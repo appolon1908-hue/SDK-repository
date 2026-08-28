@@ -1,0 +1,58 @@
+name: Apply Slice 2 signed boundary patch
+
+on:
+  push:
+    branches:
+      - 'fix/14-slice-2-signed-inbound-boundary'
+    paths:
+      - '.github/workflows/apply-slice-2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-validate-and-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Slice 2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/14-slice-2-signed-inbound-boundary
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Reassemble and verify patch archive
+        run: |
+          cat .slice2-patch/part* > /tmp/slice2-patch.tar.gz.b64
+          base64 --decode /tmp/slice2-patch.tar.gz.b64 > /tmp/slice2-patch.tar.gz
+          echo '6fb0db331c93c393674e3689910de201f52c5d793e0eaf7209d0675616b61ea5  /tmp/slice2-patch.tar.gz' | sha256sum --check --strict
+          tar --extract --gzip --file /tmp/slice2-patch.tar.gz --directory . --no-same-owner
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate deterministic lockfile
+        run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+      - name: Prove frozen install
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate contracts semantically
+        run: pnpm contracts:validate
+      - name: Build workspace
+        run: pnpm build
+      - name: Type-check n8n package
+        run: pnpm --filter @codestra/n8n-nodes typecheck
+      - name: Test signed event boundary
+        run: pnpm --filter @codestra/n8n-nodes test
+      - name: Commit implementation and remove bootstrap material
+        run: |
+          rm -rf .slice2-patch
+          rm .github/workflows/apply-slice-2.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(slice-2): add signed replay-safe n8n event boundary'
+          git push origin HEAD:refs/heads/fix/14-slice-2-signed-inbound-boundary
