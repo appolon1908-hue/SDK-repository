@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+  },
   test: {
     environment: "node",
     globals: false,
@@ -8,10 +11,13 @@ export default defineConfig({
       "test/**/*.test.ts",
       "packages/**/test/**/*.test.ts",
       "integrations/**/test/**/*.test.ts",
+      "apps/**/test/**/*.test.ts",
+      "apps/**/test/**/*.test.tsx",
     ],
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
+      "**/.next/**",
       "**/test/pact/**",
     ],
     clearMocks: true,
