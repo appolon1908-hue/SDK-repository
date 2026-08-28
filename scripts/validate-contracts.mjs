@@ -204,8 +204,10 @@ function validateAsyncApi(path, document, output) {
 }
 
 function runRedocly(args) {
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  return spawnSync(executable, ["exec", "redocly", ...args], {
+  const command = ["pnpm", "exec", "redocly", ...args];
+  const executable = process.platform === "win32" ? "cmd.exe" : command[0];
+  const commandArgs = process.platform === "win32" ? ["/d", "/s", "/c", ...command] : command.slice(1);
+  return spawnSync(executable, commandArgs, {
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
     env: {
