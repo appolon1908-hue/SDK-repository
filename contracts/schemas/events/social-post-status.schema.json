@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.codestra.co/events/social-post-status.schema.json",
+  "title": "Social post status event data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["postId", "tenantId", "status", "deliveries", "occurredAt"],
+  "properties": {
+    "postId": { "type": "string", "format": "uuid" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "previousStatus": { "$ref": "#/$defs/status" },
+    "status": { "$ref": "#/$defs/status" },
+    "deliveries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["channel", "status"],
+        "properties": {
+          "channel": { "type": "string" },
+          "status": { "$ref": "#/$defs/status" },
+          "externalId": { "type": "string" },
+          "failureCode": { "type": "string" },
+          "failureMessage": { "type": "string" }
+        }
+      }
+    },
+    "occurredAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "scheduled",
+        "publishing",
+        "published",
+        "partially_published",
+        "failed",
+        "cancelled"
+      ]
+    }
+  }
+}

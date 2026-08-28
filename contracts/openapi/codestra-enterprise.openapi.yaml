@@ -1,0 +1,119 @@
+openapi: 3.1.0
+info:
+  title: Codestra Enterprise Connector API
+  version: 0.1.0
+  description: Restricted service-to-service commands used by Middleware. This API is never exposed to browser clients.
+servers:
+  - url: https://api.codestra.co/internal
+security:
+  - serviceBearer: []
+paths:
+  /v1/connectors/{connectorKey}/commands:
+    post:
+      operationId: executeConnectorCommand
+      parameters:
+        - name: connectorKey
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]{1,63}$' }
+        - name: X-Codestra-Tenant-Id
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-Correlation-Id
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectorCommand'
+      responses:
+        '202':
+          description: Command accepted or replayed from the idempotency ledger
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandReceipt' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/connectors/{connectorKey}/reconciliation:
+    post:
+      operationId: reconcileConnector
+      parameters:
+        - name: connectorKey
+          in: path
+          required: true
+          schema: { type: string }
+        - name: X-Codestra-Tenant-Id
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-Correlation-Id
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                cursor: { type: string }
+                limit: { type: integer, minimum: 1, maximum: 500 }
+      responses:
+        '200':
+          description: Reconciliation page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReconciliationPage' }
+        '403': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Error:
+      description: Structured Codestra error
+      content:
+        application/json:
+          schema: { $ref: './codestra-public.openapi.yaml#/components/schemas/ErrorResponse' }
+  schemas:
+    ConnectorCommand:
+      type: object
+      additionalProperties: false
+      required: [commandId, operation, payload, requestedAt]
+      properties:
+        commandId: { type: string, format: uuid }
+        operation: { type: string, minLength: 1, maxLength: 100 }
+        payload: { type: object }
+        requestedAt: { type: string, format: date-time }
+        expectedVersion: { type: integer, minimum: 0 }
+    CommandReceipt:
+      type: object
+      additionalProperties: false
+      required: [commandId, status, acceptedAt]
+      properties:
+        commandId: { type: string, format: uuid }
+        status: { type: string, enum: [accepted, completed, rejected] }
+        replayed: { type: boolean, default: false }
+        acceptedAt: { type: string, format: date-time }
+        result: { type: object }
+    ReconciliationPage:
+      type: object
+      additionalProperties: false
+      required: [items, hasMore]
+      properties:
+        items: { type: array, items: { type: object } }
+        nextCursor: { type: string }
+        hasMore: { type: boolean }
