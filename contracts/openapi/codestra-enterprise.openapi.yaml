@@ -11,6 +11,7 @@ paths:
   /v1/connectors/{connectorKey}/commands:
     post:
       operationId: executeConnectorCommand
+      summary: Execute one tenant-scoped connector command
       parameters:
         - name: connectorKey
           in: path
@@ -46,6 +47,7 @@ paths:
   /v1/connectors/{connectorKey}/reconciliation:
     post:
       operationId: reconcileConnector
+      summary: Read one tenant-scoped reconciliation page
       parameters:
         - name: connectorKey
           in: path
