@@ -7,6 +7,7 @@ export type {
 export {
   CodestraApiError,
   CodestraConfigurationError,
+  CodestraContractViolationError,
   CodestraSdkError,
   CodestraTimeoutError,
 } from "./errors.js";

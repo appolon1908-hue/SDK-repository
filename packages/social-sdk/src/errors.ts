@@ -25,6 +25,15 @@ export class CodestraTimeoutError extends CodestraSdkError {
   }
 }
 
+export class CodestraContractViolationError extends CodestraSdkError {
+  readonly path: string;
+
+  constructor(message: string, path: string) {
+    super(message, "CONTRACT_VIOLATION");
+    this.path = path;
+  }
+}
+
 export class CodestraApiError extends CodestraSdkError {
   readonly status: number;
   readonly requestId: string | undefined;

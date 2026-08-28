@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { CodestraClient, CodestraConfigurationError } from "../src/index.js";
+import { CodestraClient, CodestraConfigurationError, CodestraContractViolationError } from "../src/index.js";
 
 const post = {
   id: "d0313dba-09f7-4cce-8894-195f72c62126",
@@ -123,6 +123,32 @@ describe("CodestraClient", () => {
     expectRequest(fetchMock, "POST", `/v1/webhook-subscriptions/${subscription.id}/enable`, "idempotency-key-0005");
     expectRequest(fetchMock, "POST", `/v1/webhook-subscriptions/${subscription.id}/disable`, "idempotency-key-0006");
     expectRequest(fetchMock, "DELETE", `/v1/webhook-subscriptions/${subscription.id}`, "idempotency-key-0007");
+  });
+
+  it("rejects invalid JavaScript caller input before sending", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const client = testClient(fetchMock);
+
+    expect(() =>
+      client.webhooks.subscriptions.create(
+        {
+          endpointUrl: "http://169.254.169.254/latest",
+          eventTypes: ["codestra.social.post.status.v1"],
+        },
+        { idempotencyKey: "idempotency-key-0008" },
+      ),
+    ).toThrow(CodestraContractViolationError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed successful responses", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { ...subscription, status: "surprise" }));
+    const client = testClient(fetchMock);
+
+    await expect(client.webhooks.subscriptions.get(subscription.id)).rejects.toMatchObject({
+      code: "CONTRACT_VIOLATION",
+      path: "response.status",
+    });
   });
 });
 
