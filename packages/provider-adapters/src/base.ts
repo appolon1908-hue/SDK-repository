@@ -35,7 +35,7 @@ export interface RestrictedGatewayAdapterConfig {
   webhookNormalizer?: WebhookNormalizer;
 }
 
-const DEFAULT_ROUTES: RestrictedGatewayRoutes = {
+export const DEFAULT_RESTRICTED_GATEWAY_ROUTES: RestrictedGatewayRoutes = {
   health: "/health/ready",
   commands: "/internal/v1/codestra/commands",
   reconciliation: "/internal/v1/codestra/reconciliation",
@@ -60,7 +60,7 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
     this.enabledOperations = new Set(config.enabledOperations ?? []);
     this.timeoutMs = positiveInteger(config.timeoutMs ?? 10_000, "timeoutMs");
     this.fetchImplementation = config.fetch ?? globalThis.fetch;
-    this.routes = { ...DEFAULT_ROUTES, ...config.routes };
+    this.routes = { ...DEFAULT_RESTRICTED_GATEWAY_ROUTES, ...config.routes };
     this.webhookNormalizer = config.webhookNormalizer;
 
     if (typeof this.fetchImplementation !== "function") {
