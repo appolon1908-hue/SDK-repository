@@ -1,0 +1,73 @@
+asyncapi: 3.0.0
+info:
+  title: Codestra Canonical Events
+  version: 0.1.0
+  description: Canonical CloudEvents emitted only after inbox validation and durable state transition.
+defaultContentType: application/json
+channels:
+  socialPostStatus:
+    address: codestra.social.post.status.v1
+    messages:
+      socialPostStatusChanged:
+        $ref: '#/components/messages/SocialPostStatusChanged'
+  webhookDeliveryStatus:
+    address: codestra.webhook.delivery.status.v1
+    messages:
+      webhookDeliveryStatusChanged:
+        $ref: '#/components/messages/WebhookDeliveryStatusChanged'
+operations:
+  receiveSocialPostStatus:
+    action: receive
+    channel:
+      $ref: '#/channels/socialPostStatus'
+  receiveWebhookDeliveryStatus:
+    action: receive
+    channel:
+      $ref: '#/channels/webhookDeliveryStatus'
+components:
+  messages:
+    SocialPostStatusChanged:
+      name: codestra.social.post.status.v1
+      title: Social post status changed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: codestra.social.post.status.v1 }
+              data:
+                $ref: '../schemas/events/social-post-status.schema.json'
+    WebhookDeliveryStatusChanged:
+      name: codestra.webhook.delivery.status.v1
+      title: Webhook delivery status changed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: codestra.webhook.delivery.status.v1 }
+              data:
+                type: object
+                additionalProperties: false
+                required: [deliveryId, endpointId, status, occurredAt]
+                properties:
+                  deliveryId: { type: string, format: uuid }
+                  endpointId: { type: string, format: uuid }
+                  status: { type: string, enum: [queued, attempting, delivered, failed, dead_lettered] }
+                  attempt: { type: integer, minimum: 0 }
+                  occurredAt: { type: string, format: date-time }
+  schemas:
+    CloudEventEnvelope:
+      type: object
+      additionalProperties: false
+      required: [specversion, id, source, type, time, datacontenttype, data]
+      properties:
+        specversion: { const: '1.0' }
+        id: { type: string, format: uuid }
+        source: { type: string, format: uri-reference }
+        type: { type: string }
+        subject: { type: string }
+        time: { type: string, format: date-time }
+        datacontenttype: { const: application/json }
+        dataschema: { type: string, format: uri }
+        data: {}

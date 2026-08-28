@@ -1,0 +1,24 @@
+{
+  "name": "codestra-sdk-repository",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Contract-first SDK and connector monorepo for the Codestra platform.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "contracts:validate": "node scripts/validate-contracts.mjs",
+    "ci": "pnpm contracts:validate && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.6",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
