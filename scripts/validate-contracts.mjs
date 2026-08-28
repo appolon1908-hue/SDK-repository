@@ -16,6 +16,11 @@ const definitions = [
     expectedVersion: "3.1.0",
   },
   {
+    kind: "openapi",
+    path: "contracts/openapi/codestra-restricted-gateway.openapi.yaml",
+    expectedVersion: "3.1.0",
+  },
+  {
     kind: "asyncapi",
     path: "contracts/asyncapi/codestra-events.asyncapi.yaml",
     expectedVersion: "3.0.0",
@@ -204,8 +209,10 @@ function validateAsyncApi(path, document, output) {
 }
 
 function runRedocly(args) {
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  return spawnSync(executable, ["exec", "redocly", ...args], {
+  const command = ["pnpm", "exec", "redocly", ...args];
+  const executable = process.platform === "win32" ? "cmd.exe" : command[0];
+  const commandArgs = process.platform === "win32" ? ["/d", "/s", "/c", ...command] : command.slice(1);
+  return spawnSync(executable, commandArgs, {
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
     env: {

@@ -1,0 +1,242 @@
+openapi: 3.1.0
+info:
+  title: Codestra Product-Local Restricted Gateway API
+  version: 0.1.0
+  description: Product-local private API implemented beside each provider. It is reachable only from Codestra Middleware over private service identity and mTLS, never from browsers, n8n workflows, SDK consumers, Svix, Camel, or public Internet routes.
+servers:
+  - url: https://{gatewayHost}
+    variables:
+      gatewayHost:
+        default: product-gateway.invalid
+        description: Private product-local gateway host resolved only inside the deployment network.
+security:
+  - workloadMtls: []
+    serviceBearer: []
+paths:
+  /health/ready:
+    get:
+      operationId: restrictedGatewayReadiness
+      summary: Report whether the product-local gateway can accept private Middleware traffic
+      responses:
+        '200':
+          description: Gateway is configured and ready for restricted traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayHealth'
+        '503':
+          description: Gateway is disabled, unavailable, or not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayHealth'
+  /internal/v1/codestra/commands:
+    post:
+      operationId: executeRestrictedGatewayCommand
+      summary: Execute one Middleware-authorized provider command
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/WorkloadIdentity'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestrictedGatewayCommand'
+      responses:
+        '202':
+          description: Command accepted, completed, rejected, or replayed by provider-local idempotency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestrictedGatewayCommandReceipt'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /internal/v1/codestra/commands/{commandId}/reconciliation:
+    post:
+      operationId: reconcileRestrictedGatewayCommand
+      summary: Reconcile one previously dispatched command without issuing the mutation again
+      parameters:
+        - $ref: '#/components/parameters/CommandId'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkloadIdentity'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandReconciliationRequest'
+      responses:
+        '200':
+          description: Provider-local command outcome, or no result when the outcome is still unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandReconciliationResponse'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /internal/v1/codestra/reconciliation:
+    post:
+      operationId: reconcileRestrictedGatewayCommands
+      summary: Read provider-local state without issuing a mutation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkloadIdentity'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconciliationRequest'
+      responses:
+        '200':
+          description: Provider-local reconciliation page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationPage'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    workloadMtls:
+      type: mutualTLS
+      description: Private workload certificate identity issued to Codestra Middleware and the product-local gateway.
+    serviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Middleware service token scoped to one tenant, connector, and restricted operation set.
+  parameters:
+    CommandId:
+      name: commandId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TenantId:
+      name: X-Codestra-Tenant-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+    WorkloadIdentity:
+      name: X-Codestra-Workload-Id
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  responses:
+    Error:
+      description: Structured fail-closed gateway error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    GatewayHealth:
+      type: object
+      additionalProperties: false
+      required: [status, checkedAt]
+      properties:
+        status: { type: string, enum: [ready, disabled, degraded, unavailable] }
+        checkedAt: { type: string, format: date-time }
+        connectorKey: { type: string, pattern: '^[a-z][a-z0-9-]{1,63}$' }
+        enabledOperations:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 100 }
+        details: { type: object }
+    RestrictedGatewayCommand:
+      type: object
+      additionalProperties: false
+      required: [commandId, operation, payload, requestedAt]
+      properties:
+        commandId: { type: string, format: uuid }
+        operation: { type: string, minLength: 1, maxLength: 100 }
+        payload: { type: object }
+        requestedAt: { type: string, format: date-time }
+        expectedVersion: { type: integer, minimum: 0 }
+    RestrictedGatewayCommandReceipt:
+      type: object
+      additionalProperties: false
+      required: [commandId, status]
+      properties:
+        commandId: { type: string, format: uuid }
+        status: { type: string, enum: [accepted, completed, rejected] }
+        providerReference: { type: string, minLength: 1, maxLength: 500 }
+        data: { type: object }
+        replayed: { type: boolean, default: false }
+    ReconciliationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        cursor: { type: string, minLength: 1, maxLength: 1000 }
+        limit: { type: integer, minimum: 1, maximum: 500 }
+    CommandReconciliationRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, requestedAt]
+      properties:
+        operation: { type: string, minLength: 1, maxLength: 100 }
+        requestedAt: { type: string, format: date-time }
+    CommandReconciliationResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/RestrictedGatewayCommandReceipt'
+            - type: 'null'
+    ReconciliationPage:
+      type: object
+      additionalProperties: false
+      required: [items, hasMore]
+      properties:
+        items:
+          type: array
+          items: { type: object }
+        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
+        hasMore: { type: boolean }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId, retryable]
+          properties:
+            code: { type: string, minLength: 1, maxLength: 100 }
+            message: { type: string, minLength: 1, maxLength: 1000 }
+            requestId: { type: string, minLength: 8, maxLength: 128 }
+            retryable: { type: boolean }
+            details: { type: object }

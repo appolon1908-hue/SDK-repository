@@ -25,9 +25,18 @@ export class Codestra implements INodeType {
         type: "options",
         default: "createSocialPost",
         options: [
+          { name: "Cancel Social Post", value: "cancelSocialPost" },
           { name: "Create Social Post", value: "createSocialPost" },
           { name: "Get Social Post", value: "getSocialPost" },
+          { name: "List Social Posts", value: "listSocialPosts" },
           { name: "Create Webhook Subscription", value: "createWebhookSubscription" },
+          { name: "List Webhook Subscriptions", value: "listWebhookSubscriptions" },
+          { name: "Get Webhook Subscription", value: "getWebhookSubscription" },
+          { name: "Test Webhook Subscription", value: "testWebhookSubscription" },
+          { name: "Rotate Webhook Secret", value: "rotateWebhookSubscriptionSecret" },
+          { name: "Enable Webhook Subscription", value: "enableWebhookSubscription" },
+          { name: "Disable Webhook Subscription", value: "disableWebhookSubscription" },
+          { name: "Delete Webhook Subscription", value: "deleteWebhookSubscription" },
         ],
       },
       {
@@ -36,7 +45,32 @@ export class Codestra implements INodeType {
         type: "string",
         default: "",
         required: true,
-        displayOptions: { show: { operation: ["createSocialPost"] } },
+        displayOptions: { show: { operation: ["createSocialPost", "listSocialPosts"] } },
+      },
+      {
+        displayName: "Social Post Status",
+        name: "socialPostStatus",
+        type: "options",
+        default: "",
+        options: [
+          { name: "Any", value: "" },
+          { name: "Accepted", value: "accepted" },
+          { name: "Scheduled", value: "scheduled" },
+          { name: "Publishing", value: "publishing" },
+          { name: "Published", value: "published" },
+          { name: "Partially Published", value: "partially_published" },
+          { name: "Failed", value: "failed" },
+          { name: "Cancelled", value: "cancelled" },
+        ],
+        displayOptions: { show: { operation: ["listSocialPosts"] } },
+      },
+      {
+        displayName: "Limit",
+        name: "limit",
+        type: "number",
+        default: 50,
+        typeOptions: { minValue: 1, maxValue: 100 },
+        displayOptions: { show: { operation: ["listSocialPosts"] } },
       },
       {
         displayName: "Channels",
@@ -69,7 +103,7 @@ export class Codestra implements INodeType {
         type: "string",
         default: "",
         required: true,
-        displayOptions: { show: { operation: ["getSocialPost"] } },
+        displayOptions: { show: { operation: ["getSocialPost", "cancelSocialPost"] } },
       },
       {
         displayName: "Endpoint URL",
@@ -78,6 +112,25 @@ export class Codestra implements INodeType {
         default: "",
         required: true,
         displayOptions: { show: { operation: ["createWebhookSubscription"] } },
+      },
+      {
+        displayName: "Webhook Subscription ID",
+        name: "subscriptionId",
+        type: "string",
+        default: "",
+        required: true,
+        displayOptions: {
+          show: {
+            operation: [
+              "getWebhookSubscription",
+              "testWebhookSubscription",
+              "rotateWebhookSubscriptionSecret",
+              "enableWebhookSubscription",
+              "disableWebhookSubscription",
+              "deleteWebhookSubscription",
+            ],
+          },
+        },
       },
       {
         displayName: "Event Types",
@@ -93,7 +146,7 @@ export class Codestra implements INodeType {
         type: "string",
         default: "={{$execution.id}}-{{$itemIndex}}",
         required: true,
-        displayOptions: { hide: { operation: ["getSocialPost"] } },
+        displayOptions: { hide: { operation: ["listSocialPosts", "getSocialPost", "listWebhookSubscriptions", "getWebhookSubscription"] } },
       },
       {
         displayName: "Correlation ID",
@@ -148,6 +201,17 @@ export class Codestra implements INodeType {
       } else if (operation === "getSocialPost") {
         const postId = requireString(this.getNodeParameter("postId", itemIndex), "postId");
         request.url = `${baseUrl}/v1/social/posts/${encodeURIComponent(postId)}`;
+      } else if (operation === "listSocialPosts") {
+        request.url = withQuery(`${baseUrl}/v1/social/posts`, {
+          workspaceId: optionalString(this.getNodeParameter("workspaceId", itemIndex, "")),
+          status: optionalString(this.getNodeParameter("socialPostStatus", itemIndex, "")),
+          limit: optionalNumber(this.getNodeParameter("limit", itemIndex, 50), "limit"),
+        });
+      } else if (operation === "cancelSocialPost") {
+        request.method = "POST";
+        const postId = requireString(this.getNodeParameter("postId", itemIndex), "postId");
+        request.url = `${baseUrl}/v1/social/posts/${encodeURIComponent(postId)}/cancel`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
       } else if (operation === "createWebhookSubscription") {
         request.method = "POST";
         request.url = `${baseUrl}/v1/webhook-subscriptions`;
@@ -158,6 +222,30 @@ export class Codestra implements INodeType {
           endpointUrl: requireHttpsUrl(this.getNodeParameter("endpointUrl", itemIndex)),
           eventTypes: commaSeparated(this.getNodeParameter("eventTypes", itemIndex), "eventTypes"),
         };
+      } else if (operation === "listWebhookSubscriptions") {
+        request.url = `${baseUrl}/v1/webhook-subscriptions`;
+      } else if (operation === "getWebhookSubscription") {
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}`;
+      } else if (operation === "testWebhookSubscription") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/test`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "rotateWebhookSubscriptionSecret") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/rotate-secret`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "enableWebhookSubscription") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/enable`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "disableWebhookSubscription") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/disable`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "deleteWebhookSubscription") {
+        request.method = "DELETE";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
       } else {
         throw new Error(`Unsupported Codestra operation: ${operation}`);
       }
@@ -199,6 +287,24 @@ function requireIdempotencyKey(value: unknown): string {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function optionalNumber(value: unknown, name: string): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isSafeInteger(number) || number < 1 || number > 100) {
+    throw new Error(`${name} must be an integer between 1 and 100.`);
+  }
+  return number;
+}
+
+function withQuery(url: string, query: Record<string, string | number | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  const serialized = params.toString();
+  return serialized ? `${url}?${serialized}` : url;
 }
 
 function commaSeparated(value: unknown, name: string): string[] {

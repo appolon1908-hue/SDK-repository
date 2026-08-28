@@ -9,6 +9,39 @@ security:
   - oidc: []
 paths:
   /v1/social/posts:
+    get:
+      operationId: listSocialPosts
+      summary: List tenant-owned social posts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 1000 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: workspaceId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SocialPostStatus'
+      responses:
+        '200':
+          description: Current tenant social posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialPostList'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       operationId: createSocialPost
       summary: Create or schedule a social post
@@ -56,10 +89,51 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /v1/social/posts/{postId}/cancel:
+    post:
+      operationId: cancelSocialPost
+      summary: Cancel one tenant-owned social post through Middleware
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Cancellation accepted for asynchronous processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialPost'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions:
+    get:
+      operationId: listWebhookSubscriptions
+      summary: List tenant-owned webhook subscriptions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Current tenant webhook subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscriptionList'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       operationId: createWebhookSubscription
-      summary: Register a tenant-owned HTTPS webhook endpoint
+      summary: Register a tenant-owned HTTPS webhook endpoint for verification
+      description: Middleware must apply SSRF-safe destination validation, issue the signing secret exactly once in this create response, and keep the subscription pending until verification succeeds.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -72,12 +146,131 @@ paths:
               $ref: '#/components/schemas/CreateWebhookSubscriptionRequest'
       responses:
         '201':
-          description: Subscription created
+          description: Subscription created with one-time signing secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscriptionCreated'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/webhook-subscriptions/{subscriptionId}:
+    get:
+      operationId: getWebhookSubscription
+      summary: Read one tenant-owned webhook subscription
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WebhookSubscriptionId'
+      responses:
+        '200':
+          description: Current subscription state without signing secret material
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebhookSubscription'
-        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteWebhookSubscription
+      summary: Delete one tenant-owned webhook subscription
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/WebhookSubscriptionId'
+      responses:
+        '204':
+          description: Subscription deleted
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/webhook-subscriptions/{subscriptionId}/test:
+    post:
+      operationId: testWebhookSubscription
+      summary: Send a signed test event to one webhook subscription
+      description: Test delivery must use the same SSRF-safe destination policy as production delivery and must not enable a disabled or pending subscription.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/WebhookSubscriptionId'
+      responses:
+        '202':
+          description: Test delivery accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryTest'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/webhook-subscriptions/{subscriptionId}/rotate-secret:
+    post:
+      operationId: rotateWebhookSubscriptionSecret
+      summary: Rotate a webhook subscription signing secret
+      description: The new signing secret is returned exactly once in this response. Middleware must continue accepting the previous secret for the configured overlap window.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/WebhookSubscriptionId'
+      responses:
+        '200':
+          description: Secret rotated with one-time secret material
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscriptionSecretRotation'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/webhook-subscriptions/{subscriptionId}/enable:
+    post:
+      operationId: enableWebhookSubscription
+      summary: Enable a verified webhook subscription
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/WebhookSubscriptionId'
+      responses:
+        '200':
+          description: Subscription enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscription'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/webhook-subscriptions/{subscriptionId}/disable:
+    post:
+      operationId: disableWebhookSubscription
+      summary: Disable a webhook subscription without deleting its audit history
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/WebhookSubscriptionId'
+      responses:
+        '200':
+          description: Subscription disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscription'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
@@ -100,6 +293,11 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 16, maxLength: 128 }
+    WebhookSubscriptionId:
+      name: subscriptionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   responses:
     Error:
       description: Structured Codestra error
@@ -148,6 +346,15 @@ components:
         publishAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    SocialPostList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SocialPost' }
+        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
     ChannelDelivery:
       type: object
       additionalProperties: false
@@ -176,6 +383,17 @@ components:
           uniqueItems: true
           items: { type: string, minLength: 1 }
         description: { type: string, maxLength: 200 }
+    WebhookSubscriptionCreated:
+      type: object
+      additionalProperties: false
+      required: [subscription, signingSecret]
+      properties:
+        subscription: { $ref: '#/components/schemas/WebhookSubscription' }
+        signingSecret:
+          type: string
+          pattern: '^whsec_'
+          minLength: 28
+          description: One-time signing secret. It is never returned by read, list, enable, disable, test, or delete operations.
     WebhookSubscription:
       type: object
       additionalProperties: false
@@ -184,8 +402,57 @@ components:
         id: { type: string, format: uuid }
         endpointUrl: { type: string, format: uri }
         eventTypes: { type: array, items: { type: string } }
-        status: { type: string, enum: [active, disabled] }
+        status: { type: string, enum: [pending_verification, active, disabled, verification_failed] }
+        verification:
+          type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status: { type: string, enum: [pending, verified, failed] }
+            challengeId: { type: string }
+            verifiedAt: { type: string, format: date-time }
+            lastAttemptAt: { type: string, format: date-time }
+            failureCode: { type: string }
+        destinationPolicy:
+          type: object
+          additionalProperties: false
+          required: [httpsOnly, privateAddressBlocked, redirectsBlocked]
+          properties:
+            httpsOnly: { type: boolean, const: true }
+            privateAddressBlocked: { type: boolean, const: true }
+            redirectsBlocked: { type: boolean, const: true }
         createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        disabledAt: { type: string, format: date-time }
+    WebhookSubscriptionList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/WebhookSubscription' }
+        nextCursor: { type: string }
+    WebhookDeliveryTest:
+      type: object
+      additionalProperties: false
+      required: [deliveryId, subscriptionId, status, acceptedAt]
+      properties:
+        deliveryId: { type: string, format: uuid }
+        subscriptionId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, rejected] }
+        acceptedAt: { type: string, format: date-time }
+    WebhookSubscriptionSecretRotation:
+      type: object
+      additionalProperties: false
+      required: [subscription, signingSecret, previousSecretExpiresAt]
+      properties:
+        subscription: { $ref: '#/components/schemas/WebhookSubscription' }
+        signingSecret:
+          type: string
+          pattern: '^whsec_'
+          minLength: 28
+        previousSecretExpiresAt: { type: string, format: date-time }
     ErrorResponse:
       type: object
       additionalProperties: false

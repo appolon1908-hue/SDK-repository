@@ -1,4 +1,5 @@
 export {
+  DEFAULT_RESTRICTED_GATEWAY_ROUTES,
   RestrictedGatewayAdapter,
   canonicalEvent,
   createManifest,

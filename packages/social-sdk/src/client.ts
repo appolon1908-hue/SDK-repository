@@ -1,10 +1,16 @@
 import type {
   CodestraErrorBody,
   CreateSocialPostInput,
+  ListSocialPostsInput,
   SocialPost,
+  SocialPostList,
   UUID,
+  WebhookDeliveryTest,
   WebhookSubscription,
+  WebhookSubscriptionCreated,
   WebhookSubscriptionInput,
+  WebhookSubscriptionList,
+  WebhookSubscriptionSecretRotation,
 } from "@codestra/contracts";
 import {
   CodestraApiError,
@@ -12,6 +18,18 @@ import {
   CodestraSdkError,
   CodestraTimeoutError,
 } from "./errors.js";
+import {
+  parseSocialPost,
+  parseSocialPostList,
+  parseWebhookDeliveryTest,
+  parseWebhookSubscription,
+  parseWebhookSubscriptionCreated,
+  parseWebhookSubscriptionList,
+  parseWebhookSubscriptionSecretRotation,
+  validateCreateSocialPostInput,
+  validateListSocialPostsInput,
+  validateWebhookSubscriptionInput,
+} from "./validation.js";
 
 const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -37,17 +55,20 @@ export interface MutationRequestOptions extends RequestOptions {
 }
 
 interface InternalRequestOptions extends RequestOptions {
-  method: "GET" | "POST";
+  method: "DELETE" | "GET" | "POST";
   path: string;
   body?: unknown;
   idempotencyKey?: string;
+  validate?: (value: unknown) => unknown;
 }
 
 export class CodestraClient {
   readonly social: {
     posts: {
       create: (input: CreateSocialPostInput, options: MutationRequestOptions) => Promise<SocialPost>;
+      list: (input?: ListSocialPostsInput, options?: RequestOptions) => Promise<SocialPostList>;
       get: (postId: UUID, options?: RequestOptions) => Promise<SocialPost>;
+      cancel: (postId: UUID, options: MutationRequestOptions) => Promise<SocialPost>;
     };
   };
 
@@ -56,7 +77,17 @@ export class CodestraClient {
       create: (
         input: WebhookSubscriptionInput,
         options: MutationRequestOptions,
-      ) => Promise<WebhookSubscription>;
+      ) => Promise<WebhookSubscriptionCreated>;
+      list: (options?: RequestOptions) => Promise<WebhookSubscriptionList>;
+      get: (subscriptionId: UUID, options?: RequestOptions) => Promise<WebhookSubscription>;
+      test: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<WebhookDeliveryTest>;
+      rotateSecret: (
+        subscriptionId: UUID,
+        options: MutationRequestOptions,
+      ) => Promise<WebhookSubscriptionSecretRotation>;
+      enable: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<WebhookSubscription>;
+      disable: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<WebhookSubscription>;
+      delete: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<void>;
     };
   };
 
@@ -96,14 +127,31 @@ export class CodestraClient {
           this.request<SocialPost>({
             method: "POST",
             path: "/v1/social/posts",
-            body: input,
+            body: validateCreateSocialPostInput(input),
             idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseSocialPost,
+            ...copyRequestOptions(requestOptions),
+          }),
+        list: (input = {}, requestOptions) =>
+          this.request<SocialPostList>({
+            method: "GET",
+            path: withQuery("/v1/social/posts", validateListSocialPostsInput(input)),
+            validate: parseSocialPostList,
             ...copyRequestOptions(requestOptions),
           }),
         get: (postId, requestOptions) =>
           this.request<SocialPost>({
             method: "GET",
             path: `/v1/social/posts/${encodeURIComponent(requirePathSegment(postId, "postId"))}`,
+            validate: parseSocialPost,
+            ...copyRequestOptions(requestOptions),
+          }),
+        cancel: (postId, requestOptions) =>
+          this.request<SocialPost>({
+            method: "POST",
+            path: `/v1/social/posts/${encodeURIComponent(requirePathSegment(postId, "postId"))}/cancel`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseSocialPost,
             ...copyRequestOptions(requestOptions),
           }),
       },
@@ -112,10 +160,64 @@ export class CodestraClient {
     this.webhooks = {
       subscriptions: {
         create: (input, requestOptions) =>
-          this.request<WebhookSubscription>({
+          this.request<WebhookSubscriptionCreated>({
             method: "POST",
             path: "/v1/webhook-subscriptions",
-            body: input,
+            body: validateWebhookSubscriptionInput(input),
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseWebhookSubscriptionCreated,
+            ...copyRequestOptions(requestOptions),
+          }),
+        list: (requestOptions) =>
+          this.request<WebhookSubscriptionList>({
+            method: "GET",
+            path: "/v1/webhook-subscriptions",
+            validate: parseWebhookSubscriptionList,
+            ...copyRequestOptions(requestOptions),
+          }),
+        get: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscription>({
+            method: "GET",
+            path: webhookSubscriptionPath(subscriptionId),
+            validate: parseWebhookSubscription,
+            ...copyRequestOptions(requestOptions),
+          }),
+        test: (subscriptionId, requestOptions) =>
+          this.request<WebhookDeliveryTest>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/test`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseWebhookDeliveryTest,
+            ...copyRequestOptions(requestOptions),
+          }),
+        rotateSecret: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscriptionSecretRotation>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/rotate-secret`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseWebhookSubscriptionSecretRotation,
+            ...copyRequestOptions(requestOptions),
+          }),
+        enable: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscription>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/enable`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseWebhookSubscription,
+            ...copyRequestOptions(requestOptions),
+          }),
+        disable: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscription>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/disable`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            validate: parseWebhookSubscription,
+            ...copyRequestOptions(requestOptions),
+          }),
+        delete: (subscriptionId, requestOptions) =>
+          this.request<void>({
+            method: "DELETE",
+            path: webhookSubscriptionPath(subscriptionId),
             idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
             ...copyRequestOptions(requestOptions),
           }),
@@ -159,7 +261,7 @@ export class CodestraClient {
 
       try {
         const response = await this.fetchImplementation(url, requestInit);
-        if (response.ok) return await parseSuccess<T>(response);
+        if (response.ok) return parseValidatedSuccess<T>(await parseSuccess(response), options.validate);
 
         const apiError = await parseApiError(response, correlationId);
         lastError = apiError;
@@ -180,6 +282,8 @@ export class CodestraClient {
 
         if (error instanceof CodestraApiError) {
           if (!canRetry || attempt >= this.maxRetries || !error.retryable) throw error;
+        } else if (error instanceof CodestraSdkError) {
+          throw error;
         } else if (!canRetry || attempt >= this.maxRetries) {
           throw new CodestraSdkError("Codestra request failed before a response was received.", "NETWORK_ERROR", {
             cause: error,
@@ -252,6 +356,24 @@ function requireIdempotencyKey(value: string): string {
     throw new CodestraConfigurationError("idempotencyKey must contain between 16 and 128 characters.");
   }
   return key;
+}
+
+function parseValidatedSuccess<T>(value: unknown, validate: ((value: unknown) => unknown) | undefined): T {
+  return (validate === undefined ? value : validate(value)) as T;
+}
+
+function webhookSubscriptionPath(subscriptionId: UUID): string {
+  return `/v1/webhook-subscriptions/${encodeURIComponent(requirePathSegment(subscriptionId, "subscriptionId"))}`;
+}
+
+function withQuery(path: string, query: ListSocialPostsInput): string {
+  const params = new URLSearchParams();
+  if (query.cursor !== undefined) params.set("cursor", query.cursor);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.workspaceId !== undefined) params.set("workspaceId", query.workspaceId);
+  if (query.status !== undefined) params.set("status", query.status);
+  const serialized = params.toString();
+  return serialized ? `${path}?${serialized}` : path;
 }
 
 function requireNonNegativeInteger(value: number, name: string, allowZero: boolean): number {

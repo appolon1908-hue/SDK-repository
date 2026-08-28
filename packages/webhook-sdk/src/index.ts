@@ -35,6 +35,60 @@ export interface ReplayStore {
   claim(eventId: string, expiresAtEpochSeconds: number): Promise<boolean>;
 }
 
+export type WebhookSignerType = "current" | "previous";
+export type WebhookProcessingState = "processing" | "processed" | "failed";
+
+export interface WebhookProcessingScopeInput {
+  tenantId: string;
+  endpointId: string;
+  signerType: WebhookSignerType;
+  eventId: string;
+}
+
+export interface WebhookProcessingLease {
+  scope: string;
+  token: string;
+  expiresAtEpochSeconds: number;
+}
+
+export interface WebhookProcessingSnapshot {
+  scope: string;
+  state: WebhookProcessingState;
+  expiresAtEpochSeconds?: number;
+  processedAtEpochSeconds?: number;
+  failedAtEpochSeconds?: number;
+  failureCode?: string;
+  failureMessage?: string;
+}
+
+export type WebhookProcessingClaimResult =
+  | { state: "claimed"; lease: WebhookProcessingLease }
+  | { state: "processing"; snapshot: WebhookProcessingSnapshot }
+  | { state: "processed"; snapshot: WebhookProcessingSnapshot }
+  | { state: "failed"; snapshot: WebhookProcessingSnapshot };
+
+export interface WebhookProcessingStore {
+  /** Atomically claims processing for a scoped event. Expired processing leases may be reclaimed. */
+  claimProcessing(scope: string, expiresAtEpochSeconds: number): Promise<WebhookProcessingClaimResult>;
+  markProcessed(lease: WebhookProcessingLease, processedAtEpochSeconds: number): Promise<void>;
+  markFailed(
+    lease: WebhookProcessingLease,
+    failedAtEpochSeconds: number,
+    failure: { code: string; message: string },
+  ): Promise<void>;
+  get(scope: string): Promise<WebhookProcessingSnapshot | undefined>;
+}
+
+export interface VerifiedWebhookProcessing extends VerifiedWebhook {
+  scope: string;
+  lease: WebhookProcessingLease;
+}
+
+export interface VerifyAndClaimWebhookProcessingOptions extends WebhookProcessingScopeInput {
+  processingTtlSeconds?: number;
+  now?: () => number;
+}
+
 export class WebhookVerificationError extends Error {
   readonly code: string;
 
@@ -61,6 +115,107 @@ export class InMemoryReplayStore implements ReplayStore {
     if (this.claims.has(eventId)) return false;
     this.claims.set(eventId, expiresAtEpochSeconds);
     return true;
+  }
+}
+
+interface InMemoryProcessingRecord extends WebhookProcessingSnapshot {
+  token?: string;
+}
+
+export class InMemoryWebhookProcessingStore implements WebhookProcessingStore {
+  private readonly records = new Map<string, InMemoryProcessingRecord>();
+  private readonly now: () => number;
+  private readonly tokenFactory: () => string;
+
+  constructor(options: { now?: () => number; tokenFactory?: () => string } = {}) {
+    this.now = options.now ?? (() => Math.floor(Date.now() / 1_000));
+    this.tokenFactory =
+      options.tokenFactory ??
+      (() => {
+        if (!globalThis.crypto?.randomUUID) {
+          throw new WebhookVerificationError(
+            "A cryptographically secure randomUUID implementation is required.",
+            "CRYPTO_UNAVAILABLE",
+          );
+        }
+        return globalThis.crypto.randomUUID();
+      });
+  }
+
+  async claimProcessing(scope: string, expiresAtEpochSeconds: number): Promise<WebhookProcessingClaimResult> {
+    const normalizedScope = validateProcessingScope(scope);
+    validateTimestamp(expiresAtEpochSeconds);
+    const current = this.now();
+    const existing = this.records.get(normalizedScope);
+    if (existing) {
+      if (existing.state === "processed") return { state: "processed", snapshot: snapshot(existing) };
+      if (existing.state === "failed") return { state: "failed", snapshot: snapshot(existing) };
+      if ((existing.expiresAtEpochSeconds ?? 0) > current) {
+        return { state: "processing", snapshot: snapshot(existing) };
+      }
+    }
+
+    const token = validateScope(this.tokenFactory());
+    const record: InMemoryProcessingRecord = {
+      scope: normalizedScope,
+      state: "processing",
+      token,
+      expiresAtEpochSeconds,
+    };
+    this.records.set(normalizedScope, record);
+    return {
+      state: "claimed",
+      lease: { scope: normalizedScope, token, expiresAtEpochSeconds },
+    };
+  }
+
+  async markProcessed(lease: WebhookProcessingLease, processedAtEpochSeconds: number): Promise<void> {
+    const record = this.requireLease(lease);
+    validateTimestamp(processedAtEpochSeconds);
+    record.state = "processed";
+    record.processedAtEpochSeconds = processedAtEpochSeconds;
+    delete record.expiresAtEpochSeconds;
+    delete record.token;
+    delete record.failedAtEpochSeconds;
+    delete record.failureCode;
+    delete record.failureMessage;
+  }
+
+  async markFailed(
+    lease: WebhookProcessingLease,
+    failedAtEpochSeconds: number,
+    failure: { code: string; message: string },
+  ): Promise<void> {
+    const record = this.requireLease(lease);
+    validateTimestamp(failedAtEpochSeconds);
+    record.state = "failed";
+    record.failedAtEpochSeconds = failedAtEpochSeconds;
+    record.failureCode = validateScope(failure.code);
+    record.failureMessage = validateFailureMessage(failure.message);
+    delete record.expiresAtEpochSeconds;
+    delete record.token;
+    delete record.processedAtEpochSeconds;
+  }
+
+  async get(scope: string): Promise<WebhookProcessingSnapshot | undefined> {
+    const record = this.records.get(validateProcessingScope(scope));
+    return record ? snapshot(record) : undefined;
+  }
+
+  private requireLease(lease: WebhookProcessingLease): InMemoryProcessingRecord {
+    const scope = validateProcessingScope(lease.scope);
+    const token = validateScope(lease.token);
+    validateTimestamp(lease.expiresAtEpochSeconds);
+    const record = this.records.get(scope);
+    if (
+      !record ||
+      record.state !== "processing" ||
+      record.token !== token ||
+      record.expiresAtEpochSeconds !== lease.expiresAtEpochSeconds
+    ) {
+      throw new WebhookVerificationError("Webhook processing lease is not active.", "PROCESSING_LEASE_LOST");
+    }
+    return record;
   }
 }
 
@@ -117,6 +272,37 @@ export async function verifyAndClaimWebhook(
     throw new WebhookVerificationError("Webhook event has already been processed.", "REPLAY_DETECTED");
   }
   return verified;
+}
+
+export async function verifyAndClaimWebhookProcessing(
+  input: VerifyWebhookInput,
+  store: WebhookProcessingStore,
+  options: VerifyAndClaimWebhookProcessingOptions,
+): Promise<VerifiedWebhookProcessing> {
+  const verified = await verifyWebhook(input);
+  if (verified.id !== options.eventId) {
+    throw new WebhookVerificationError("Webhook processing scope event ID does not match the verified event.", "SCOPE_EVENT_MISMATCH");
+  }
+  const now = Math.floor((options.now?.() ?? input.now?.() ?? Date.now()) / 1_000);
+  const ttlSeconds = validateProcessingTtl(options.processingTtlSeconds ?? DEFAULT_TOLERANCE_SECONDS);
+  const scope = buildWebhookProcessingScope(options);
+  const claimed = await store.claimProcessing(scope, now + ttlSeconds);
+  if (claimed.state !== "claimed") {
+    throw new WebhookVerificationError(
+      `Webhook event is already ${claimed.state}.`,
+      claimed.state === "processed" ? "REPLAY_DETECTED" : "PROCESSING_ALREADY_CLAIMED",
+    );
+  }
+  return { ...verified, scope, lease: claimed.lease };
+}
+
+export function buildWebhookProcessingScope(input: WebhookProcessingScopeInput): string {
+  return [
+    validateScope(input.tenantId),
+    validateScope(input.endpointId),
+    validateSignerType(input.signerType),
+    validateEventId(input.eventId),
+  ].join(":");
 }
 
 export function createWebhookSecret(bytes = 32): string {
@@ -210,6 +396,56 @@ function validateTolerance(value: number): number {
     throw new WebhookVerificationError("Webhook tolerance must be between 0 and 86400 seconds.", "INVALID_TOLERANCE");
   }
   return value;
+}
+
+function validateProcessingTtl(value: number): number {
+  if (!Number.isSafeInteger(value) || value <= 0 || value > 86_400) {
+    throw new WebhookVerificationError("Webhook processing TTL must be between 1 and 86400 seconds.", "INVALID_PROCESSING_TTL");
+  }
+  return value;
+}
+
+function validateSignerType(value: WebhookSignerType): WebhookSignerType {
+  if (value !== "current" && value !== "previous") {
+    throw new WebhookVerificationError("Webhook signer type must be current or previous.", "INVALID_SIGNER_TYPE");
+  }
+  return value;
+}
+
+function validateScope(value: string): string {
+  const text = value.trim();
+  if (!text || text.length > 200 || /[:\r\n]/u.test(text)) {
+    throw new WebhookVerificationError("Webhook processing scope parts must be non-empty single-line values.", "INVALID_PROCESSING_SCOPE");
+  }
+  return text;
+}
+
+function validateProcessingScope(value: string): string {
+  const text = value.trim();
+  if (!text || text.length > 1000 || /[\r\n]/u.test(text) || text.split(":").length !== 4) {
+    throw new WebhookVerificationError("Webhook processing scope must be a canonical four-part value.", "INVALID_PROCESSING_SCOPE");
+  }
+  return text;
+}
+
+function validateFailureMessage(value: string): string {
+  const text = value.trim();
+  if (!text || text.length > 1000 || /[\r\n]/u.test(text)) {
+    throw new WebhookVerificationError("Webhook processing failure message must be a non-empty single-line value.", "INVALID_PROCESSING_FAILURE");
+  }
+  return text;
+}
+
+function snapshot(record: InMemoryProcessingRecord): WebhookProcessingSnapshot {
+  return {
+    scope: record.scope,
+    state: record.state,
+    ...(record.expiresAtEpochSeconds === undefined ? {} : { expiresAtEpochSeconds: record.expiresAtEpochSeconds }),
+    ...(record.processedAtEpochSeconds === undefined ? {} : { processedAtEpochSeconds: record.processedAtEpochSeconds }),
+    ...(record.failedAtEpochSeconds === undefined ? {} : { failedAtEpochSeconds: record.failedAtEpochSeconds }),
+    ...(record.failureCode === undefined ? {} : { failureCode: record.failureCode }),
+    ...(record.failureMessage === undefined ? {} : { failureMessage: record.failureMessage }),
+  };
 }
 
 function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {

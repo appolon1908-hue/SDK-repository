@@ -16,6 +16,7 @@ import {
 export interface RestrictedGatewayRoutes {
   health: string;
   commands: string;
+  commandReconciliation: string;
   reconciliation: string;
 }
 
@@ -27,6 +28,7 @@ export type WebhookNormalizer = (
 export interface RestrictedGatewayAdapterConfig {
   baseUrl: string;
   tokenProvider: () => Promise<string> | string;
+  workloadIdentity?: string;
   enabled?: boolean;
   enabledOperations?: readonly string[];
   timeoutMs?: number;
@@ -35,9 +37,10 @@ export interface RestrictedGatewayAdapterConfig {
   webhookNormalizer?: WebhookNormalizer;
 }
 
-const DEFAULT_ROUTES: RestrictedGatewayRoutes = {
+export const DEFAULT_RESTRICTED_GATEWAY_ROUTES: RestrictedGatewayRoutes = {
   health: "/health/ready",
   commands: "/internal/v1/codestra/commands",
+  commandReconciliation: "/internal/v1/codestra/commands/{commandId}/reconciliation",
   reconciliation: "/internal/v1/codestra/reconciliation",
 };
 
@@ -45,6 +48,7 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
   private readonly descriptor: ConnectorManifest;
   private readonly baseUrl: URL;
   private readonly tokenProvider: () => Promise<string> | string;
+  private readonly workloadIdentity: string | undefined;
   private readonly enabled: boolean;
   private readonly enabledOperations: ReadonlySet<string>;
   private readonly timeoutMs: number;
@@ -56,16 +60,18 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
     this.descriptor = descriptor;
     this.baseUrl = validateBaseUrl(config.baseUrl);
     this.tokenProvider = config.tokenProvider;
+    this.workloadIdentity = config.workloadIdentity;
     this.enabled = config.enabled ?? false;
     this.enabledOperations = new Set(config.enabledOperations ?? []);
     this.timeoutMs = positiveInteger(config.timeoutMs ?? 10_000, "timeoutMs");
     this.fetchImplementation = config.fetch ?? globalThis.fetch;
-    this.routes = { ...DEFAULT_ROUTES, ...config.routes };
+    this.routes = { ...DEFAULT_RESTRICTED_GATEWAY_ROUTES, ...config.routes };
     this.webhookNormalizer = config.webhookNormalizer;
 
     if (typeof this.fetchImplementation !== "function") {
       throw new TypeError("A Fetch API implementation is required.");
     }
+    if (this.workloadIdentity !== undefined) requireHeader(this.workloadIdentity, "workloadIdentity");
     const declared = new Set(descriptor.operations.map((operation) => operation.name));
     for (const operation of this.enabledOperations) {
       if (!declared.has(operation)) {
@@ -140,22 +146,7 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
       ...(command.expectedVersion !== undefined ? { expectedVersion: command.expectedVersion } : {}),
     }, command.idempotencyKey);
 
-    const status = response.status;
-    if (status !== "accepted" && status !== "completed" && status !== "rejected") {
-      throw new ConnectorError("Restricted gateway returned an invalid command status.", "INVALID_PROVIDER_RESPONSE");
-    }
-    const commandId = response.commandId;
-    if (typeof commandId !== "string") {
-      throw new ConnectorError("Restricted gateway omitted commandId.", "INVALID_PROVIDER_RESPONSE");
-    }
-    return {
-      commandId,
-      status,
-      ...(typeof response.providerReference === "string"
-        ? { providerReference: response.providerReference }
-        : {}),
-      ...(isJsonObject(response.data) ? { data: response.data } : {}),
-    };
+    return parseCommandReceipt(response, command.commandId);
   }
 
   async ingestWebhook(
@@ -169,7 +160,8 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
         "WEBHOOK_VERIFIER_REQUIRED",
       );
     }
-    return this.webhookNormalizer(context, input);
+    const events = await this.webhookNormalizer(context, input);
+    return events.map((event, index) => validateNormalizedEvent(this.descriptor, event, index));
   }
 
   async reconcile(context: ConnectorContext, cursor?: string): Promise<ReconciliationResult> {
@@ -180,12 +172,42 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
     if (!Array.isArray(response.items) || typeof response.hasMore !== "boolean") {
       throw new ConnectorError("Restricted gateway returned an invalid reconciliation page.", "INVALID_PROVIDER_RESPONSE");
     }
-    const items = response.items.filter(isJsonObject);
+    const items = response.items.map((item, index) => {
+      if (!isJsonObject(item)) {
+        throw new ConnectorError(
+          `Restricted gateway returned an invalid reconciliation item at index ${index}.`,
+          "INVALID_PROVIDER_RESPONSE",
+          { details: { index } },
+        );
+      }
+      return item;
+    });
     return {
       items,
       hasMore: response.hasMore,
       ...(typeof response.nextCursor === "string" ? { nextCursor: response.nextCursor } : {}),
     };
+  }
+
+  async reconcileCommand(
+    context: ConnectorContext,
+    command: ConnectorCommand,
+  ): Promise<ConnectorCommandResult | undefined> {
+    this.assertEnabled();
+    const operation = this.descriptor.operations.find((entry) => entry.name === command.operation);
+    if (!operation) {
+      throw new ConnectorPolicyError(`${this.descriptor.key} does not support ${command.operation}.`, "UNKNOWN_OPERATION");
+    }
+    if (!operation.mutates) return undefined;
+    const response = await this.request<JsonObject>(context, "POST", interpolateCommandPath(
+      this.routes.commandReconciliation,
+      command.commandId,
+    ), {
+      operation: command.operation,
+      requestedAt: command.requestedAt,
+    });
+    if (response.result === undefined || response.result === null) return undefined;
+    return parseCommandReceipt(requireJsonObject(response.result, "result"), command.commandId);
   }
 
   private assertEnabled(): void {
@@ -215,6 +237,9 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
       "x-codestra-tenant-id": requireHeader(context.tenantId, "tenantId"),
       "x-correlation-id": requireHeader(context.correlationId, "correlationId"),
     });
+    if (this.workloadIdentity !== undefined) {
+      headers.set("x-codestra-workload-id", requireHeader(this.workloadIdentity, "workloadIdentity"));
+    }
     if (body !== undefined) headers.set("content-type", "application/json");
     if (idempotencyKey !== undefined) headers.set("idempotency-key", requireHeader(idempotencyKey, "idempotencyKey"));
 
@@ -230,8 +255,8 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
 
     try {
       const response = await this.fetchImplementation(resolvePath(this.baseUrl, path), init);
-      const payload = await parseJson(response);
       if (!response.ok) {
+        const payload = await parseErrorBody(response);
         throw new ConnectorError(
           extractMessage(payload) ?? `Restricted gateway returned HTTP ${response.status}.`,
           extractCode(payload) ?? `PROVIDER_HTTP_${response.status}`,
@@ -241,6 +266,7 @@ export abstract class RestrictedGatewayAdapter implements CodestraConnector {
           },
         );
       }
+      const payload = await parseSuccessJson(response);
       return payload as T;
     } catch (error) {
       if (error instanceof ConnectorError) throw error;
@@ -294,6 +320,16 @@ function resolvePath(baseUrl: URL, path: string): URL {
   return new URL(path.replace(/^\/+/, ""), base);
 }
 
+function interpolateCommandPath(path: string, commandId: string): string {
+  if (!path.includes("{commandId}")) {
+    throw new ConnectorPolicyError(
+      "Command reconciliation route must include a {commandId} path parameter.",
+      "INVALID_GATEWAY_ROUTE",
+    );
+  }
+  return path.replace("{commandId}", encodeURIComponent(commandId));
+}
+
 function requireHeader(value: string, name: string): string {
   const normalized = value.trim();
   if (!normalized || /[\r\n]/u.test(normalized)) {
@@ -307,7 +343,7 @@ function positiveInteger(value: number, name: string): number {
   return value;
 }
 
-async function parseJson(response: Response): Promise<JsonObject> {
+async function parseSuccessJson(response: Response): Promise<JsonObject> {
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
     throw new ConnectorError("Restricted gateway returned a non-JSON response.", "INVALID_PROVIDER_RESPONSE");
@@ -317,6 +353,17 @@ async function parseJson(response: Response): Promise<JsonObject> {
     throw new ConnectorError("Restricted gateway returned a non-object response.", "INVALID_PROVIDER_RESPONSE");
   }
   return value;
+}
+
+async function parseErrorBody(response: Response): Promise<JsonObject> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) return {};
+  try {
+    const value = (await response.json()) as unknown;
+    return isJsonObject(value) ? value : {};
+  } catch {
+    return {};
+  }
 }
 
 function extractCode(payload: JsonObject): string | undefined {
@@ -329,6 +376,64 @@ function extractMessage(payload: JsonObject): string | undefined {
 
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function requireJsonObject(value: unknown, path: string): JsonObject {
+  if (!isJsonObject(value)) {
+    throw new ConnectorError(`Restricted gateway returned invalid ${path}.`, "INVALID_PROVIDER_RESPONSE");
+  }
+  return value;
+}
+
+function parseCommandReceipt(response: JsonObject, expectedCommandId: string): ConnectorCommandResult {
+  if (response.commandId !== expectedCommandId) {
+    throw new ConnectorError("Restricted gateway returned a mismatched commandId.", "INVALID_PROVIDER_RESPONSE");
+  }
+  const status = response.status;
+  if (status !== "accepted" && status !== "completed" && status !== "rejected") {
+    throw new ConnectorError("Restricted gateway returned an invalid command status.", "INVALID_PROVIDER_RESPONSE");
+  }
+  if (response.providerReference !== undefined && typeof response.providerReference !== "string") {
+    throw new ConnectorError("Restricted gateway returned an invalid providerReference.", "INVALID_PROVIDER_RESPONSE");
+  }
+  if (response.data !== undefined && !isJsonObject(response.data)) {
+    throw new ConnectorError("Restricted gateway returned invalid command data.", "INVALID_PROVIDER_RESPONSE");
+  }
+  return {
+    commandId: expectedCommandId,
+    status,
+    ...(typeof response.providerReference === "string" ? { providerReference: response.providerReference } : {}),
+    ...(isJsonObject(response.data) ? { data: response.data } : {}),
+    ...(typeof response.replayed === "boolean" ? { replayed: response.replayed } : {}),
+  };
+}
+
+function validateNormalizedEvent(
+  manifest: ConnectorManifest,
+  event: NormalizedConnectorEvent,
+  index: number,
+): NormalizedConnectorEvent {
+  if (!manifest.webhookEventTypes.includes(event.type)) {
+    throw new ConnectorError(
+      `Webhook normalizer returned undeclared event type at index ${index}.`,
+      "UNDECLARED_PROVIDER_EVENT",
+      { details: { connector: manifest.key, eventType: event.type, index } },
+    );
+  }
+  requireHeader(event.id, `events[${index}].id`);
+  requireHeader(event.source, `events[${index}].source`);
+  requireHeader(event.type, `events[${index}].type`);
+  if (!Number.isFinite(Date.parse(event.time))) {
+    throw new ConnectorError("Webhook normalizer returned an invalid event time.", "INVALID_PROVIDER_RESPONSE", {
+      details: { index },
+    });
+  }
+  if (!isJsonObject(event.data)) {
+    throw new ConnectorError("Webhook normalizer returned invalid event data.", "INVALID_PROVIDER_RESPONSE", {
+      details: { index },
+    });
+  }
+  return event;
 }
 
 export function canonicalEvent(input: {

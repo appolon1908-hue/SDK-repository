@@ -7,6 +7,7 @@ export type {
 export {
   CodestraApiError,
   CodestraConfigurationError,
+  CodestraContractViolationError,
   CodestraSdkError,
   CodestraTimeoutError,
 } from "./errors.js";
@@ -14,10 +15,16 @@ export type {
   ChannelDelivery,
   CodestraErrorBody,
   CreateSocialPostInput,
+  ListSocialPostsInput,
   SocialChannel,
   SocialPost,
   SocialPostContent,
+  SocialPostList,
   SocialPostStatus,
+  WebhookDeliveryTest,
   WebhookSubscription,
+  WebhookSubscriptionCreated,
   WebhookSubscriptionInput,
+  WebhookSubscriptionList,
+  WebhookSubscriptionSecretRotation,
 } from "@codestra/contracts";

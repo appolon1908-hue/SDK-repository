@@ -48,6 +48,7 @@ declare module "n8n-workflow" {
     getCredentials(name: string): Promise<ICredentialDataDecryptedObject>;
     getHeaderData(): Record<string, string | string[] | undefined>;
     getBodyData(): IDataObject;
+    getRawBodyData?(): Promise<Buffer | Uint8Array | string>;
     helpers: {
       returnJsonArray(items: IDataObject[]): INodeExecutionData[];
     };

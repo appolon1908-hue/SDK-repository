@@ -30,6 +30,7 @@ export default defineConfig({
         "packages/connector-kit/src/**/*.ts",
         "packages/provider-adapters/src/**/*.ts",
         "packages/svix-delivery/src/**/*.ts",
+        "integrations/n8n-nodes/src/**/*.ts",
       ],
       exclude: ["**/*.d.ts"],
       thresholds: {
