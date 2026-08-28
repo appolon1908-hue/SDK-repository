@@ -83,6 +83,8 @@ export interface CodestraErrorBody {
 export interface CloudEvent<TData = JsonObject> {
   specversion: "1.0";
   id: UUID;
+  /** Tenant binding extension authenticated at every internal event boundary. */
+  tenantid: UUID;
   source: string;
   type: string;
   subject?: string;
@@ -100,3 +102,23 @@ export interface SocialPostStatusEventData {
   deliveries: ChannelDelivery[];
   occurredAt: ISODateTime;
 }
+
+export interface WebhookDeliveryStatusEventData {
+  deliveryId: UUID;
+  endpointId: UUID;
+  status: "queued" | "attempting" | "delivered" | "failed" | "dead_lettered";
+  attempt?: number;
+  occurredAt: ISODateTime;
+}
+
+export interface SocialPostStatusChangedEvent extends CloudEvent<SocialPostStatusEventData> {
+  type: "codestra.social.post.status.v1";
+}
+
+export interface WebhookDeliveryStatusChangedEvent extends CloudEvent<WebhookDeliveryStatusEventData> {
+  type: "codestra.webhook.delivery.status.v1";
+}
+
+export type CodestraCanonicalEvent =
+  | SocialPostStatusChangedEvent
+  | WebhookDeliveryStatusChangedEvent;

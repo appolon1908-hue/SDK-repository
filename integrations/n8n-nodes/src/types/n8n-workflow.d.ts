@@ -44,10 +44,18 @@ declare module "n8n-workflow" {
     };
   }
 
+  export interface IWebhookRequest {
+    method?: string;
+    headers: Record<string, string | string[] | undefined>;
+    rawBody?: string | Uint8Array;
+    readRawBody(): Promise<void>;
+  }
+
   export interface IWebhookFunctions {
     getCredentials(name: string): Promise<ICredentialDataDecryptedObject>;
     getHeaderData(): Record<string, string | string[] | undefined>;
     getBodyData(): IDataObject;
+    getRequestObject(): IWebhookRequest;
     helpers: {
       returnJsonArray(items: IDataObject[]): INodeExecutionData[];
     };

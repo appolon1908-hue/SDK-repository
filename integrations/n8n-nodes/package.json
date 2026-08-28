@@ -1,11 +1,18 @@
 {
   "name": "@codestra/n8n-nodes",
   "version": "0.1.0",
-  "description": "Thin Codestra actions and internal event triggers for n8n.",
+  "description": "Thin Codestra actions plus signed, replay-safe internal event lifecycle nodes for n8n.",
   "license": "MIT",
   "type": "module",
-  "keywords": ["n8n-community-node-package", "codestra", "automation"],
-  "files": ["dist", "README.md"],
+  "keywords": [
+    "n8n-community-node-package",
+    "codestra",
+    "automation"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -17,7 +24,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "peerDependencies": {
     "n8n-workflow": ">=1.0.0 <3.0.0"
@@ -28,10 +35,14 @@
   },
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "credentials": ["dist/credentials/CodestraApi.credentials.js"],
+    "credentials": [
+      "dist/credentials/CodestraApi.credentials.js",
+      "dist/credentials/CodestraInternalWebhook.credentials.js"
+    ],
     "nodes": [
       "dist/nodes/Codestra/Codestra.node.js",
-      "dist/nodes/CodestraInternalTrigger/CodestraInternalTrigger.node.js"
+      "dist/nodes/CodestraInternalTrigger/CodestraInternalTrigger.node.js",
+      "dist/nodes/CodestraInternalEventAck/CodestraInternalEventAck.node.js"
     ]
   },
   "publishConfig": {

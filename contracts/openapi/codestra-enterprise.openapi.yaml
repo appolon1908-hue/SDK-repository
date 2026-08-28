@@ -17,18 +17,9 @@ paths:
           in: path
           required: true
           schema: { type: string, pattern: '^[a-z][a-z0-9-]{1,63}$' }
-        - name: X-Codestra-Tenant-Id
-          in: header
-          required: true
-          schema: { type: string, format: uuid }
-        - name: X-Correlation-Id
-          in: header
-          required: true
-          schema: { type: string, minLength: 8, maxLength: 128 }
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string, minLength: 16, maxLength: 128 }
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -52,15 +43,9 @@ paths:
         - name: connectorKey
           in: path
           required: true
-          schema: { type: string }
-        - name: X-Codestra-Tenant-Id
-          in: header
-          required: true
-          schema: { type: string, format: uuid }
-        - name: X-Correlation-Id
-          in: header
-          required: true
-          schema: { type: string }
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]{1,63}$' }
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: false
         content:
@@ -78,12 +63,84 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReconciliationPage' }
         '403': { $ref: '#/components/responses/Error' }
+  /v1/automation/n8n-deliveries/{deliveryId}/claim:
+    post:
+      operationId: claimN8nEventDelivery
+      summary: Atomically claim one signed internal event delivery for n8n processing
+      description: Creates the durable replay record before n8n starts workflow execution. A second claim for the same delivery returns 409.
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/N8nDeliveryClaimRequest' }
+      responses:
+        '201':
+          description: Delivery claimed atomically
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/N8nDeliveryClaimReceipt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/automation/n8n-deliveries/{deliveryId}/complete:
+    post:
+      operationId: completeN8nEventDelivery
+      summary: Record the terminal workflow outcome for a claimed n8n event delivery
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/N8nDeliveryCompletionRequest' }
+      responses:
+        '200':
+          description: Terminal outcome recorded or replayed idempotently
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/N8nDeliveryCompletionReceipt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     serviceBearer:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  parameters:
+    TenantId:
+      name: X-Codestra-Tenant-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+    DeliveryId:
+      name: deliveryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   responses:
     Error:
       description: Structured Codestra error
@@ -119,3 +176,45 @@ components:
         items: { type: array, items: { type: object } }
         nextCursor: { type: string }
         hasMore: { type: boolean }
+    N8nDeliveryClaimRequest:
+      type: object
+      additionalProperties: false
+      required: [eventId, eventType, eventSource, eventTime, bodySha256, signatureTimestamp, target]
+      properties:
+        eventId: { type: string, format: uuid }
+        eventType: { type: string, minLength: 1, maxLength: 200 }
+        eventSource: { type: string, minLength: 1, maxLength: 512 }
+        eventTime: { type: string, format: date-time }
+        bodySha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        signatureTimestamp: { type: integer, minimum: 1 }
+        target: { const: n8n }
+    N8nDeliveryClaimReceipt:
+      type: object
+      additionalProperties: false
+      required: [claimId, deliveryId, status, claimedAt, expiresAt]
+      properties:
+        claimId: { type: string, format: uuid }
+        deliveryId: { type: string, format: uuid }
+        status: { const: claimed }
+        claimedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    N8nDeliveryCompletionRequest:
+      type: object
+      additionalProperties: false
+      required: [claimId, outcome, completedAt]
+      properties:
+        claimId: { type: string, format: uuid }
+        outcome: { type: string, enum: [completed, failed] }
+        completedAt: { type: string, format: date-time }
+        workflowExecutionId: { type: string, minLength: 1, maxLength: 200 }
+        errorCode: { type: string, minLength: 1, maxLength: 100 }
+    N8nDeliveryCompletionReceipt:
+      type: object
+      additionalProperties: false
+      required: [deliveryId, claimId, status, recordedAt]
+      properties:
+        deliveryId: { type: string, format: uuid }
+        claimId: { type: string, format: uuid }
+        status: { type: string, enum: [completed, failed] }
+        recordedAt: { type: string, format: date-time }
+        replayed: { type: boolean, default: false }
