@@ -28,6 +28,13 @@ export class Codestra implements INodeType {
           { name: "Create Social Post", value: "createSocialPost" },
           { name: "Get Social Post", value: "getSocialPost" },
           { name: "Create Webhook Subscription", value: "createWebhookSubscription" },
+          { name: "List Webhook Subscriptions", value: "listWebhookSubscriptions" },
+          { name: "Get Webhook Subscription", value: "getWebhookSubscription" },
+          { name: "Test Webhook Subscription", value: "testWebhookSubscription" },
+          { name: "Rotate Webhook Secret", value: "rotateWebhookSubscriptionSecret" },
+          { name: "Enable Webhook Subscription", value: "enableWebhookSubscription" },
+          { name: "Disable Webhook Subscription", value: "disableWebhookSubscription" },
+          { name: "Delete Webhook Subscription", value: "deleteWebhookSubscription" },
         ],
       },
       {
@@ -80,6 +87,25 @@ export class Codestra implements INodeType {
         displayOptions: { show: { operation: ["createWebhookSubscription"] } },
       },
       {
+        displayName: "Webhook Subscription ID",
+        name: "subscriptionId",
+        type: "string",
+        default: "",
+        required: true,
+        displayOptions: {
+          show: {
+            operation: [
+              "getWebhookSubscription",
+              "testWebhookSubscription",
+              "rotateWebhookSubscriptionSecret",
+              "enableWebhookSubscription",
+              "disableWebhookSubscription",
+              "deleteWebhookSubscription",
+            ],
+          },
+        },
+      },
+      {
         displayName: "Event Types",
         name: "eventTypes",
         type: "string",
@@ -93,7 +119,7 @@ export class Codestra implements INodeType {
         type: "string",
         default: "={{$execution.id}}-{{$itemIndex}}",
         required: true,
-        displayOptions: { hide: { operation: ["getSocialPost"] } },
+        displayOptions: { hide: { operation: ["getSocialPost", "listWebhookSubscriptions", "getWebhookSubscription"] } },
       },
       {
         displayName: "Correlation ID",
@@ -158,6 +184,30 @@ export class Codestra implements INodeType {
           endpointUrl: requireHttpsUrl(this.getNodeParameter("endpointUrl", itemIndex)),
           eventTypes: commaSeparated(this.getNodeParameter("eventTypes", itemIndex), "eventTypes"),
         };
+      } else if (operation === "listWebhookSubscriptions") {
+        request.url = `${baseUrl}/v1/webhook-subscriptions`;
+      } else if (operation === "getWebhookSubscription") {
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}`;
+      } else if (operation === "testWebhookSubscription") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/test`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "rotateWebhookSubscriptionSecret") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/rotate-secret`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "enableWebhookSubscription") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/enable`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "disableWebhookSubscription") {
+        request.method = "POST";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}/disable`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
+      } else if (operation === "deleteWebhookSubscription") {
+        request.method = "DELETE";
+        request.url = `${baseUrl}/v1/webhook-subscriptions/${encodeURIComponent(requireString(this.getNodeParameter("subscriptionId", itemIndex), "subscriptionId"))}`;
+        headers["idempotency-key"] = requireIdempotencyKey(this.getNodeParameter("idempotencyKey", itemIndex));
       } else {
         throw new Error(`Unsupported Codestra operation: ${operation}`);
       }

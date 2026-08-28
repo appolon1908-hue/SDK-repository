@@ -66,8 +66,45 @@ export interface WebhookSubscription {
   id: UUID;
   endpointUrl: string;
   eventTypes: string[];
-  status: "active" | "disabled";
+  status: "pending_verification" | "active" | "disabled" | "verification_failed";
+  verification?: {
+    status: "pending" | "verified" | "failed";
+    challengeId?: string;
+    verifiedAt?: ISODateTime;
+    lastAttemptAt?: ISODateTime;
+    failureCode?: string;
+  };
+  destinationPolicy?: {
+    httpsOnly: true;
+    privateAddressBlocked: true;
+    redirectsBlocked: true;
+  };
   createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+  disabledAt?: ISODateTime;
+}
+
+export interface WebhookSubscriptionCreated {
+  subscription: WebhookSubscription;
+  signingSecret: string;
+}
+
+export interface WebhookSubscriptionList {
+  items: WebhookSubscription[];
+  nextCursor?: string;
+}
+
+export interface WebhookDeliveryTest {
+  deliveryId: UUID;
+  subscriptionId: UUID;
+  status: "queued" | "rejected";
+  acceptedAt: ISODateTime;
+}
+
+export interface WebhookSubscriptionSecretRotation {
+  subscription: WebhookSubscription;
+  signingSecret: string;
+  previousSecretExpiresAt: ISODateTime;
 }
 
 export interface CodestraErrorBody {

@@ -3,8 +3,12 @@ import type {
   CreateSocialPostInput,
   SocialPost,
   UUID,
+  WebhookDeliveryTest,
   WebhookSubscription,
+  WebhookSubscriptionCreated,
   WebhookSubscriptionInput,
+  WebhookSubscriptionList,
+  WebhookSubscriptionSecretRotation,
 } from "@codestra/contracts";
 import {
   CodestraApiError,
@@ -37,7 +41,7 @@ export interface MutationRequestOptions extends RequestOptions {
 }
 
 interface InternalRequestOptions extends RequestOptions {
-  method: "GET" | "POST";
+  method: "DELETE" | "GET" | "POST";
   path: string;
   body?: unknown;
   idempotencyKey?: string;
@@ -56,7 +60,17 @@ export class CodestraClient {
       create: (
         input: WebhookSubscriptionInput,
         options: MutationRequestOptions,
-      ) => Promise<WebhookSubscription>;
+      ) => Promise<WebhookSubscriptionCreated>;
+      list: (options?: RequestOptions) => Promise<WebhookSubscriptionList>;
+      get: (subscriptionId: UUID, options?: RequestOptions) => Promise<WebhookSubscription>;
+      test: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<WebhookDeliveryTest>;
+      rotateSecret: (
+        subscriptionId: UUID,
+        options: MutationRequestOptions,
+      ) => Promise<WebhookSubscriptionSecretRotation>;
+      enable: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<WebhookSubscription>;
+      disable: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<WebhookSubscription>;
+      delete: (subscriptionId: UUID, options: MutationRequestOptions) => Promise<void>;
     };
   };
 
@@ -112,10 +126,57 @@ export class CodestraClient {
     this.webhooks = {
       subscriptions: {
         create: (input, requestOptions) =>
-          this.request<WebhookSubscription>({
+          this.request<WebhookSubscriptionCreated>({
             method: "POST",
             path: "/v1/webhook-subscriptions",
             body: input,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            ...copyRequestOptions(requestOptions),
+          }),
+        list: (requestOptions) =>
+          this.request<WebhookSubscriptionList>({
+            method: "GET",
+            path: "/v1/webhook-subscriptions",
+            ...copyRequestOptions(requestOptions),
+          }),
+        get: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscription>({
+            method: "GET",
+            path: webhookSubscriptionPath(subscriptionId),
+            ...copyRequestOptions(requestOptions),
+          }),
+        test: (subscriptionId, requestOptions) =>
+          this.request<WebhookDeliveryTest>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/test`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            ...copyRequestOptions(requestOptions),
+          }),
+        rotateSecret: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscriptionSecretRotation>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/rotate-secret`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            ...copyRequestOptions(requestOptions),
+          }),
+        enable: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscription>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/enable`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            ...copyRequestOptions(requestOptions),
+          }),
+        disable: (subscriptionId, requestOptions) =>
+          this.request<WebhookSubscription>({
+            method: "POST",
+            path: `${webhookSubscriptionPath(subscriptionId)}/disable`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
+            ...copyRequestOptions(requestOptions),
+          }),
+        delete: (subscriptionId, requestOptions) =>
+          this.request<void>({
+            method: "DELETE",
+            path: webhookSubscriptionPath(subscriptionId),
             idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
             ...copyRequestOptions(requestOptions),
           }),
@@ -252,6 +313,10 @@ function requireIdempotencyKey(value: string): string {
     throw new CodestraConfigurationError("idempotencyKey must contain between 16 and 128 characters.");
   }
   return key;
+}
+
+function webhookSubscriptionPath(subscriptionId: UUID): string {
+  return `/v1/webhook-subscriptions/${encodeURIComponent(requirePathSegment(subscriptionId, "subscriptionId"))}`;
 }
 
 function requireNonNegativeInteger(value: number, name: string, allowZero: boolean): number {
