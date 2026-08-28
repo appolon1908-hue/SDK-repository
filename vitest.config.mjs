@@ -5,6 +5,7 @@ export default defineConfig({
     environment: "node",
     globals: false,
     include: [
+      "test/**/*.test.ts",
       "packages/**/test/**/*.test.ts",
       "integrations/**/test/**/*.test.ts",
     ],
