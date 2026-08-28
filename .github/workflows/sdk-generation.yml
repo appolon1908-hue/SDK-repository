@@ -7,6 +7,8 @@ on:
       - 'codegen/**'
       - 'scripts/generate-sdks.sh'
       - 'scripts/verify-generated-sdks.mjs'
+      - 'scripts/smoke_test_python_sdk.py'
+      - 'scripts/smoke_test_php_sdk.php'
       - 'scripts/validate-contracts.mjs'
       - 'scripts/validate-json-schemas.mjs'
       - 'package.json'
@@ -52,9 +54,18 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install exact dependencies
         run: pnpm install --frozen-lockfile
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:2
       - name: Validate canonical contract semantically
         run: pnpm contracts:validate
-      - name: Generate Python and PHP clients
+      - name: Generate Python and PHP clients and smoke-test both
         run: scripts/generate-sdks.sh
       - name: Archive exact-SHA clients
         run: |

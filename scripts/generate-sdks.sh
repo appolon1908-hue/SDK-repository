@@ -33,3 +33,14 @@ run_generator python codegen/python.yaml generated/python
 run_generator php codegen/php.yaml generated/php
 
 node "$ROOT/scripts/verify-generated-sdks.mjs" "$ROOT/generated"
+
+# Structural validation above only proves the generator produced files --
+# it has previously passed on a PHP SDK that could not even be parsed
+# (see the invokerPackage note in codegen/php.yaml's git history). These
+# smoke tests actually install and run each generated client.
+python3 -m venv "$ROOT/generated/python/.venv"
+"$ROOT/generated/python/.venv/bin/pip" install --quiet -r "$ROOT/generated/python/requirements.txt"
+"$ROOT/generated/python/.venv/bin/python" "$ROOT/scripts/smoke_test_python_sdk.py" "$ROOT/generated/python"
+
+composer install --no-interaction --quiet --working-dir="$ROOT/generated/php"
+php "$ROOT/scripts/smoke_test_php_sdk.php" "$ROOT/generated/php"
