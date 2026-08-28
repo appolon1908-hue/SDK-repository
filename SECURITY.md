@@ -12,3 +12,7 @@ Report vulnerabilities through the repository's private GitHub Security Advisory
 - Raw webhook bytes are verified before parsing.
 - Provider credentials and production mappings never belong in this repository.
 - Optional delivery and protocol services remain disabled by default.
+
+## Production setup
+
+Password reset, SMTP, OIDC clients, provider credentials, DNS, Kong, and deployed Middleware settings must be configured outside this SDK repository. Track the required owners and verification gates in [docs/PRODUCTION_CONFIGURATION_CHECKLIST.md](docs/PRODUCTION_CONFIGURATION_CHECKLIST.md).

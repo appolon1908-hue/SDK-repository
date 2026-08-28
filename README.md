@@ -24,3 +24,7 @@ Each branch is based on the preceding branch so reviews remain small and the rel
 SDKs and connectors never bypass Codestra Middleware. Middleware remains the only cross-system write authority and owns authorization, tenant isolation, idempotency, inbox/outbox processing, retries, reconciliation, audit, and privileged credentials.
 
 Optional runtime integrations are disabled by default and must not activate external delivery or production mutations merely by installing this repository.
+
+## Production configuration
+
+Password reset, SMTP, OIDC clients, provider credentials, DNS, Kong, and deployed Middleware settings are intentionally outside this SDK repository. Use [docs/PRODUCTION_CONFIGURATION_CHECKLIST.md](docs/PRODUCTION_CONFIGURATION_CHECKLIST.md) to verify those owners and gates before any production activation.
