@@ -54,13 +54,19 @@ export async function assertSafeWebhookDestination(
   const hostname = url.hostname;
   const port = url.port ? Number(url.port) : 443;
 
-  const ipFamily = isIP(hostname);
+  // WHATWG URL keeps the brackets in .hostname for an IPv6 literal (e.g.
+  // "[::1]"), which node:net's isIP() does not recognize as an IP at all —
+  // it would fall through to the DNS-lookup branch below and fail as
+  // "unresolvable" instead of being rejected as private/reserved. Strip
+  // them before the IP check; both the check and the returned address use
+  // the bracket-free form.
+  const literalAddress = hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+  const ipFamily = isIP(literalAddress);
   if (ipFamily !== 0) {
-    // The host is already a literal IP address (bracket-stripped by URL for IPv6).
-    if (!allowInsecure && !isPublicAddress(hostname, ipFamily === 4 ? 4 : 6)) {
+    if (!allowInsecure && !isPublicAddress(literalAddress, ipFamily === 4 ? 4 : 6)) {
       throw unprocessable("PRIVATE_WEBHOOK_DESTINATION", "Webhook endpointUrl resolves to a private, loopback, or reserved address.");
     }
-    return { hostname, port, addresses: [{ address: hostname, family: ipFamily === 4 ? 4 : 6 }] };
+    return { hostname, port, addresses: [{ address: literalAddress, family: ipFamily === 4 ? 4 : 6 }] };
   }
 
   if (!allowInsecure && (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local"))) {

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import {
   canonicalizeJson,
@@ -46,8 +45,18 @@ export async function runIdempotentMutation<T extends JsonObject>(
   work: () => Promise<MutationOutcome<T>>,
   ttls: IdempotentMutationTtls = DEFAULT_TTLS,
 ): Promise<{ outcome: MutationOutcome<T>; replayed: boolean }> {
-  const commandId = randomUUID();
   const scope = `${params.tenantId}:${params.namespace}:${params.operation}:${params.idempotencyKey}`;
+  // Deterministic, not randomUUID(): the store's begin() (mirroring
+  // InMemoryConnectorIdempotencyStore in @codestra/connector-kit) treats
+  // commandId as part of the caller's identity for the command and rejects
+  // a mismatch as request_mismatch. The enterprise connector API gets that
+  // stability for free because its caller supplies commandId once and
+  // reuses it on retry. The public Idempotency-Key API has no client-
+  // supplied commandId, so every replay of the identical key+payload must
+  // derive the identical commandId here too, or every replay looks like a
+  // different command and is wrongly rejected as a mismatch instead of
+  // replayed.
+  const commandId = deterministicCommandId(scope);
   const requestHash = sha256Hex(
     canonicalizeJson({ tenantId: params.tenantId, operation: params.operation, payload: params.payload }),
   );
@@ -146,4 +155,14 @@ function errorFromCachedRejection(statusCode: number, body: JsonObject): Codestr
 
 function sha256Hex(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/** UUID v5-shaped, derived deterministically from `scope` so every replay of the same (tenant, operation, Idempotency-Key) computes the identical commandId. */
+function deterministicCommandId(scope: string): string {
+  const digest = createHash("sha256").update(scope).digest();
+  const bytes = Buffer.from(digest.subarray(0, 16));
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
