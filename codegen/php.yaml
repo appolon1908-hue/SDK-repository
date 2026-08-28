@@ -1,4 +1,4 @@
-invokerPackage: Codestra\\Sdk
+invokerPackage: Codestra\Sdk
 packageName: CodestraSdk
 composerVendorName: codestra
 composerProjectName: sdk
