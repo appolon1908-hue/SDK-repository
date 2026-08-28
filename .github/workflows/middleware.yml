@@ -1,0 +1,68 @@
+name: Middleware service
+
+on:
+  pull_request:
+    paths:
+      - "services/middleware/**"
+      - "packages/contracts/**"
+      - "packages/connector-kit/**"
+      - "packages/webhook-sdk/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/middleware.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: middleware-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: codestra_middleware
+          POSTGRES_USER: codestra
+          POSTGRES_PASSWORD: codestra
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U codestra -d codestra_middleware"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      # Tests spin up their own real, local JWKS HTTP server and set
+      # OIDC_ISSUER/OIDC_JWKS_URL/OIDC_AUDIENCE per-test (see
+      # services/middleware/test/support) — only the database needs to be
+      # wired here.
+      DATABASE_URL: postgresql://codestra:codestra@localhost:5432/codestra_middleware
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build @codestra/middleware and its workspace dependencies
+        run: pnpm --filter @codestra/middleware... build
+      - name: Type-check @codestra/middleware
+        run: pnpm --filter @codestra/middleware typecheck
+      - name: Apply Prisma migrations and run integration tests against real Postgres
+        run: pnpm --filter @codestra/middleware test
