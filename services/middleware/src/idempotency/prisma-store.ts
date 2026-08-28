@@ -259,7 +259,7 @@ interface RawRow {
 
 async function selectForUpdate(tx: Prisma.TransactionClient, scope: string): Promise<RawRow | undefined> {
   const rows = await tx.$queryRaw<RawRow[]>(
-    Prisma.sql`SELECT scope, tenant_id, request_hash, command_id, state, lease_token, lease_expires_at, result_json, outcome_json
+    Prisma.sql`SELECT scope, "tenantId" AS tenant_id, request_hash, command_id, state, lease_token, lease_expires_at, result_json, outcome_json
                FROM idempotent_commands WHERE scope = ${scope} FOR UPDATE`,
   );
   return rows[0];
