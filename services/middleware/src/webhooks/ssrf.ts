@@ -133,9 +133,14 @@ function isPublicIPv6(address: string): boolean {
   if (normalized === "::") return false; // unspecified
 
   // IPv4-mapped (::ffff:a.b.c.d) and IPv4-compatible/NAT64 addresses: judge
-  // by the embedded IPv4 address instead.
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(normalized) ?? /^64:ff9b::(\d+\.\d+\.\d+\.\d+)$/u.exec(normalized);
-  if (mapped?.[1]) return isPublicIPv4(mapped[1]);
+  // by the embedded IPv4 address instead. WHATWG URL's IPv6 serializer
+  // never keeps the dotted-quad form for a bracketed URL literal -- it
+  // always emits the embedded IPv4 as compressed hex groups (so
+  // "[::ffff:10.0.0.5]" becomes hostname "[::ffff:a00:5]", not
+  // "[::ffff:10.0.0.5]") -- so both forms have to be checked, not just the
+  // dotted one a resolved DNS record might still use.
+  const mappedIPv4 = extractMappedIPv4(normalized);
+  if (mappedIPv4) return isPublicIPv4(mappedIPv4);
 
   const firstGroup = normalized.split(":")[0] ?? "";
   const firstHextet = Number.parseInt(firstGroup.padStart(1, "0") || "0", 16);
@@ -148,4 +153,28 @@ function isPublicIPv6(address: string): boolean {
   if (normalized.startsWith("ff")) return false; // multicast
 
   return true;
+}
+
+/**
+ * Returns the embedded IPv4 address (dotted-quad) for an IPv4-mapped
+ * (`::ffff:.../96`) or IPv4-compatible/NAT64 (`64:ff9b::/96`) IPv6 address,
+ * accepting both the dotted-quad suffix a resolved DNS record might carry
+ * and the compressed-hex-groups suffix WHATWG URL always serializes for a
+ * bracketed literal. Returns null for anything else.
+ */
+function extractMappedIPv4(normalized: string): string | null {
+  const dottedMatch =
+    /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(normalized) ?? /^64:ff9b::(\d+\.\d+\.\d+\.\d+)$/u.exec(normalized);
+  if (dottedMatch?.[1]) return dottedMatch[1];
+
+  const hexMatch =
+    /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/u.exec(normalized) ??
+    /^64:ff9b::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/u.exec(normalized);
+  if (hexMatch) {
+    const hi = Number.parseInt(hexMatch[1]!, 16);
+    const lo = Number.parseInt(hexMatch[2]!, 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+
+  return null;
 }
