@@ -10,19 +10,26 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "test": "turbo run test",
+    "test": "turbo run build && pnpm test:coverage",
+    "test:unit": "vitest run --config vitest.config.mjs",
+    "test:coverage": "vitest run --config vitest.config.mjs --coverage",
     "typecheck": "turbo run typecheck",
     "contracts:validate": "node scripts/validate-contracts.mjs",
-    "ci": "pnpm contracts:validate && pnpm typecheck && pnpm test",
+    "contracts:validate:negative": "node scripts/test-contract-validator.mjs",
+    "ci": "pnpm contracts:validate && pnpm contracts:validate:negative && pnpm build && pnpm typecheck && pnpm test:coverage",
     "contracts:drift": "node scripts/check-contract-drift.mjs",
     "workflows:validate": "node scripts/validate-workflow-policy.mjs",
     "pacts:validate": "node scripts/validate-pacts.mjs"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.6",
-    "turbo": "^2.5.6",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4",
-    "yaml": "^2.8.1"
+    "@changesets/cli": "2.31.1",
+    "@redocly/cli": "2.47.0",
+    "@vitest/coverage-v8": "3.2.7",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "turbo": "2.10.12",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7",
+    "yaml": "2.9.0"
   }
 }

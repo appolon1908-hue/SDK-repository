@@ -13,9 +13,13 @@ concurrency:
   group: compatibility-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REDOCLY_TELEMETRY: off
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
+
 jobs:
   compatibility:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout exact revision
@@ -32,11 +36,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
       - name: Validate workflow security policy
         run: pnpm workflows:validate
-      - name: Validate current contracts
+      - name: Validate current contracts semantically
         run: pnpm contracts:validate
       - name: Materialize base public contract
         env:
@@ -55,7 +61,7 @@ jobs:
       - name: Upload Pact evidence
         uses: actions/upload-artifact@v4
         with:
-          name: consumer-pacts-${{ github.sha }}
+          name: consumer-pacts-${{ github.event.pull_request.head.sha || github.sha }}
           path: pact/pacts/*.json
           if-no-files-found: error
           retention-days: 7

@@ -10,6 +10,10 @@ concurrency:
   group: workspace-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REDOCLY_TELEMETRY: off
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
+
 jobs:
   verify:
     runs-on: ubuntu-24.04
@@ -28,13 +32,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-      - name: Validate canonical contracts
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate canonical contracts semantically
         run: pnpm contracts:validate
+      - name: Prove invalid contracts fail closed
+        run: pnpm contracts:validate:negative
       - name: Build workspace
         run: pnpm build
       - name: Type-check workspace
         run: pnpm typecheck
-      - name: Test workspace
-        run: pnpm test
+      - name: Test workspace with coverage floor
+        run: pnpm test:coverage

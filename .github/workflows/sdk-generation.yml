@@ -7,6 +7,10 @@ on:
       - 'codegen/**'
       - 'scripts/generate-sdks.sh'
       - 'scripts/verify-generated-sdks.mjs'
+      - 'scripts/validate-contracts.mjs'
+      - 'scripts/validate-json-schemas.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/sdk-generation.yml'
   push:
     branches:
@@ -22,37 +26,48 @@ concurrency:
 env:
   OPENAPI_GENERATOR_VERSION: 7.15.0
   OPENAPI_GENERATOR_IMAGE: openapitools/openapi-generator-cli:v7.15.0
+  REDOCLY_TELEMETRY: off
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   generate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout exact revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate canonical contract
-        run: node scripts/validate-contracts.mjs
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate canonical contract semantically
+        run: pnpm contracts:validate
       - name: Generate Python and PHP clients
         run: scripts/generate-sdks.sh
       - name: Archive exact-SHA clients
         run: |
-          tar -C generated/python -czf "generated/codestra-python-${GITHUB_SHA}.tar.gz" .
-          tar -C generated/php -czf "generated/codestra-php-${GITHUB_SHA}.tar.gz" .
+          tar -C generated/python -czf "generated/codestra-python-${SOURCE_SHA}.tar.gz" .
+          tar -C generated/php -czf "generated/codestra-php-${SOURCE_SHA}.tar.gz" .
           sha256sum generated/*.tar.gz > generated/SHA256SUMS
       - name: Upload generation evidence
         uses: actions/upload-artifact@v4
         with:
-          name: generated-sdks-${{ github.sha }}
+          name: generated-sdks-${{ env.SOURCE_SHA }}
           path: |
-            generated/codestra-python-${{ github.sha }}.tar.gz
-            generated/codestra-php-${{ github.sha }}.tar.gz
+            generated/codestra-python-${{ env.SOURCE_SHA }}.tar.gz
+            generated/codestra-php-${{ env.SOURCE_SHA }}.tar.gz
             generated/SHA256SUMS
           if-no-files-found: error
           retention-days: 7

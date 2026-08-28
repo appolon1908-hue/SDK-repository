@@ -6,6 +6,11 @@ on:
       - 'contracts/**'
       - 'packages/contracts/**'
       - 'scripts/validate-contracts.mjs'
+      - 'scripts/validate-json-schemas.mjs'
+      - 'scripts/test-contract-validator.mjs'
+      - 'test/fixtures/contracts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/contracts.yml'
   push:
     branches:
@@ -18,9 +23,13 @@ concurrency:
   group: contracts-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REDOCLY_TELEMETRY: off
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
+
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout exact revision
@@ -36,10 +45,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-      - name: Validate canonical contracts
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate canonical contracts semantically
         run: pnpm contracts:validate
+      - name: Prove invalid contracts fail closed
+        run: pnpm contracts:validate:negative
       - name: Type-check contract package
         run: pnpm --filter @codestra/contracts typecheck
       - name: Test contract package
