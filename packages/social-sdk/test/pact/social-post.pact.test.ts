@@ -105,6 +105,70 @@ describe("Codestra Middleware consumer contract", () => {
     });
   });
 
+  it("lists tenant social posts with filters", async () => {
+    provider
+      .given("a tenant has social posts")
+      .uponReceiving("a filtered social post list request")
+      .withRequest({
+        method: "GET",
+        path: "/v1/social/posts",
+        query: {
+          workspaceId: syntheticIdentity.workspaceId,
+          status: "accepted",
+          limit: "25",
+        },
+        headers: {
+          authorization: `Bearer ${syntheticAccessToken()}`,
+          "x-codestra-tenant-id": syntheticIdentity.tenantId,
+          "x-correlation-id": syntheticIdentity.correlationId,
+        },
+      })
+      .willRespondWith({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: like({
+          items: [socialPost("accepted")],
+          nextCursor: "cursor-2",
+        }),
+      });
+
+    await provider.executeTest(async (mockServer) => {
+      await pactClient(mockServer.url).social.posts.list({
+        workspaceId: syntheticIdentity.workspaceId,
+        status: "accepted",
+        limit: 25,
+      });
+    });
+  });
+
+  it("accepts an idempotent social post cancellation command", async () => {
+    provider
+      .given("a tenant has a cancellable social post")
+      .uponReceiving("an idempotent social post cancellation command")
+      .withRequest({
+        method: "POST",
+        path: `/v1/social/posts/${syntheticIdentity.postId}/cancel`,
+        headers: {
+          authorization: `Bearer ${syntheticAccessToken()}`,
+          "x-codestra-tenant-id": syntheticIdentity.tenantId,
+          "x-correlation-id": syntheticIdentity.correlationId,
+          "idempotency-key": syntheticIdentity.idempotencyKey,
+        },
+      })
+      .willRespondWith({
+        status: 202,
+        headers: { "content-type": "application/json" },
+        body: like(socialPost("cancelled")),
+      });
+
+    await provider.executeTest(async (mockServer) => {
+      await pactClient(mockServer.url).social.posts.cancel(
+        syntheticIdentity.postId,
+        { idempotencyKey: syntheticIdentity.idempotencyKey },
+      );
+    });
+  });
+
   it("reads and manages webhook subscriptions", async () => {
     provider
       .given("a tenant has an active webhook subscription")
@@ -152,6 +216,19 @@ function webhookSubscription(status: "active" | "pending_verification") {
       privateAddressBlocked: true,
       redirectsBlocked: true,
     },
+    createdAt: "2026-08-27T00:00:00Z",
+    updatedAt: "2026-08-27T00:00:00Z",
+  };
+}
+
+function socialPost(status: "accepted" | "cancelled") {
+  return {
+    id: syntheticIdentity.postId,
+    tenantId: syntheticIdentity.tenantId,
+    workspaceId: syntheticIdentity.workspaceId,
+    status,
+    channels: [{ channel: "linkedin", status }],
+    content: { text: "Compatibility test" },
     createdAt: "2026-08-27T00:00:00Z",
     updatedAt: "2026-08-27T00:00:00Z",
   };

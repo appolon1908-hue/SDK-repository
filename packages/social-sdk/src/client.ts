@@ -1,7 +1,9 @@
 import type {
   CodestraErrorBody,
   CreateSocialPostInput,
+  ListSocialPostsInput,
   SocialPost,
+  SocialPostList,
   UUID,
   WebhookDeliveryTest,
   WebhookSubscription,
@@ -18,12 +20,14 @@ import {
 } from "./errors.js";
 import {
   parseSocialPost,
+  parseSocialPostList,
   parseWebhookDeliveryTest,
   parseWebhookSubscription,
   parseWebhookSubscriptionCreated,
   parseWebhookSubscriptionList,
   parseWebhookSubscriptionSecretRotation,
   validateCreateSocialPostInput,
+  validateListSocialPostsInput,
   validateWebhookSubscriptionInput,
 } from "./validation.js";
 
@@ -62,7 +66,9 @@ export class CodestraClient {
   readonly social: {
     posts: {
       create: (input: CreateSocialPostInput, options: MutationRequestOptions) => Promise<SocialPost>;
+      list: (input?: ListSocialPostsInput, options?: RequestOptions) => Promise<SocialPostList>;
       get: (postId: UUID, options?: RequestOptions) => Promise<SocialPost>;
+      cancel: (postId: UUID, options: MutationRequestOptions) => Promise<SocialPost>;
     };
   };
 
@@ -126,10 +132,25 @@ export class CodestraClient {
             validate: parseSocialPost,
             ...copyRequestOptions(requestOptions),
           }),
+        list: (input = {}, requestOptions) =>
+          this.request<SocialPostList>({
+            method: "GET",
+            path: withQuery("/v1/social/posts", validateListSocialPostsInput(input)),
+            validate: parseSocialPostList,
+            ...copyRequestOptions(requestOptions),
+          }),
         get: (postId, requestOptions) =>
           this.request<SocialPost>({
             method: "GET",
             path: `/v1/social/posts/${encodeURIComponent(requirePathSegment(postId, "postId"))}`,
+            validate: parseSocialPost,
+            ...copyRequestOptions(requestOptions),
+          }),
+        cancel: (postId, requestOptions) =>
+          this.request<SocialPost>({
+            method: "POST",
+            path: `/v1/social/posts/${encodeURIComponent(requirePathSegment(postId, "postId"))}/cancel`,
+            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
             validate: parseSocialPost,
             ...copyRequestOptions(requestOptions),
           }),
@@ -343,6 +364,16 @@ function parseValidatedSuccess<T>(value: unknown, validate: ((value: unknown) =>
 
 function webhookSubscriptionPath(subscriptionId: UUID): string {
   return `/v1/webhook-subscriptions/${encodeURIComponent(requirePathSegment(subscriptionId, "subscriptionId"))}`;
+}
+
+function withQuery(path: string, query: ListSocialPostsInput): string {
+  const params = new URLSearchParams();
+  if (query.cursor !== undefined) params.set("cursor", query.cursor);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.workspaceId !== undefined) params.set("workspaceId", query.workspaceId);
+  if (query.status !== undefined) params.set("status", query.status);
+  const serialized = params.toString();
+  return serialized ? `${path}?${serialized}` : path;
 }
 
 function requireNonNegativeInteger(value: number, name: string, allowZero: boolean): number {

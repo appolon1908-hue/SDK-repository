@@ -36,6 +36,13 @@ export interface CreateSocialPostInput {
   metadata?: JsonObject;
 }
 
+export interface ListSocialPostsInput {
+  cursor?: string;
+  limit?: number;
+  workspaceId?: UUID;
+  status?: SocialPostStatus;
+}
+
 export interface ChannelDelivery {
   channel: SocialChannel;
   status: SocialPostStatus;
@@ -54,6 +61,11 @@ export interface SocialPost {
   publishAt?: ISODateTime;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
+}
+
+export interface SocialPostList {
+  items: SocialPost[];
+  nextCursor?: string;
 }
 
 export interface WebhookSubscriptionInput {

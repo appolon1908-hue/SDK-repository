@@ -9,6 +9,39 @@ security:
   - oidc: []
 paths:
   /v1/social/posts:
+    get:
+      operationId: listSocialPosts
+      summary: List tenant-owned social posts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 1000 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: workspaceId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SocialPostStatus'
+      responses:
+        '200':
+          description: Current tenant social posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialPostList'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
     post:
       operationId: createSocialPost
       summary: Create or schedule a social post
@@ -56,6 +89,31 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /v1/social/posts/{postId}/cancel:
+    post:
+      operationId: cancelSocialPost
+      summary: Cancel one tenant-owned social post through Middleware
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Cancellation accepted for asynchronous processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialPost'
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions:
     get:
       operationId: listWebhookSubscriptions
@@ -288,6 +346,15 @@ components:
         publishAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    SocialPostList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SocialPost' }
+        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
     ChannelDelivery:
       type: object
       additionalProperties: false

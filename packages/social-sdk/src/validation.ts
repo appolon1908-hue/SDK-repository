@@ -1,6 +1,8 @@
 import type {
   CreateSocialPostInput,
+  ListSocialPostsInput,
   SocialPost,
+  SocialPostList,
   WebhookDeliveryTest,
   WebhookSubscription,
   WebhookSubscriptionCreated,
@@ -30,6 +32,15 @@ export function validateCreateSocialPostInput(input: CreateSocialPostInput): Cre
   return input;
 }
 
+export function validateListSocialPostsInput(input: ListSocialPostsInput): ListSocialPostsInput {
+  const value = object(input, "query");
+  if (value.cursor !== undefined) boundedString(value.cursor, "query.cursor", 1, 1000);
+  if (value.limit !== undefined) integer(value.limit, "query.limit", 1, 100);
+  if (value.workspaceId !== undefined) uuid(value.workspaceId, "query.workspaceId");
+  if (value.status !== undefined) enumValue(value.status, SOCIAL_STATUSES, "query.status");
+  return input;
+}
+
 export function validateWebhookSubscriptionInput(input: WebhookSubscriptionInput): WebhookSubscriptionInput {
   const value = object(input, "body");
   httpsUrl(value.endpointUrl, "body.endpointUrl");
@@ -38,22 +49,29 @@ export function validateWebhookSubscriptionInput(input: WebhookSubscriptionInput
   return input;
 }
 
-export function parseSocialPost(value: unknown): SocialPost {
-  const post = object(value, "response");
-  uuid(post.id, "response.id");
-  uuid(post.tenantId, "response.tenantId");
-  uuid(post.workspaceId, "response.workspaceId");
-  enumValue(post.status, SOCIAL_STATUSES, "response.status");
-  nonEmptyArray(post.channels, "response.channels", true).forEach((delivery, index) => {
-    const item = object(delivery, `response.channels[${index}]`);
-    enumValue(item.channel, SOCIAL_CHANNELS, `response.channels[${index}].channel`);
-    enumValue(item.status, SOCIAL_STATUSES, `response.channels[${index}].status`);
+export function parseSocialPost(value: unknown, path = "response"): SocialPost {
+  const post = object(value, path);
+  uuid(post.id, `${path}.id`);
+  uuid(post.tenantId, `${path}.tenantId`);
+  uuid(post.workspaceId, `${path}.workspaceId`);
+  enumValue(post.status, SOCIAL_STATUSES, `${path}.status`);
+  nonEmptyArray(post.channels, `${path}.channels`, true).forEach((delivery, index) => {
+    const item = object(delivery, `${path}.channels[${index}]`);
+    enumValue(item.channel, SOCIAL_CHANNELS, `${path}.channels[${index}].channel`);
+    enumValue(item.status, SOCIAL_STATUSES, `${path}.channels[${index}].status`);
   });
-  object(post.content, "response.content");
-  if (post.publishAt !== undefined) dateTime(post.publishAt, "response.publishAt");
-  dateTime(post.createdAt, "response.createdAt");
-  dateTime(post.updatedAt, "response.updatedAt");
+  object(post.content, `${path}.content`);
+  if (post.publishAt !== undefined) dateTime(post.publishAt, `${path}.publishAt`);
+  dateTime(post.createdAt, `${path}.createdAt`);
+  dateTime(post.updatedAt, `${path}.updatedAt`);
   return post as unknown as SocialPost;
+}
+
+export function parseSocialPostList(value: unknown): SocialPostList {
+  const list = object(value, "response");
+  const items = nonEmptyArray(list.items, "response.items", true).map((item, index) => parseSocialPost(item, `response.items[${index}]`));
+  if (list.nextCursor !== undefined) boundedString(list.nextCursor, "response.nextCursor", 1, 1000);
+  return { items, ...(list.nextCursor === undefined ? {} : { nextCursor: String(list.nextCursor) }) };
 }
 
 export function parseWebhookSubscription(value: unknown, path = "response"): WebhookSubscription {
@@ -133,6 +151,13 @@ function dateTime(value: unknown, path: string): string {
   const text = boundedString(value, path, 1, 100);
   if (Number.isNaN(Date.parse(text))) violation(`${path} must be a date-time.`, path);
   return text;
+}
+
+function integer(value: unknown, path: string, min: number, max: number): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) {
+    violation(`${path} must be an integer between ${min} and ${max}.`, path);
+  }
+  return value;
 }
 
 function absoluteUri(value: unknown, path: string): string {

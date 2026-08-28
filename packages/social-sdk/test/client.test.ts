@@ -66,6 +66,34 @@ describe("CodestraClient", () => {
     ).toThrow(CodestraConfigurationError);
   });
 
+  it("supports social post list, read, and cancellation operations", async () => {
+    const cancelledPost = { ...post, status: "cancelled" };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, { items: [post], nextCursor: "cursor-2" }))
+      .mockResolvedValueOnce(jsonResponse(200, post))
+      .mockResolvedValueOnce(jsonResponse(202, cancelledPost));
+    const client = testClient(fetchMock);
+
+    await expect(client.social.posts.list({
+      workspaceId: post.workspaceId,
+      status: "accepted",
+      limit: 25,
+    })).resolves.toMatchObject({ items: [post], nextCursor: "cursor-2" });
+    await expect(client.social.posts.get(post.id)).resolves.toMatchObject(post);
+    await expect(
+      client.social.posts.cancel(post.id, { idempotencyKey: "idempotency-key-0002" }),
+    ).resolves.toMatchObject(cancelledPost);
+
+    expectRequest(
+      fetchMock,
+      "GET",
+      `/v1/social/posts?limit=25&workspaceId=${post.workspaceId}&status=accepted`,
+    );
+    expectRequest(fetchMock, "GET", `/v1/social/posts/${post.id}`);
+    expectRequest(fetchMock, "POST", `/v1/social/posts/${post.id}/cancel`, "idempotency-key-0002");
+  });
+
   it("creates webhook subscriptions with one-time signing secret response", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse(201, {
@@ -141,6 +169,14 @@ describe("CodestraClient", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects invalid social list filters before sending", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const client = testClient(fetchMock);
+
+    expect(() => client.social.posts.list({ limit: 101 })).toThrow(CodestraContractViolationError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed successful responses", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { ...subscription, status: "surprise" }));
     const client = testClient(fetchMock);
@@ -172,7 +208,7 @@ function jsonResponse(status: number, body: unknown): Response {
 function expectRequest(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, method: string, path: string, idempotencyKey?: string): void {
   const call = fetchMock.mock.calls.find(([url, init]) => {
     const requestUrl = new URL(String(url));
-    return requestUrl.pathname === path && init?.method === method;
+    return `${requestUrl.pathname}${requestUrl.search}` === path && init?.method === method;
   });
   expect(call).toBeDefined();
   const headers = new Headers(call?.[1]?.headers);
