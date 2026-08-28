@@ -397,7 +397,7 @@ components:
     WebhookSubscription:
       type: object
       additionalProperties: false
-      required: [id, endpointUrl, eventTypes, status, createdAt, updatedAt]
+      required: [id, endpointUrl, eventTypes, status, createdAt]
       properties:
         id: { type: string, format: uuid }
         endpointUrl: { type: string, format: uri }
