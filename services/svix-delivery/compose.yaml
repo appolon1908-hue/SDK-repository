@@ -1,0 +1,112 @@
+name: codestra-svix
+
+x-security: &security
+  restart: "no"
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  svix:
+    <<: *security
+    profiles: ["optional-svix"]
+    image: ${SVIX_SERVER_IMAGE:?Set an immutable svix/svix-server image by digest}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    environment:
+      WAIT_FOR: "true"
+      SVIX_REDIS_DSN: redis://redis:6379
+      SVIX_DB_DSN: postgresql://svix:${SVIX_POSTGRES_PASSWORD:?Set SVIX_POSTGRES_PASSWORD}@pgbouncer/svix
+      SVIX_JWT_SECRET: ${SVIX_JWT_SECRET:?Set a high-entropy SVIX_JWT_SECRET}
+    expose:
+      - "8071"
+    healthcheck:
+      test: ["CMD-SHELL", "svix-server healthcheck http://localhost:8071"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - svix-internal
+      - codestra-private
+
+  postgres:
+    <<: *security
+    profiles: ["optional-svix"]
+    image: ${SVIX_POSTGRES_IMAGE:?Set an immutable PostgreSQL image by digest}
+    environment:
+      POSTGRES_DB: svix
+      POSTGRES_USER: svix
+      POSTGRES_PASSWORD: ${SVIX_POSTGRES_PASSWORD:?Set SVIX_POSTGRES_PASSWORD}
+    volumes:
+      - svix-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U svix -d svix"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    networks:
+      - svix-internal
+
+  pgbouncer:
+    <<: *security
+    profiles: ["optional-svix"]
+    image: ${SVIX_PGBOUNCER_IMAGE:?Set an immutable PgBouncer image by digest}
+    environment:
+      DB_HOST: postgres
+      DB_NAME: svix
+      DB_USER: svix
+      DB_PASSWORD: ${SVIX_POSTGRES_PASSWORD:?Set SVIX_POSTGRES_PASSWORD}
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: "200"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U svix -d svix"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - svix-internal
+
+  redis:
+    <<: *security
+    profiles: ["optional-svix"]
+    image: ${SVIX_REDIS_IMAGE:?Set an immutable Redis image by digest}
+    command: ["redis-server", "--save", "60", "500", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - svix-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks:
+      - svix-internal
+
+volumes:
+  svix-postgres:
+  svix-redis:
+
+networks:
+  svix-internal:
+    internal: true
+  codestra-private:
+    external: true
+    name: ${CODESTRA_PRIVATE_NETWORK:-codestra-private}
