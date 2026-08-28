@@ -19,7 +19,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --exclude test/pact/**",
-    "test:pact": "vitest run test/pact"
+    "test:pact": "vitest run --config vitest.pact.config.mjs"
   },
   "dependencies": {
     "@codestra/contracts": "workspace:^"
