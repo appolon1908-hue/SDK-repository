@@ -1,0 +1,58 @@
+name: Generated SDKs
+
+on:
+  pull_request:
+    paths:
+      - 'contracts/openapi/**'
+      - 'codegen/**'
+      - 'scripts/generate-sdks.sh'
+      - 'scripts/verify-generated-sdks.mjs'
+      - '.github/workflows/sdk-generation.yml'
+  push:
+    branches:
+      - 'feat/08-python-php-generation'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-generation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  OPENAPI_GENERATOR_VERSION: 7.15.0
+  OPENAPI_GENERATOR_IMAGE: openapitools/openapi-generator-cli:v7.15.0
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate canonical contract
+        run: node scripts/validate-contracts.mjs
+      - name: Generate Python and PHP clients
+        run: scripts/generate-sdks.sh
+      - name: Archive exact-SHA clients
+        run: |
+          tar -C generated/python -czf "generated/codestra-python-${GITHUB_SHA}.tar.gz" .
+          tar -C generated/php -czf "generated/codestra-php-${GITHUB_SHA}.tar.gz" .
+          sha256sum generated/*.tar.gz > generated/SHA256SUMS
+      - name: Upload generation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-sdks-${{ github.sha }}
+          path: |
+            generated/codestra-python-${{ github.sha }}.tar.gz
+            generated/codestra-php-${{ github.sha }}.tar.gz
+            generated/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7

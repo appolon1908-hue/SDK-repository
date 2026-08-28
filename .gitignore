@@ -10,3 +10,5 @@ coverage/
 .pact/
 pact/logs/
 pact/pacts/
+/generated/*
+!/generated/README.md

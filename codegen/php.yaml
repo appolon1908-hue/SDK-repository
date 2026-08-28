@@ -1,0 +1,10 @@
+invokerPackage: Codestra\\Sdk
+packageName: CodestraSdk
+composerVendorName: codestra
+composerProjectName: sdk
+packageVersion: 0.1.0
+variableNamingConvention: camelCase
+disallowAdditionalPropertiesIfNotPresent: false
+enumUnknownDefaultCase: true
+hideGenerationTimestamp: true
+licenseName: MIT
