@@ -3,12 +3,14 @@ packages:
   - integrations/*
   - sdks/*
   - services/*
+  - apps/*
 
 autoInstallPeers: false
 
 allowBuilds:
   esbuild: true
   isolated-vm: true
+  msw: true
 
 overrides:
   '@jridgewell/sourcemap-codec': 1.5.5

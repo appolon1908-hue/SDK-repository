@@ -1,0 +1,119 @@
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse } from "yaml";
+
+/**
+ * Parses `contracts/asyncapi/codestra-events.asyncapi.yaml` at request time
+ * (server component only -- this module uses `node:fs`) so the developer
+ * portal's event catalogue page always reflects the current contract file
+ * without a separate build step. Field/type names below come straight out
+ * of the YAML document; nothing here is invented.
+ */
+
+// Resolved from this file's own location (not process.cwd()) so it works
+// whether Next/Vitest is invoked from this package directory or from the
+// repo root, e.g. by the root `pnpm test`.
+const APP_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
+const REPO_ROOT = resolve(APP_DIR, "..", "..");
+const ASYNCAPI_PATH = join(REPO_ROOT, "contracts", "asyncapi", "codestra-events.asyncapi.yaml");
+
+export interface EventSchemaField {
+  name: string;
+  type: string;
+  required: boolean;
+  enumValues?: readonly string[];
+}
+
+export interface EventCatalogueMessage {
+  name: string;
+  title: string;
+  cloudEventType: string;
+  fields: readonly EventSchemaField[];
+}
+
+export interface EventCatalogueChannel {
+  key: string;
+  address: string;
+  messages: readonly EventCatalogueMessage[];
+}
+
+// Minimal shape of the parsed AsyncAPI YAML document -- just enough to walk
+// the channels/messages/schemas this catalogue page needs.
+interface RawDocument {
+  channels?: Record<string, RawChannel>;
+  components?: { messages?: Record<string, RawMessage> };
+}
+interface RawChannel {
+  address?: string;
+  messages?: Record<string, { $ref?: string }>;
+}
+interface RawMessage {
+  title?: string;
+  payload?: { allOf?: RawSchema[] };
+}
+interface RawSchema {
+  type?: string;
+  properties?: Record<string, RawSchema & { const?: string; $ref?: string; enum?: string[]; items?: RawSchema; format?: string }>;
+  required?: string[];
+  $ref?: string;
+  const?: string;
+}
+
+export function loadEventCatalogue(): EventCatalogueChannel[] {
+  const source = readFileSync(ASYNCAPI_PATH, "utf8");
+  const document = parse(source) as RawDocument;
+  const channels = document.channels ?? {};
+  const messages = document.components?.messages ?? {};
+
+  return Object.entries(channels).map(([key, channel]) => {
+    const channelMessages = Object.entries(channel.messages ?? {}).map(([messageKey, ref]) => {
+      const messageName = ref.$ref?.split("/").pop() ?? messageKey;
+      const rawMessage = messages[messageName];
+      return resolveMessage(messageName, rawMessage);
+    });
+    return { key, address: channel.address ?? key, messages: channelMessages };
+  });
+}
+
+export function listKnownEventTypes(): string[] {
+  return loadEventCatalogue().flatMap((channel) => channel.messages.map((message) => message.cloudEventType));
+}
+
+function resolveMessage(name: string, message: RawMessage | undefined): EventCatalogueMessage {
+  const objectPart = message?.payload?.allOf?.find((part) => part.type === "object");
+  const typeProperty = objectPart?.properties?.type;
+  const cloudEventType = typeof typeProperty?.const === "string" ? typeProperty.const : "unknown";
+  const dataSchema = resolveSchema(objectPart?.properties?.data);
+  return {
+    name,
+    title: message?.title ?? name,
+    cloudEventType,
+    fields: extractFields(dataSchema),
+  };
+}
+
+function resolveSchema(schema: RawSchema | undefined): RawSchema | undefined {
+  if (schema?.$ref && schema.$ref.startsWith("..")) {
+    const schemaPath = resolve(dirname(ASYNCAPI_PATH), schema.$ref);
+    return JSON.parse(readFileSync(schemaPath, "utf8")) as RawSchema;
+  }
+  return schema;
+}
+
+function extractFields(schema: RawSchema | undefined): EventSchemaField[] {
+  if (!schema?.properties) return [];
+  const required = schema.required ?? [];
+  return Object.entries(schema.properties).map(([name, definition]) => ({
+    name,
+    type: describeType(definition),
+    required: required.includes(name),
+    ...(Array.isArray(definition.enum) ? { enumValues: definition.enum } : {}),
+  }));
+}
+
+function describeType(definition: RawSchema & { format?: string; items?: RawSchema }): string {
+  if (definition.type === "array" && definition.items) return `${describeType(definition.items)}[]`;
+  if (definition.format) return `${definition.type ?? "string"} (${definition.format})`;
+  return definition.type ?? "object";
+}

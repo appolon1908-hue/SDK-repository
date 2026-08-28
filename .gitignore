@@ -2,6 +2,8 @@ node_modules/
 dist/
 coverage/
 .turbo/
+.next/
+apps/developer-portal/public/api-reference.html
 .env
 .env.*
 !.env.example
