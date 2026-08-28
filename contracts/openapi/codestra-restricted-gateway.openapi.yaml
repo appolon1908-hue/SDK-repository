@@ -60,6 +60,37 @@ paths:
         '429': { $ref: '#/components/responses/Error' }
         '500': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
+  /internal/v1/codestra/commands/{commandId}/reconciliation:
+    post:
+      operationId: reconcileRestrictedGatewayCommand
+      summary: Reconcile one previously dispatched command without issuing the mutation again
+      parameters:
+        - $ref: '#/components/parameters/CommandId'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkloadIdentity'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandReconciliationRequest'
+      responses:
+        '200':
+          description: Provider-local command outcome, or no result when the outcome is still unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandReconciliationResponse'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
   /internal/v1/codestra/reconciliation:
     post:
       operationId: reconcileRestrictedGatewayCommands
@@ -98,6 +129,11 @@ components:
       bearerFormat: JWT
       description: Middleware service token scoped to one tenant, connector, and restricted operation set.
   parameters:
+    CommandId:
+      name: commandId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     TenantId:
       name: X-Codestra-Tenant-Id
       in: header
@@ -164,6 +200,21 @@ components:
       properties:
         cursor: { type: string, minLength: 1, maxLength: 1000 }
         limit: { type: integer, minimum: 1, maximum: 500 }
+    CommandReconciliationRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, requestedAt]
+      properties:
+        operation: { type: string, minLength: 1, maxLength: 100 }
+        requestedAt: { type: string, format: date-time }
+    CommandReconciliationResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/RestrictedGatewayCommandReceipt'
+            - type: 'null'
     ReconciliationPage:
       type: object
       additionalProperties: false
