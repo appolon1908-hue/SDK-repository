@@ -10,6 +10,13 @@ allowBuilds:
   esbuild: true
   isolated-vm: true
 
+onlyBuiltDependencies:
+  - esbuild
+  - isolated-vm
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+
 overrides:
   '@jridgewell/sourcemap-codec': 1.5.5
   fastq: 1.20.1
