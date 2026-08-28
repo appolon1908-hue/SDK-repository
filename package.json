@@ -13,12 +13,16 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "contracts:validate": "node scripts/validate-contracts.mjs",
-    "ci": "pnpm contracts:validate && pnpm typecheck && pnpm test"
+    "ci": "pnpm contracts:validate && pnpm typecheck && pnpm test",
+    "contracts:drift": "node scripts/check-contract-drift.mjs",
+    "workflows:validate": "node scripts/validate-workflow-policy.mjs",
+    "pacts:validate": "node scripts/validate-pacts.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.6",
     "turbo": "^2.5.6",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "yaml": "^2.8.1"
   }
 }

@@ -1,14 +1,11 @@
 {
-  "name": "@codestra/social-sdk",
+  "name": "@codestra/testing",
   "version": "0.1.0",
-  "description": "Tenant-aware Codestra social publishing SDK for browser and server applications.",
+  "description": "Synthetic fixtures and Pact helpers for Codestra SDK compatibility tests.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -18,16 +15,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --exclude test/pact/**",
-    "test:pact": "vitest run test/pact"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@codestra/contracts": "workspace:^"
+    "@codestra/contracts": "workspace:^",
+    "@pact-foundation/pact": "^15.0.0"
   },
   "devDependencies": {
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4",
-    "@codestra/testing": "workspace:^"
+    "vitest": "^3.2.4"
   },
   "publishConfig": {
     "access": "public",

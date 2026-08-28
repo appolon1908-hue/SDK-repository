@@ -1,0 +1,61 @@
+name: Compatibility gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'feat/07-pact-contract-gates'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compatibility-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Validate workflow security policy
+        run: pnpm workflows:validate
+      - name: Validate current contracts
+        run: pnpm contracts:validate
+      - name: Materialize base public contract
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          BASE_SHA="${PR_BASE_SHA:-$(git rev-parse HEAD^)}"
+          git show "$BASE_SHA:contracts/openapi/codestra-public.openapi.yaml" > /tmp/base-public.openapi.yaml
+      - name: Reject breaking contract drift
+        run: pnpm contracts:drift /tmp/base-public.openapi.yaml
+      - name: Build workspace dependencies
+        run: pnpm --filter @codestra/contracts build && pnpm --filter @codestra/testing build
+      - name: Generate consumer Pact
+        run: pnpm --filter @codestra/social-sdk test:pact
+      - name: Validate generated Pact
+        run: pnpm pacts:validate
+      - name: Upload Pact evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-pacts-${{ github.sha }}
+          path: pact/pacts/*.json
+          if-no-files-found: error
+          retention-days: 7
