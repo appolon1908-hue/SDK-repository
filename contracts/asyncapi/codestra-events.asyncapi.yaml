@@ -123,12 +123,10 @@ components:
           type: string
           description: Provider call ID that caused this event
         odoo_contact_id:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Odoo res.partner ID — null if contact could not be matched
         odoo_lead_id:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Odoo crm.lead ID — null if no active lead for contact
         disposition:
           type: string
@@ -151,8 +149,7 @@ components:
           type: integer
           minimum: 0
         campaign_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         provider_call_id:
           type: string
           description: VICIdial call ID (uniqueid)
@@ -179,12 +176,10 @@ components:
           type: string
           description: Telnexa message ID that caused this event
         odoo_contact_id:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Odoo res.partner ID — null if phone not matched
         odoo_message_id:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Odoo mail.message ID of the chatter entry
         from_number:
           type: string
