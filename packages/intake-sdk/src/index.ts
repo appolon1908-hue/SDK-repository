@@ -42,6 +42,13 @@ export interface IntakeReceipt {
   status: "accepted" | "duplicate";
 }
 
+interface MiddlewareIntakeReceipt {
+  event_id: string;
+  correlation_id: string;
+  duplicate: boolean;
+  status: "accepted" | "duplicate";
+}
+
 export interface IntakeClientOptions {
   /**
    * Browser usage should normally point to a same-origin BFF route such as
@@ -93,7 +100,13 @@ export class CodestraIntakeClient {
       throw new Error(`Codestra intake failed (${response.status}): ${body.slice(0, 500)}`);
     }
 
-    return (await response.json()) as IntakeReceipt;
+    const receipt = (await response.json()) as MiddlewareIntakeReceipt;
+    return {
+      eventId: receipt.event_id,
+      correlationId: receipt.correlation_id,
+      duplicate: receipt.duplicate,
+      status: receipt.status,
+    };
   }
 }
 
