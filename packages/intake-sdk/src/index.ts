@@ -13,6 +13,8 @@ export interface Attribution {
 export interface LeadSubmission {
   tenantId: string;
   siteId: string;
+  /** Stable client-side occurrence time used to make exact retries semantic duplicates. */
+  submittedAt?: string;
   source: IntakeSource;
   formId?: string;
   campaignId?: string;
@@ -65,19 +67,25 @@ export class CodestraIntakeClient {
     submission: LeadSubmission,
     options: { idempotencyKey?: string; correlationId?: string } = {},
   ): Promise<IntakeReceipt> {
+    const idempotencyKey = options.idempotencyKey ?? randomId("lead");
+    const correlationId = options.correlationId ?? randomId("corr");
+    const prepared: LeadSubmission & { submittedAt: string } = {
+      ...submission,
+      submittedAt: submission.submittedAt ?? new Date().toISOString(),
+    };
     const headers = new Headers({
       "Content-Type": "application/json",
-      "X-Tenant-ID": submission.tenantId,
+      "X-Tenant-ID": prepared.tenantId,
+      "Idempotency-Key": idempotencyKey,
+      "X-Correlation-ID": correlationId,
     });
 
-    if (options.idempotencyKey) headers.set("Idempotency-Key", options.idempotencyKey);
-    if (options.correlationId) headers.set("X-Correlation-ID", options.correlationId);
     if (this.bearerToken) headers.set("Authorization", `Bearer ${this.bearerToken}`);
 
     const response = await this.fetchImpl(this.endpoint, {
       method: "POST",
       headers,
-      body: JSON.stringify(submission),
+      body: JSON.stringify(prepared),
     });
 
     if (!response.ok) {
@@ -91,4 +99,10 @@ export class CodestraIntakeClient {
 
 export function createIntakeClient(options?: IntakeClientOptions): CodestraIntakeClient {
   return new CodestraIntakeClient(options);
+}
+
+function randomId(prefix: string): string {
+  const value = globalThis.crypto?.randomUUID?.();
+  if (value) return `${prefix}-${value}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
 }
