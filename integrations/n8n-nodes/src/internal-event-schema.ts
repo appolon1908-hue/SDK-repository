@@ -67,6 +67,12 @@ export function parseAndValidateCanonicalEvent(
   if (eventType === "codestra.webhook.delivery.status.v1") {
     return { ...base, type: eventType, data: validateWebhookDeliveryData(event.data) };
   }
+  if (eventType === "call_disposition_updated") {
+    return { ...base, type: eventType, data: validateCallDispositionData(event.data, tenantId) };
+  }
+  if (eventType === "sms_received") {
+    return { ...base, type: eventType, data: validateSmsReceivedData(event.data, tenantId) };
+  }
   throw new InternalEventBoundaryError("No schema validator exists for the allowlisted event type.", "EVENT_SCHEMA_NOT_SUPPORTED", { status: 422 });
 }
 
@@ -107,5 +113,81 @@ function validateWebhookDeliveryData(value: unknown): Record<string, unknown> {
     status: requireEnum(data.status, WEBHOOK_DELIVERY_STATUSES, "event.data.status"),
     ...(data.attempt === undefined ? {} : { attempt: integerBetween(data.attempt, 0, 1_000_000, "event.data.attempt") }),
     occurredAt: requireDateTime(data.occurredAt, "event.data.occurredAt"),
+  };
+}
+
+function validateCallDispositionData(value: unknown, tenantId: string): Record<string, unknown> {
+  const data = requireObject(value, "event.data");
+  rejectUnknownKeys(
+    data,
+    new Set([
+      "callId",
+      "tenantId",
+      "campaignId",
+      "contactId",
+      "agentId",
+      "provider",
+      "disposition",
+      "previousDisposition",
+      "durationSeconds",
+      "occurredAt",
+      "metadata",
+    ]),
+    "event.data",
+  );
+  if (requireUuid(data.tenantId, "event.data.tenantId") !== tenantId) {
+    throw new InternalEventBoundaryError("The event data tenant does not match the signed event tenant.", "EVENT_TENANT_MISMATCH", { status: 403 });
+  }
+  return {
+    callId: requireUuid(data.callId, "event.data.callId"),
+    tenantId,
+    ...(data.campaignId === undefined ? {} : { campaignId: requireUuid(data.campaignId, "event.data.campaignId") }),
+    ...(data.contactId === undefined ? {} : { contactId: requireUuid(data.contactId, "event.data.contactId") }),
+    ...(data.agentId === undefined ? {} : { agentId: requireString(data.agentId, "event.data.agentId", 200) }),
+    ...(data.provider === undefined ? {} : { provider: requireString(data.provider, "event.data.provider", 100) }),
+    disposition: requireString(data.disposition, "event.data.disposition", 100),
+    ...(data.previousDisposition === undefined ? {} : { previousDisposition: requireString(data.previousDisposition, "event.data.previousDisposition", 100) }),
+    ...(data.durationSeconds === undefined ? {} : { durationSeconds: integerBetween(data.durationSeconds, 0, 86_400, "event.data.durationSeconds") }),
+    occurredAt: requireDateTime(data.occurredAt, "event.data.occurredAt"),
+    ...(data.metadata === undefined ? {} : { metadata: requireObject(data.metadata, "event.data.metadata") }),
+  };
+}
+
+function validateSmsReceivedData(value: unknown, tenantId: string): Record<string, unknown> {
+  const data = requireObject(value, "event.data");
+  rejectUnknownKeys(
+    data,
+    new Set([
+      "messageId",
+      "tenantId",
+      "conversationId",
+      "contactId",
+      "campaignId",
+      "provider",
+      "from",
+      "to",
+      "body",
+      "mediaUrls",
+      "receivedAt",
+      "metadata",
+    ]),
+    "event.data",
+  );
+  if (requireUuid(data.tenantId, "event.data.tenantId") !== tenantId) {
+    throw new InternalEventBoundaryError("The event data tenant does not match the signed event tenant.", "EVENT_TENANT_MISMATCH", { status: 403 });
+  }
+  return {
+    messageId: requireUuid(data.messageId, "event.data.messageId"),
+    tenantId,
+    ...(data.conversationId === undefined ? {} : { conversationId: requireUuid(data.conversationId, "event.data.conversationId") }),
+    ...(data.contactId === undefined ? {} : { contactId: requireUuid(data.contactId, "event.data.contactId") }),
+    ...(data.campaignId === undefined ? {} : { campaignId: requireUuid(data.campaignId, "event.data.campaignId") }),
+    ...(data.provider === undefined ? {} : { provider: requireString(data.provider, "event.data.provider", 100) }),
+    from: requireString(data.from, "event.data.from", 100),
+    to: requireString(data.to, "event.data.to", 100),
+    body: requireString(data.body, "event.data.body", 10_000, true),
+    ...(data.mediaUrls === undefined ? {} : { mediaUrls: requireArray(data.mediaUrls, "event.data.mediaUrls").map((url, index) => requireAbsoluteUri(url, `event.data.mediaUrls[${index}]`)) }),
+    receivedAt: requireDateTime(data.receivedAt, "event.data.receivedAt"),
+    ...(data.metadata === undefined ? {} : { metadata: requireObject(data.metadata, "event.data.metadata") }),
   };
 }

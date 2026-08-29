@@ -8,7 +8,11 @@ export interface CodestraCanonicalEvent {
   id: string;
   tenantid: string;
   source: string;
-  type: "codestra.social.post.status.v1" | "codestra.webhook.delivery.status.v1";
+  type:
+    | "call_disposition_updated"
+    | "sms_received"
+    | "codestra.social.post.status.v1"
+    | "codestra.webhook.delivery.status.v1";
   subject?: string;
   time: string;
   datacontenttype: "application/json";

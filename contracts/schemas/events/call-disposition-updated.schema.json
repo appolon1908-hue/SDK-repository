@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.codestra.co/events/call-disposition-updated.schema.json",
+  "title": "Call disposition updated event data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["callId", "tenantId", "disposition", "occurredAt"],
+  "properties": {
+    "callId": { "type": "string", "format": "uuid" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "campaignId": { "type": "string", "format": "uuid" },
+    "contactId": { "type": "string", "format": "uuid" },
+    "agentId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "provider": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "disposition": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "previousDisposition": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "durationSeconds": { "type": "integer", "minimum": 0, "maximum": 86400 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object" }
+  }
+}

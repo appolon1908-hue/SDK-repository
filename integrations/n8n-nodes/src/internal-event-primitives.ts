@@ -61,8 +61,8 @@ export function requireArray(value: unknown, path: string): unknown[] {
   return value;
 }
 
-export function requireString(value: unknown, path: string, max = 512): string {
-  if (typeof value !== "string" || value.length === 0 || value.length > max || /[\u0000-\u001f]/u.test(value)) {
+export function requireString(value: unknown, path: string, max = 512, allowEmpty = false): string {
+  if (typeof value !== "string" || (!allowEmpty && value.length === 0) || value.length > max || /[\u0000-\u001f]/u.test(value)) {
     throw new InternalEventBoundaryError(`${path} must be a bounded string.`, "INVALID_STRING", { status: 422 });
   }
   return value;

@@ -97,13 +97,69 @@ describe("signed internal n8n event boundary", () => {
       now: () => nowMs,
     })).rejects.toMatchObject({ code: "EVENT_TYPE_NOT_ALLOWED", status: 403 });
   });
+
+  it("accepts call disposition update events", async () => {
+    const body = canonicalBody({
+      type: "call_disposition_updated",
+      data: {
+        callId: "55555555-5555-4555-8555-555555555555",
+        tenantId,
+        campaignId: "66666666-6666-4666-8666-666666666666",
+        provider: "vicidial",
+        disposition: "SALE",
+        previousDisposition: "CONTACTED",
+        durationSeconds: 180,
+        occurredAt: "2026-08-28T15:00:00.000Z",
+      },
+    });
+    const fetch = replayClaimFetch("call_disposition_updated");
+
+    const accepted = await acceptSignedInternalEvent({
+      headers: await signedHeaders(body),
+      rawBody: body,
+      credentials: credentials(),
+      fetch,
+      now: () => nowMs,
+    });
+
+    expect(accepted.event.type).toBe("call_disposition_updated");
+    expect(accepted.event.data).toMatchObject({ disposition: "SALE", provider: "vicidial" });
+  });
+
+  it("accepts inbound SMS events", async () => {
+    const body = canonicalBody({
+      type: "sms_received",
+      data: {
+        messageId: "77777777-7777-4777-8777-777777777777",
+        tenantId,
+        conversationId: "88888888-8888-4888-8888-888888888888",
+        provider: "telnexa",
+        from: "+15551234567",
+        to: "+15557654321",
+        body: "Reply received",
+        receivedAt: "2026-08-28T15:00:00.000Z",
+      },
+    });
+    const fetch = replayClaimFetch("sms_received");
+
+    const accepted = await acceptSignedInternalEvent({
+      headers: await signedHeaders(body),
+      rawBody: body,
+      credentials: credentials(),
+      fetch,
+      now: () => nowMs,
+    });
+
+    expect(accepted.event.type).toBe("sms_received");
+    expect(accepted.event.data).toMatchObject({ body: "Reply received", provider: "telnexa" });
+  });
 });
 
 function credentials() {
   return {
     expectedTenantId: tenantId,
     webhookSecrets: secret,
-    allowedEventTypes: "codestra.social.post.status.v1\ncodestra.webhook.delivery.status.v1",
+    allowedEventTypes: "codestra.social.post.status.v1\ncodestra.webhook.delivery.status.v1\ncall_disposition_updated\nsms_received",
     allowedSourcePrefixes: "urn:codestra:",
     replayGuardBaseUrl: "https://middleware.codestra.test/internal/",
     replayGuardAccessToken: "replay-token-for-n8n",
@@ -111,6 +167,24 @@ function credentials() {
     maxBodyBytes: 1_048_576,
     requestTimeoutMs: 1_000,
   };
+}
+
+function replayClaimFetch(eventType: string) {
+  return vi.fn(async (_url: URL, request: RequestInit) => {
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      eventId,
+      tenantId,
+      eventType,
+      matchedSecretIndex: 0,
+    });
+    return jsonResponse(200, {
+      claimId: "claim_123",
+      deliveryId: "delivery_123",
+      status: "claimed",
+      claimedAt: "2026-08-28T15:00:00.000Z",
+      expiresAt: "2026-08-28T15:05:00.000Z",
+    });
+  });
 }
 
 async function signedHeaders(body: string) {

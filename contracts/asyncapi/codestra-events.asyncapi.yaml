@@ -5,6 +5,16 @@ info:
   description: Canonical CloudEvents emitted only after inbox validation and durable state transition.
 defaultContentType: application/json
 channels:
+  callDispositionUpdated:
+    address: call_disposition_updated
+    messages:
+      callDispositionUpdated:
+        $ref: '#/components/messages/CallDispositionUpdated'
+  smsReceived:
+    address: sms_received
+    messages:
+      smsReceived:
+        $ref: '#/components/messages/SmsReceived'
   socialPostStatus:
     address: codestra.social.post.status.v1
     messages:
@@ -16,6 +26,14 @@ channels:
       webhookDeliveryStatusChanged:
         $ref: '#/components/messages/WebhookDeliveryStatusChanged'
 operations:
+  receiveCallDispositionUpdated:
+    action: receive
+    channel:
+      $ref: '#/channels/callDispositionUpdated'
+  receiveSmsReceived:
+    action: receive
+    channel:
+      $ref: '#/channels/smsReceived'
   receiveSocialPostStatus:
     action: receive
     channel:
@@ -26,6 +44,28 @@ operations:
       $ref: '#/channels/webhookDeliveryStatus'
 components:
   messages:
+    CallDispositionUpdated:
+      name: call_disposition_updated
+      title: Call disposition updated
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: call_disposition_updated }
+              data:
+                $ref: '../schemas/events/call-disposition-updated.schema.json'
+    SmsReceived:
+      name: sms_received
+      title: SMS received
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: sms_received }
+              data:
+                $ref: '../schemas/events/sms-received.schema.json'
     SocialPostStatusChanged:
       name: codestra.social.post.status.v1
       title: Social post status changed

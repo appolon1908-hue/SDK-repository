@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.codestra.co/events/sms-received.schema.json",
+  "title": "SMS received event data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["messageId", "tenantId", "from", "to", "body", "receivedAt"],
+  "properties": {
+    "messageId": { "type": "string", "format": "uuid" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "conversationId": { "type": "string", "format": "uuid" },
+    "contactId": { "type": "string", "format": "uuid" },
+    "campaignId": { "type": "string", "format": "uuid" },
+    "provider": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "from": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "to": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "body": { "type": "string", "minLength": 0, "maxLength": 10000 },
+    "mediaUrls": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "format": "uri" }
+    },
+    "receivedAt": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object" }
+  }
+}

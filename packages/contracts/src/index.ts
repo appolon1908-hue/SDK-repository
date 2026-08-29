@@ -141,6 +141,35 @@ export interface CloudEvent<TData = JsonObject> {
   data: TData;
 }
 
+export interface CallDispositionUpdatedEventData {
+  callId: UUID;
+  tenantId: UUID;
+  campaignId?: UUID;
+  contactId?: UUID;
+  agentId?: string;
+  provider?: string;
+  disposition: string;
+  previousDisposition?: string;
+  durationSeconds?: number;
+  occurredAt: ISODateTime;
+  metadata?: JsonObject;
+}
+
+export interface SmsReceivedEventData {
+  messageId: UUID;
+  tenantId: UUID;
+  conversationId?: UUID;
+  contactId?: UUID;
+  campaignId?: UUID;
+  provider?: string;
+  from: string;
+  to: string;
+  body: string;
+  mediaUrls?: string[];
+  receivedAt: ISODateTime;
+  metadata?: JsonObject;
+}
+
 export interface SocialPostStatusEventData {
   postId: UUID;
   tenantId: UUID;

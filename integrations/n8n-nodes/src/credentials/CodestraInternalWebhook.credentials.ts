@@ -26,7 +26,7 @@ export class CodestraInternalWebhook implements ICredentialType {
       name: "allowedEventTypes",
       type: "string",
       typeOptions: { rows: 3 },
-      default: "codestra.social.post.status.v1\ncodestra.webhook.delivery.status.v1",
+      default: "codestra.social.post.status.v1\ncodestra.webhook.delivery.status.v1\ncall_disposition_updated\nsms_received",
       required: true,
     },
     {
