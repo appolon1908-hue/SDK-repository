@@ -4,6 +4,7 @@ coverage/
 .turbo/
 .next/
 *.tsbuildinfo
+target/
 apps/developer-portal/public/api-reference.html
 .env
 .env.*
