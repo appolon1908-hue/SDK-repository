@@ -2,6 +2,27 @@
 
 Codestra's contract-first developer platform for reusable SDKs, webhook tooling, connector interfaces, automation nodes, provider adapters, compatibility gates, generated clients, and optional delivery/protocol gateways.
 
+## Connector ownership boundary
+
+This repository is the **developer-facing SDK and connector distribution authority**. It owns reusable packages such as contracts, generated clients, webhook helpers, `@codestra/connector-kit`, n8n node packages, provider adapter libraries intended for distribution, and compatibility/contract-drift gates.
+
+`appolon1908-hue/Middleware-` separately owns the **privileged connector runtime and enforcement boundary** under its internal connector framework/runtime. Middleware owns authenticated command execution, tenant/actor authorization, idempotency, durable inbox/outbox state, provider credential access, read-back, reconciliation, kill switches and production connector activation.
+
+The two repositories are intentionally complementary rather than competing:
+
+```text
+SDK-repository
+  -> public/reusable contracts and connector-kit APIs
+  -> generated clients and integration developer tooling
+
+Middleware-
+  -> trusted connector registry/runtime
+  -> privileged provider execution and durable state
+  -> production capability activation
+```
+
+A reusable SDK must never become an alternate cross-system write path. Provider-specific runtime authority remains in the owning product/adapter repository and is invoked through Middleware.
+
 ## Release branches
 
 Implementation is delivered as a stacked, dependency-ordered branch series:
