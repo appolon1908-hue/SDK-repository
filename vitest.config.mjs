@@ -32,6 +32,7 @@ export default defineConfig({
       include: [
         "packages/contracts/src/**/*.ts",
         "packages/social-sdk/src/**/*.ts",
+        "packages/communications-sdk/src/**/*.ts",
         "packages/webhook-sdk/src/**/*.ts",
         "packages/connector-kit/src/**/*.ts",
         "packages/provider-adapters/src/**/*.ts",
