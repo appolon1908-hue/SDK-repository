@@ -5,10 +5,15 @@ import { listKnownEventTypes, loadEventCatalogue } from "../lib/contracts.js";
 // this is an integration test against the actual checked-in contract, not a
 // fixture, so it fails if the event catalogue page would fail to render.
 describe("loadEventCatalogue", () => {
-  it("parses both real channels from the AsyncAPI catalogue", () => {
+  it("parses all real channels from the AsyncAPI catalogue", () => {
     const channels = loadEventCatalogue();
     expect(channels.map((channel) => channel.address).sort()).toEqual(
-      ["codestra.social.post.status.v1", "codestra.webhook.delivery.status.v1"].sort(),
+      [
+        "codestra.events.call_disposition_updated",
+        "codestra.events.sms_received",
+        "codestra.social.post.status.v1",
+        "codestra.webhook.delivery.status.v1",
+      ].sort(),
     );
   });
 
@@ -32,12 +37,32 @@ describe("loadEventCatalogue", () => {
       expect.arrayContaining(["deliveryId", "endpointId", "status", "occurredAt"]),
     );
   });
+
+  it("resolves the VICIdial and SMS direct payload schemas", () => {
+    const channels = loadEventCatalogue();
+    const call = channels.find((channel) => channel.address === "codestra.events.call_disposition_updated")?.messages[0];
+    const sms = channels.find((channel) => channel.address === "codestra.events.sms_received")?.messages[0];
+
+    expect(call?.cloudEventType).toBe("call_disposition_updated");
+    expect(call?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(["correlation_id", "causation_id", "disposition", "phone_number", "provider_call_id"]),
+    );
+    expect(sms?.cloudEventType).toBe("sms_received");
+    expect(sms?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(["correlation_id", "causation_id", "from_number", "body_preview", "provider_event_id"]),
+    );
+  });
 });
 
 describe("listKnownEventTypes", () => {
-  it("returns the CloudEvent type constants used by the webhook subscription form", () => {
+  it("returns the event type constants used by the webhook subscription form", () => {
     expect(listKnownEventTypes().sort()).toEqual(
-      ["codestra.social.post.status.v1", "codestra.webhook.delivery.status.v1"].sort(),
+      [
+        "call_disposition_updated",
+        "codestra.social.post.status.v1",
+        "codestra.webhook.delivery.status.v1",
+        "sms_received",
+      ].sort(),
     );
   });
 });
