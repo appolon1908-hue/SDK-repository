@@ -124,14 +124,36 @@ describe("RestrictedGatewayAdapter against a real HTTP server", () => {
   });
 
   it("refuses to follow a real redirect rather than leaking the request to another host", async () => {
-    gateway.setHandler((_request, response) => {
-      response.writeHead(302, { location: "https://attacker.example/steal" });
-      response.end();
+    // The redirect target is a second real server we control, not an
+    // unreachable domain: pointing Location at a host that merely fails to
+    // resolve would make this pass even if redirect: "error" were dropped
+    // (a followed redirect and a rejected one both end in the same
+    // PROVIDER_NETWORK_ERROR via a DNS failure). Asserting this server
+    // never receives a request is what actually proves the redirect was
+    // never followed.
+    const redirectTarget = new FakeRestrictedGateway(() => {
+      throw new Error("handler not configured");
+    });
+    await redirectTarget.start();
+    let redirectTargetHit = false;
+    redirectTarget.setHandler((_request, response) => {
+      redirectTargetHit = true;
+      sendJson(response, 200, { commandId: command.commandId, status: "accepted" });
     });
 
-    await expect(adapter().execute(context, command)).rejects.toMatchObject({
-      code: "PROVIDER_NETWORK_ERROR",
-    });
+    try {
+      gateway.setHandler((_request, response) => {
+        response.writeHead(302, { location: `${redirectTarget.url}/internal/v1/codestra/commands` });
+        response.end();
+      });
+
+      await expect(adapter().execute(context, command)).rejects.toMatchObject({
+        code: "PROVIDER_NETWORK_ERROR",
+      });
+      expect(redirectTargetHit).toBe(false);
+    } finally {
+      await redirectTarget.stop();
+    }
   });
 
   it("aborts with a retryable timeout when the server never responds", async () => {
