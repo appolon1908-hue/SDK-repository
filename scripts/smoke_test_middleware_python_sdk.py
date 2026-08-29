@@ -15,6 +15,10 @@ def fail(message: str) -> None:
     sys.exit(1)
 
 
+def state_value(value: object) -> object:
+    return getattr(value, "value", value)
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         fail("usage: smoke_test_middleware_python_sdk.py <generated-sdk-path>")
@@ -158,9 +162,9 @@ def main() -> None:
             fail(f"command body did not serialize correctly: {body!r}")
         if body.get("tenant_id") != tenant_id or body.get("capability") != "ODOO_WRITE":
             fail(f"command authority fields did not serialize correctly: {body!r}")
-        if str(submitted.command_id) != str(command_id) or submitted.state.value != "completed":
+        if str(submitted.command_id) != str(command_id) or state_value(submitted.state) != "completed":
             fail(f"submitted operation did not deserialize correctly: {submitted!r}")
-        if str(fetched.command_id) != str(command_id) or fetched.state.value != "completed":
+        if str(fetched.command_id) != str(command_id) or state_value(fetched.state) != "completed":
             fail(f"operation read-back did not deserialize correctly: {fetched!r}")
 
         print(
