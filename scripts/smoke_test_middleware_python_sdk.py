@@ -44,7 +44,7 @@ def main() -> None:
     operation = {
         "command_id": str(command_id),
         "tenant_id": tenant_id,
-        "command_type": "moneybee.crm.project",
+        "command_type": "crm.project",
         "command_version": "1.0",
         "target": "odoo-19",
         "requested_by": "moneybee-backend",
@@ -124,7 +124,7 @@ def main() -> None:
             api = DefaultApi(api_client)
             command = CommandEnvelope(
                 command_id=command_id,
-                command_type="moneybee.crm.project",
+                command_type="crm.project",
                 command_version="1.0",
                 target="odoo-19",
                 tenant_id=tenant_id,
