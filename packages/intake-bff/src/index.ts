@@ -88,7 +88,7 @@ export function createIntakeBff(config: IntakeBffConfig): IntakeBffHandler {
   }
 
   async function forward(
-    body: Uint8Array,
+    bodyText: string,
     tenantId: string,
     correlationId: string,
     idempotencyKey: string,
@@ -106,7 +106,7 @@ export function createIntakeBff(config: IntakeBffConfig): IntakeBffHandler {
           "X-Correlation-ID": correlationId,
           "Idempotency-Key": idempotencyKey,
         },
-        body,
+        body: bodyText,
       }, timeoutMs);
 
       lastResponse = response;
@@ -153,13 +153,14 @@ export function createIntakeBff(config: IntakeBffConfig): IntakeBffHandler {
           return jsonResponse(413, { error: "payload_too_large" });
         }
 
-        const body = new Uint8Array(await request.arrayBuffer());
-        if (body.byteLength === 0) return jsonResponse(400, { error: "empty_body" });
-        if (body.byteLength > maxBodyBytes) return jsonResponse(413, { error: "payload_too_large" });
+        const bodyBytes = new Uint8Array(await request.arrayBuffer());
+        if (bodyBytes.byteLength === 0) return jsonResponse(400, { error: "empty_body" });
+        if (bodyBytes.byteLength > maxBodyBytes) return jsonResponse(413, { error: "payload_too_large" });
+        const bodyText = new TextDecoder().decode(bodyBytes);
 
         let parsed: unknown;
         try {
-          parsed = JSON.parse(new TextDecoder().decode(body));
+          parsed = JSON.parse(bodyText);
         } catch {
           return jsonResponse(400, { error: "invalid_json" });
         }
@@ -171,7 +172,7 @@ export function createIntakeBff(config: IntakeBffConfig): IntakeBffHandler {
           return jsonResponse(403, { error: "tenant_mismatch" });
         }
 
-        const upstream = await forward(body, tenantId, correlationId, idempotencyKey);
+        const upstream = await forward(bodyText, tenantId, correlationId, idempotencyKey);
         const responseBody = await upstream.arrayBuffer();
         const headers = new Headers();
         headers.set("Content-Type", upstream.headers.get("content-type") ?? "application/json");
