@@ -42,7 +42,10 @@ export interface EventCatalogueChannel {
 // the channels/messages/schemas this catalogue page needs.
 interface RawDocument {
   channels?: Record<string, RawChannel>;
-  components?: { messages?: Record<string, RawMessage> };
+  components?: {
+    messages?: Record<string, RawMessage>;
+    schemas?: Record<string, RawSchema>;
+  };
 }
 interface RawChannel {
   address?: string;
@@ -50,10 +53,11 @@ interface RawChannel {
 }
 interface RawMessage {
   title?: string;
-  payload?: { allOf?: RawSchema[] };
+  payload?: RawSchema;
 }
 interface RawSchema {
-  type?: string;
+  type?: string | string[];
+  allOf?: RawSchema[];
   properties?: Record<string, RawSchema & { const?: string; $ref?: string; enum?: string[]; items?: RawSchema; format?: string }>;
   required?: string[];
   $ref?: string;
@@ -65,12 +69,13 @@ export function loadEventCatalogue(): EventCatalogueChannel[] {
   const document = parse(source) as RawDocument;
   const channels = document.channels ?? {};
   const messages = document.components?.messages ?? {};
+  const schemas = document.components?.schemas ?? {};
 
   return Object.entries(channels).map(([key, channel]) => {
     const channelMessages = Object.entries(channel.messages ?? {}).map(([messageKey, ref]) => {
       const messageName = ref.$ref?.split("/").pop() ?? messageKey;
       const rawMessage = messages[messageName];
-      return resolveMessage(messageName, rawMessage);
+      return resolveMessage(messageName, rawMessage, schemas);
     });
     return { key, address: channel.address ?? key, messages: channelMessages };
   });
@@ -80,20 +85,43 @@ export function listKnownEventTypes(): string[] {
   return loadEventCatalogue().flatMap((channel) => channel.messages.map((message) => message.cloudEventType));
 }
 
-function resolveMessage(name: string, message: RawMessage | undefined): EventCatalogueMessage {
+function resolveMessage(
+  name: string,
+  message: RawMessage | undefined,
+  schemas: Record<string, RawSchema>,
+): EventCatalogueMessage {
   const objectPart = message?.payload?.allOf?.find((part) => part.type === "object");
-  const typeProperty = objectPart?.properties?.type;
+  if (objectPart) {
+    const typeProperty = objectPart.properties?.type ?? objectPart.properties?.event_type;
+    const cloudEventType = typeof typeProperty?.const === "string" ? typeProperty.const : "unknown";
+    const dataSchema = resolveSchema(objectPart.properties?.data, schemas);
+    return {
+      name,
+      title: message?.title ?? name,
+      cloudEventType,
+      fields: extractFields(dataSchema),
+    };
+  }
+
+  const payloadSchema = resolveSchema(message?.payload, schemas);
+  const typeProperty = payloadSchema?.properties?.type ?? payloadSchema?.properties?.event_type;
   const cloudEventType = typeof typeProperty?.const === "string" ? typeProperty.const : "unknown";
-  const dataSchema = resolveSchema(objectPart?.properties?.data);
   return {
     name,
     title: message?.title ?? name,
     cloudEventType,
-    fields: extractFields(dataSchema),
+    fields: extractFields(payloadSchema),
   };
 }
 
-function resolveSchema(schema: RawSchema | undefined): RawSchema | undefined {
+function resolveSchema(
+  schema: RawSchema | undefined,
+  schemas: Record<string, RawSchema>,
+): RawSchema | undefined {
+  if (schema?.$ref?.startsWith("#/components/schemas/")) {
+    const schemaName = schema.$ref.split("/").pop();
+    return schemaName ? schemas[schemaName] : undefined;
+  }
   if (schema?.$ref && schema.$ref.startsWith("..")) {
     const schemaPath = resolve(dirname(ASYNCAPI_PATH), schema.$ref);
     return JSON.parse(readFileSync(schemaPath, "utf8")) as RawSchema;
@@ -114,6 +142,7 @@ function extractFields(schema: RawSchema | undefined): EventSchemaField[] {
 
 function describeType(definition: RawSchema & { format?: string; items?: RawSchema }): string {
   if (definition.type === "array" && definition.items) return `${describeType(definition.items)}[]`;
-  if (definition.format) return `${definition.type ?? "string"} (${definition.format})`;
-  return definition.type ?? "object";
+  const type = Array.isArray(definition.type) ? definition.type.join(" | ") : definition.type;
+  if (definition.format) return `${type ?? "string"} (${definition.format})`;
+  return type ?? "object";
 }

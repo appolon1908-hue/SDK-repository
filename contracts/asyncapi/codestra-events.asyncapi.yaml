@@ -15,6 +15,24 @@ channels:
     messages:
       webhookDeliveryStatusChanged:
         $ref: '#/components/messages/WebhookDeliveryStatusChanged'
+  call_disposition_updated:
+    address: codestra.events.call_disposition_updated
+    description: >
+      Published by Middleware when a VICIdial call result has been written
+      to the Odoo contact record. Subscribers receive call outcome data
+      without accessing VICIdial or Odoo directly.
+    messages:
+      CallDispositionUpdated:
+        $ref: '#/components/messages/CallDispositionUpdated'
+  sms_received:
+    address: codestra.events.sms_received
+    description: >
+      Published by Middleware when an inbound SMS from a customer has been
+      written to the Odoo contact chatter. Subscribers receive the message
+      preview and contact reference without accessing Telnexa or Odoo directly.
+    messages:
+      SmsReceived:
+        $ref: '#/components/messages/SmsReceived'
 operations:
   receiveSocialPostStatus:
     action: receive
@@ -56,6 +74,20 @@ components:
                   status: { type: string, enum: [queued, attempting, delivered, failed, dead_lettered] }
                   attempt: { type: integer, minimum: 0 }
                   occurredAt: { type: string, format: date-time }
+    CallDispositionUpdated:
+      name: CallDispositionUpdated
+      title: Call disposition updated
+      summary: VICIdial call result written to Odoo
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/CallDispositionUpdatedPayload'
+    SmsReceived:
+      name: SmsReceived
+      title: SMS received
+      summary: Inbound customer SMS written to Odoo chatter
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SmsReceivedPayload'
   schemas:
     CloudEventEnvelope:
       type: object
@@ -71,3 +103,94 @@ components:
         datacontenttype: { const: application/json }
         dataschema: { type: string, format: uri }
         data: {}
+    CallDispositionUpdatedPayload:
+      type: object
+      required:
+        - event_type
+        - correlation_id
+        - causation_id
+        - disposition
+        - phone_number
+        - provider_call_id
+      properties:
+        event_type:
+          type: string
+          const: call_disposition_updated
+        correlation_id:
+          type: string
+          format: uuid
+        causation_id:
+          type: string
+          description: Provider call ID that caused this event
+        odoo_contact_id:
+          type: [integer, 'null']
+          description: Odoo res.partner ID — null if contact could not be matched
+        odoo_lead_id:
+          type: [integer, 'null']
+          description: Odoo crm.lead ID — null if no active lead for contact
+        disposition:
+          type: string
+          enum:
+            - answered
+            - no_answer
+            - busy
+            - voicemail
+            - dnc
+            - callback_requested
+            - sale_completed
+            - failed
+            - dropped
+            - not_interested
+            - unknown
+        phone_number:
+          type: string
+          description: E.164 format phone number
+        duration_seconds:
+          type: integer
+          minimum: 0
+        campaign_id:
+          type: [string, 'null']
+        provider_call_id:
+          type: string
+          description: VICIdial call ID (uniqueid)
+        dry_run:
+          type: boolean
+          description: True when ODOO_WRITE=false — event published but Odoo not written
+    SmsReceivedPayload:
+      type: object
+      required:
+        - event_type
+        - correlation_id
+        - causation_id
+        - from_number
+        - body_preview
+        - provider_event_id
+      properties:
+        event_type:
+          type: string
+          const: sms_received
+        correlation_id:
+          type: string
+          format: uuid
+        causation_id:
+          type: string
+          description: Telnexa message ID that caused this event
+        odoo_contact_id:
+          type: [integer, 'null']
+          description: Odoo res.partner ID — null if phone not matched
+        odoo_message_id:
+          type: [integer, 'null']
+          description: Odoo mail.message ID of the chatter entry
+        from_number:
+          type: string
+          description: E.164 format sender phone number
+        body_preview:
+          type: string
+          maxLength: 120
+          description: First 120 characters of the SMS body
+        provider_event_id:
+          type: string
+          description: Telnexa message ID
+        dry_run:
+          type: boolean
+          description: True when ODOO_WRITE=false — event published but Odoo not written
