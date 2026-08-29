@@ -6,10 +6,16 @@ const failures = [];
 
 await requireAny(join(root, "python"), ["pyproject.toml", "setup.py"]);
 await requireAny(join(root, "php"), ["composer.json"]);
+await requireAny(join(root, "middleware-python"), ["pyproject.toml", "setup.py"]);
 await requireDirectory(join(root, "python", "codestra_sdk"));
 await requireDirectory(join(root, "php", "lib"));
+await requireDirectory(join(root, "middleware-python", "codestra_middleware_sdk"));
 
-for (const directory of [join(root, "python"), join(root, "php")]) {
+for (const directory of [
+  join(root, "python"),
+  join(root, "php"),
+  join(root, "middleware-python"),
+]) {
   await walk(directory);
 }
 
@@ -17,7 +23,9 @@ if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Generated Python and PHP SDK structure passed validation.");
+console.log(
+  "Generated public Python/PHP and Middleware Python SDK structures passed validation.",
+);
 
 async function requireAny(directory, names) {
   for (const name of names) {
@@ -52,8 +60,15 @@ async function walk(directory) {
     if (entry.isDirectory()) await walk(path);
     if (!entry.isFile() || entry.name.endsWith(".png") || entry.name.endsWith(".jar")) continue;
     const source = await readFile(path, "utf8");
-    for (const forbidden of ["Bearer eyJ", "BEGIN PRIVATE KEY", "appolon1908@gmail.com", "65.109.65.169"] ) {
-      if (source.includes(forbidden)) failures.push(`${path}: contains forbidden credential or infrastructure material`);
+    for (const forbidden of [
+      "Bearer eyJ",
+      "BEGIN PRIVATE KEY",
+      "appolon1908@gmail.com",
+      "65.109.65.169",
+    ]) {
+      if (source.includes(forbidden)) {
+        failures.push(`${path}: contains forbidden credential or infrastructure material`);
+      }
     }
   }
 }

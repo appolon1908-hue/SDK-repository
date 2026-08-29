@@ -8,6 +8,7 @@ on:
       - 'scripts/generate-sdks.sh'
       - 'scripts/verify-generated-sdks.mjs'
       - 'scripts/smoke_test_python_sdk.py'
+      - 'scripts/smoke_test_middleware_python_sdk.py'
       - 'scripts/smoke_test_php_sdk.php'
       - 'scripts/validate-contracts.mjs'
       - 'scripts/validate-json-schemas.mjs'
@@ -63,14 +64,15 @@ jobs:
         with:
           php-version: '8.3'
           tools: composer:2
-      - name: Validate canonical contract semantically
+      - name: Validate canonical contracts semantically
         run: pnpm contracts:validate
-      - name: Generate Python and PHP clients and smoke-test both
+      - name: Generate public and Middleware clients and smoke-test all
         run: scripts/generate-sdks.sh
       - name: Archive exact-SHA clients
         run: |
           tar -C generated/python -czf "generated/codestra-python-${SOURCE_SHA}.tar.gz" .
           tar -C generated/php -czf "generated/codestra-php-${SOURCE_SHA}.tar.gz" .
+          tar -C generated/middleware-python -czf "generated/codestra-middleware-python-${SOURCE_SHA}.tar.gz" .
           sha256sum generated/*.tar.gz > generated/SHA256SUMS
       - name: Upload generation evidence
         uses: actions/upload-artifact@v4
@@ -79,6 +81,7 @@ jobs:
           path: |
             generated/codestra-python-${{ env.SOURCE_SHA }}.tar.gz
             generated/codestra-php-${{ env.SOURCE_SHA }}.tar.gz
+            generated/codestra-middleware-python-${{ env.SOURCE_SHA }}.tar.gz
             generated/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
