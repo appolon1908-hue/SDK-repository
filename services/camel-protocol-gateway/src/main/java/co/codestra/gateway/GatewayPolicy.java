@@ -36,6 +36,19 @@ final class GatewayPolicy {
         );
     }
 
+    /**
+     * Test-only construction seam: {@link #fromEnvironment()} is the sole
+     * production entry point and stays that way. This exists so tests can
+     * exercise {@link #assertAllowed(Exchange)} against specific allowlists
+     * without forking a new JVM per case just to vary two env vars.
+     */
+    static GatewayPolicy withAllowlistsForTests(Set<String> allowedProtocols, Set<String> allowedOperations) {
+        return new GatewayPolicy(
+            allowedProtocols.stream().map(GatewayPolicy::normalize).collect(Collectors.toUnmodifiableSet()),
+            allowedOperations.stream().map(GatewayPolicy::normalize).collect(Collectors.toUnmodifiableSet())
+        );
+    }
+
     void assertAllowed(Exchange exchange) {
         requireHeader(exchange, TENANT_HEADER, 128);
         requireHeader(exchange, CORRELATION_HEADER, 128);
