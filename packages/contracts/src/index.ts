@@ -141,33 +141,43 @@ export interface CloudEvent<TData = JsonObject> {
   data: TData;
 }
 
+export type CallDisposition =
+  | "answered"
+  | "no_answer"
+  | "busy"
+  | "voicemail"
+  | "dnc"
+  | "callback_requested"
+  | "sale_completed"
+  | "failed"
+  | "dropped"
+  | "not_interested"
+  | "unknown";
+
 export interface CallDispositionUpdatedEventData {
-  callId: UUID;
-  tenantId: UUID;
-  campaignId?: UUID;
-  contactId?: UUID;
-  agentId?: string;
-  provider?: string;
-  disposition: string;
-  previousDisposition?: string;
-  durationSeconds?: number;
-  occurredAt: ISODateTime;
-  metadata?: JsonObject;
+  event_type: "call_disposition_updated";
+  correlation_id: UUID;
+  causation_id: string;
+  odoo_contact_id?: number | null;
+  odoo_lead_id?: number | null;
+  disposition: CallDisposition;
+  phone_number: string;
+  duration_seconds?: number;
+  campaign_id?: string | null;
+  provider_call_id: string;
+  dry_run?: boolean;
 }
 
 export interface SmsReceivedEventData {
-  messageId: UUID;
-  tenantId: UUID;
-  conversationId?: UUID;
-  contactId?: UUID;
-  campaignId?: UUID;
-  provider?: string;
-  from: string;
-  to: string;
-  body: string;
-  mediaUrls?: string[];
-  receivedAt: ISODateTime;
-  metadata?: JsonObject;
+  event_type: "sms_received";
+  correlation_id: UUID;
+  causation_id: string;
+  odoo_contact_id?: number | null;
+  odoo_message_id?: number | null;
+  from_number: string;
+  body_preview: string;
+  provider_event_id: string;
+  dry_run?: boolean;
 }
 
 export interface SocialPostStatusEventData {

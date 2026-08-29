@@ -1,21 +1,54 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.codestra.co/events/call-disposition-updated.schema.json",
-  "title": "Call disposition updated event data",
+  "title": "Call disposition updated payload",
   "type": "object",
   "additionalProperties": false,
-  "required": ["callId", "tenantId", "disposition", "occurredAt"],
+  "required": ["event_type", "correlation_id", "causation_id", "disposition", "phone_number", "provider_call_id"],
   "properties": {
-    "callId": { "type": "string", "format": "uuid" },
-    "tenantId": { "type": "string", "format": "uuid" },
-    "campaignId": { "type": "string", "format": "uuid" },
-    "contactId": { "type": "string", "format": "uuid" },
-    "agentId": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "provider": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "disposition": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "previousDisposition": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "durationSeconds": { "type": "integer", "minimum": 0, "maximum": 86400 },
-    "occurredAt": { "type": "string", "format": "date-time" },
-    "metadata": { "type": "object" }
+    "event_type": { "const": "call_disposition_updated" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "causation_id": {
+      "type": "string",
+      "description": "Provider call ID that caused this event"
+    },
+    "odoo_contact_id": {
+      "type": ["integer", "null"],
+      "description": "Odoo res.partner ID; null if contact could not be matched"
+    },
+    "odoo_lead_id": {
+      "type": ["integer", "null"],
+      "description": "Odoo crm.lead ID; null if no active lead exists for the contact"
+    },
+    "disposition": {
+      "type": "string",
+      "enum": [
+        "answered",
+        "no_answer",
+        "busy",
+        "voicemail",
+        "dnc",
+        "callback_requested",
+        "sale_completed",
+        "failed",
+        "dropped",
+        "not_interested",
+        "unknown"
+      ]
+    },
+    "phone_number": {
+      "type": "string",
+      "description": "E.164 format phone number"
+    },
+    "duration_seconds": { "type": "integer", "minimum": 0 },
+    "campaign_id": { "type": ["string", "null"] },
+    "provider_call_id": {
+      "type": "string",
+      "description": "VICIdial call ID (uniqueid)"
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "True when ODOO_WRITE=false; event published but Odoo not written"
+    }
   }
 }

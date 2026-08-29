@@ -102,14 +102,17 @@ describe("signed internal n8n event boundary", () => {
     const body = canonicalBody({
       type: "call_disposition_updated",
       data: {
-        callId: "55555555-5555-4555-8555-555555555555",
-        tenantId,
-        campaignId: "66666666-6666-4666-8666-666666666666",
-        provider: "vicidial",
-        disposition: "SALE",
-        previousDisposition: "CONTACTED",
-        durationSeconds: 180,
-        occurredAt: "2026-08-28T15:00:00.000Z",
+        event_type: "call_disposition_updated",
+        correlation_id: "55555555-5555-4555-8555-555555555555",
+        causation_id: "vicidial-call-123",
+        odoo_contact_id: 4301,
+        odoo_lead_id: null,
+        disposition: "sale_completed",
+        phone_number: "+15551234567",
+        duration_seconds: 180,
+        campaign_id: "campaign-alpha",
+        provider_call_id: "1745850000.42",
+        dry_run: false,
       },
     });
     const fetch = replayClaimFetch("call_disposition_updated");
@@ -123,21 +126,26 @@ describe("signed internal n8n event boundary", () => {
     });
 
     expect(accepted.event.type).toBe("call_disposition_updated");
-    expect(accepted.event.data).toMatchObject({ disposition: "SALE", provider: "vicidial" });
+    expect(accepted.event.data).toMatchObject({
+      disposition: "sale_completed",
+      phone_number: "+15551234567",
+      provider_call_id: "1745850000.42",
+    });
   });
 
   it("accepts inbound SMS events", async () => {
     const body = canonicalBody({
       type: "sms_received",
       data: {
-        messageId: "77777777-7777-4777-8777-777777777777",
-        tenantId,
-        conversationId: "88888888-8888-4888-8888-888888888888",
-        provider: "telnexa",
-        from: "+15551234567",
-        to: "+15557654321",
-        body: "Reply received",
-        receivedAt: "2026-08-28T15:00:00.000Z",
+        event_type: "sms_received",
+        correlation_id: "77777777-7777-4777-8777-777777777777",
+        causation_id: "telnexa-message-123",
+        odoo_contact_id: 4301,
+        odoo_message_id: null,
+        from_number: "+15551234567",
+        body_preview: "Reply received",
+        provider_event_id: "telnexa-message-123",
+        dry_run: false,
       },
     });
     const fetch = replayClaimFetch("sms_received");
@@ -151,7 +159,11 @@ describe("signed internal n8n event boundary", () => {
     });
 
     expect(accepted.event.type).toBe("sms_received");
-    expect(accepted.event.data).toMatchObject({ body: "Reply received", provider: "telnexa" });
+    expect(accepted.event.data).toMatchObject({
+      body_preview: "Reply received",
+      from_number: "+15551234567",
+      provider_event_id: "telnexa-message-123",
+    });
   });
 });
 

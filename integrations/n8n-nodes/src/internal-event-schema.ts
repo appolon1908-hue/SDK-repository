@@ -17,6 +17,19 @@ const EVENT_KEYS = new Set(["specversion", "id", "tenantid", "source", "type", "
 const SOCIAL_STATUSES = new Set(["accepted", "scheduled", "publishing", "published", "partially_published", "failed", "cancelled"]);
 const SOCIAL_CHANNELS = new Set(["facebook", "instagram", "linkedin", "x", "youtube", "tiktok"]);
 const WEBHOOK_DELIVERY_STATUSES = new Set(["queued", "attempting", "delivered", "failed", "dead_lettered"]);
+const CALL_DISPOSITIONS = new Set([
+  "answered",
+  "no_answer",
+  "busy",
+  "voicemail",
+  "dnc",
+  "callback_requested",
+  "sale_completed",
+  "failed",
+  "dropped",
+  "not_interested",
+  "unknown",
+]);
 
 export function parseAndValidateCanonicalEvent(
   rawBody: Uint8Array,
@@ -68,10 +81,10 @@ export function parseAndValidateCanonicalEvent(
     return { ...base, type: eventType, data: validateWebhookDeliveryData(event.data) };
   }
   if (eventType === "call_disposition_updated") {
-    return { ...base, type: eventType, data: validateCallDispositionData(event.data, tenantId) };
+    return { ...base, type: eventType, data: validateCallDispositionData(event.data) };
   }
   if (eventType === "sms_received") {
-    return { ...base, type: eventType, data: validateSmsReceivedData(event.data, tenantId) };
+    return { ...base, type: eventType, data: validateSmsReceivedData(event.data) };
   }
   throw new InternalEventBoundaryError("No schema validator exists for the allowlisted event type.", "EVENT_SCHEMA_NOT_SUPPORTED", { status: 422 });
 }
@@ -116,78 +129,97 @@ function validateWebhookDeliveryData(value: unknown): Record<string, unknown> {
   };
 }
 
-function validateCallDispositionData(value: unknown, tenantId: string): Record<string, unknown> {
+function validateCallDispositionData(value: unknown): Record<string, unknown> {
   const data = requireObject(value, "event.data");
   rejectUnknownKeys(
     data,
     new Set([
-      "callId",
-      "tenantId",
-      "campaignId",
-      "contactId",
-      "agentId",
-      "provider",
+      "event_type",
+      "correlation_id",
+      "causation_id",
+      "odoo_contact_id",
+      "odoo_lead_id",
       "disposition",
-      "previousDisposition",
-      "durationSeconds",
-      "occurredAt",
-      "metadata",
+      "phone_number",
+      "duration_seconds",
+      "campaign_id",
+      "provider_call_id",
+      "dry_run",
     ]),
     "event.data",
   );
-  if (requireUuid(data.tenantId, "event.data.tenantId") !== tenantId) {
-    throw new InternalEventBoundaryError("The event data tenant does not match the signed event tenant.", "EVENT_TENANT_MISMATCH", { status: 403 });
+  if (data.event_type !== "call_disposition_updated") {
+    throw new InternalEventBoundaryError("event.data.event_type must match the event type.", "INVALID_EVENT_TYPE", { status: 422 });
   }
   return {
-    callId: requireUuid(data.callId, "event.data.callId"),
-    tenantId,
-    ...(data.campaignId === undefined ? {} : { campaignId: requireUuid(data.campaignId, "event.data.campaignId") }),
-    ...(data.contactId === undefined ? {} : { contactId: requireUuid(data.contactId, "event.data.contactId") }),
-    ...(data.agentId === undefined ? {} : { agentId: requireString(data.agentId, "event.data.agentId", 200) }),
-    ...(data.provider === undefined ? {} : { provider: requireString(data.provider, "event.data.provider", 100) }),
-    disposition: requireString(data.disposition, "event.data.disposition", 100),
-    ...(data.previousDisposition === undefined ? {} : { previousDisposition: requireString(data.previousDisposition, "event.data.previousDisposition", 100) }),
-    ...(data.durationSeconds === undefined ? {} : { durationSeconds: integerBetween(data.durationSeconds, 0, 86_400, "event.data.durationSeconds") }),
-    occurredAt: requireDateTime(data.occurredAt, "event.data.occurredAt"),
-    ...(data.metadata === undefined ? {} : { metadata: requireObject(data.metadata, "event.data.metadata") }),
+    event_type: "call_disposition_updated",
+    correlation_id: requireUuid(data.correlation_id, "event.data.correlation_id"),
+    causation_id: requireString(data.causation_id, "event.data.causation_id", 200),
+    ...(data.odoo_contact_id === undefined ? {} : { odoo_contact_id: optionalNullableInteger(data.odoo_contact_id, "event.data.odoo_contact_id") }),
+    ...(data.odoo_lead_id === undefined ? {} : { odoo_lead_id: optionalNullableInteger(data.odoo_lead_id, "event.data.odoo_lead_id") }),
+    disposition: requireEnum(data.disposition, CALL_DISPOSITIONS, "event.data.disposition"),
+    phone_number: requireE164(data.phone_number, "event.data.phone_number"),
+    ...(data.duration_seconds === undefined ? {} : { duration_seconds: integerBetween(data.duration_seconds, 0, 86_400, "event.data.duration_seconds") }),
+    ...(data.campaign_id === undefined ? {} : { campaign_id: optionalNullableString(data.campaign_id, "event.data.campaign_id", 200) }),
+    provider_call_id: requireString(data.provider_call_id, "event.data.provider_call_id", 200),
+    ...(data.dry_run === undefined ? {} : { dry_run: requireBoolean(data.dry_run, "event.data.dry_run") }),
   };
 }
 
-function validateSmsReceivedData(value: unknown, tenantId: string): Record<string, unknown> {
+function validateSmsReceivedData(value: unknown): Record<string, unknown> {
   const data = requireObject(value, "event.data");
   rejectUnknownKeys(
     data,
     new Set([
-      "messageId",
-      "tenantId",
-      "conversationId",
-      "contactId",
-      "campaignId",
-      "provider",
-      "from",
-      "to",
-      "body",
-      "mediaUrls",
-      "receivedAt",
-      "metadata",
+      "event_type",
+      "correlation_id",
+      "causation_id",
+      "odoo_contact_id",
+      "odoo_message_id",
+      "from_number",
+      "body_preview",
+      "provider_event_id",
+      "dry_run",
     ]),
     "event.data",
   );
-  if (requireUuid(data.tenantId, "event.data.tenantId") !== tenantId) {
-    throw new InternalEventBoundaryError("The event data tenant does not match the signed event tenant.", "EVENT_TENANT_MISMATCH", { status: 403 });
+  if (data.event_type !== "sms_received") {
+    throw new InternalEventBoundaryError("event.data.event_type must match the event type.", "INVALID_EVENT_TYPE", { status: 422 });
   }
   return {
-    messageId: requireUuid(data.messageId, "event.data.messageId"),
-    tenantId,
-    ...(data.conversationId === undefined ? {} : { conversationId: requireUuid(data.conversationId, "event.data.conversationId") }),
-    ...(data.contactId === undefined ? {} : { contactId: requireUuid(data.contactId, "event.data.contactId") }),
-    ...(data.campaignId === undefined ? {} : { campaignId: requireUuid(data.campaignId, "event.data.campaignId") }),
-    ...(data.provider === undefined ? {} : { provider: requireString(data.provider, "event.data.provider", 100) }),
-    from: requireString(data.from, "event.data.from", 100),
-    to: requireString(data.to, "event.data.to", 100),
-    body: requireString(data.body, "event.data.body", 10_000, true),
-    ...(data.mediaUrls === undefined ? {} : { mediaUrls: requireArray(data.mediaUrls, "event.data.mediaUrls").map((url, index) => requireAbsoluteUri(url, `event.data.mediaUrls[${index}]`)) }),
-    receivedAt: requireDateTime(data.receivedAt, "event.data.receivedAt"),
-    ...(data.metadata === undefined ? {} : { metadata: requireObject(data.metadata, "event.data.metadata") }),
+    event_type: "sms_received",
+    correlation_id: requireUuid(data.correlation_id, "event.data.correlation_id"),
+    causation_id: requireString(data.causation_id, "event.data.causation_id", 200),
+    ...(data.odoo_contact_id === undefined ? {} : { odoo_contact_id: optionalNullableInteger(data.odoo_contact_id, "event.data.odoo_contact_id") }),
+    ...(data.odoo_message_id === undefined ? {} : { odoo_message_id: optionalNullableInteger(data.odoo_message_id, "event.data.odoo_message_id") }),
+    from_number: requireE164(data.from_number, "event.data.from_number"),
+    body_preview: requireString(data.body_preview, "event.data.body_preview", 120, true),
+    provider_event_id: requireString(data.provider_event_id, "event.data.provider_event_id", 200),
+    ...(data.dry_run === undefined ? {} : { dry_run: requireBoolean(data.dry_run, "event.data.dry_run") }),
   };
+}
+
+function optionalNullableInteger(value: unknown, path: string): number | null {
+  if (value === null) return null;
+  return integerBetween(value, 0, 2_147_483_647, path);
+}
+
+function optionalNullableString(value: unknown, path: string, max: number): string | null {
+  if (value === null) return null;
+  return requireString(value, path, max);
+}
+
+function requireBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") {
+    throw new InternalEventBoundaryError(`${path} must be a boolean.`, "INVALID_BOOLEAN", { status: 422 });
+  }
+  return value;
+}
+
+function requireE164(value: unknown, path: string): string {
+  const text = requireString(value, path, 32);
+  if (!/^\+[1-9]\d{1,14}$/u.test(text)) {
+    throw new InternalEventBoundaryError(`${path} must be an E.164 phone number.`, "INVALID_PHONE_NUMBER", { status: 422 });
+  }
+  return text;
 }

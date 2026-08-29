@@ -6,12 +6,20 @@ info:
 defaultContentType: application/json
 channels:
   callDispositionUpdated:
-    address: call_disposition_updated
+    address: codestra.events.call_disposition_updated
+    description: >
+      Published by Middleware when a VICIdial call result has been written
+      to the Odoo contact record. Subscribers receive call outcome data
+      without accessing VICIdial or Odoo directly.
     messages:
       callDispositionUpdated:
         $ref: '#/components/messages/CallDispositionUpdated'
   smsReceived:
-    address: sms_received
+    address: codestra.events.sms_received
+    description: >
+      Published by Middleware when an inbound SMS from a customer has been
+      written to the Odoo contact chatter. Subscribers receive the message
+      preview and contact reference without accessing Telnexa or Odoo directly.
     messages:
       smsReceived:
         $ref: '#/components/messages/SmsReceived'
@@ -45,27 +53,19 @@ operations:
 components:
   messages:
     CallDispositionUpdated:
-      name: call_disposition_updated
+      name: CallDispositionUpdated
       title: Call disposition updated
+      summary: VICIdial call result written to Odoo
+      contentType: application/json
       payload:
-        allOf:
-          - $ref: '#/components/schemas/CloudEventEnvelope'
-          - type: object
-            properties:
-              type: { const: call_disposition_updated }
-              data:
-                $ref: '../schemas/events/call-disposition-updated.schema.json'
+        $ref: '#/components/schemas/CallDispositionUpdatedPayload'
     SmsReceived:
-      name: sms_received
+      name: SmsReceived
       title: SMS received
+      summary: Inbound customer SMS written to Odoo chatter
+      contentType: application/json
       payload:
-        allOf:
-          - $ref: '#/components/schemas/CloudEventEnvelope'
-          - type: object
-            properties:
-              type: { const: sms_received }
-              data:
-                $ref: '../schemas/events/sms-received.schema.json'
+        $ref: '#/components/schemas/SmsReceivedPayload'
     SocialPostStatusChanged:
       name: codestra.social.post.status.v1
       title: Social post status changed
@@ -97,6 +97,8 @@ components:
                   attempt: { type: integer, minimum: 0 }
                   occurredAt: { type: string, format: date-time }
   schemas:
+    CallDispositionUpdatedPayload:
+      $ref: '../schemas/events/call-disposition-updated.schema.json'
     CloudEventEnvelope:
       type: object
       additionalProperties: false
@@ -111,3 +113,5 @@ components:
         datacontenttype: { const: application/json }
         dataschema: { type: string, format: uri }
         data: {}
+    SmsReceivedPayload:
+      $ref: '../schemas/events/sms-received.schema.json'

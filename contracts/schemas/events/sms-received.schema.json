@@ -1,26 +1,41 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.codestra.co/events/sms-received.schema.json",
-  "title": "SMS received event data",
+  "title": "SMS received payload",
   "type": "object",
   "additionalProperties": false,
-  "required": ["messageId", "tenantId", "from", "to", "body", "receivedAt"],
+  "required": ["event_type", "correlation_id", "causation_id", "from_number", "body_preview", "provider_event_id"],
   "properties": {
-    "messageId": { "type": "string", "format": "uuid" },
-    "tenantId": { "type": "string", "format": "uuid" },
-    "conversationId": { "type": "string", "format": "uuid" },
-    "contactId": { "type": "string", "format": "uuid" },
-    "campaignId": { "type": "string", "format": "uuid" },
-    "provider": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "from": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "to": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "body": { "type": "string", "minLength": 0, "maxLength": 10000 },
-    "mediaUrls": {
-      "type": "array",
-      "maxItems": 20,
-      "items": { "type": "string", "format": "uri" }
+    "event_type": { "const": "sms_received" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "causation_id": {
+      "type": "string",
+      "description": "Telnexa message ID that caused this event"
     },
-    "receivedAt": { "type": "string", "format": "date-time" },
-    "metadata": { "type": "object" }
+    "odoo_contact_id": {
+      "type": ["integer", "null"],
+      "description": "Odoo res.partner ID; null if phone not matched"
+    },
+    "odoo_message_id": {
+      "type": ["integer", "null"],
+      "description": "Odoo mail.message ID of chatter entry"
+    },
+    "from_number": {
+      "type": "string",
+      "description": "E.164 format sender phone number"
+    },
+    "body_preview": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "First 120 characters of the inbound SMS body"
+    },
+    "provider_event_id": {
+      "type": "string",
+      "description": "Telnexa message ID"
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "True when ODOO_WRITE=false; event published but Odoo not written"
+    }
   }
 }
