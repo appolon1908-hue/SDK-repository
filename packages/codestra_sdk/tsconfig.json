@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@codestra/communications-sdk": ["../communications-sdk/dist/index.d.ts"],
+      "@codestra/contracts": ["../contracts/dist/index.d.ts"],
+      "@codestra/social-sdk": ["../social-sdk/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
