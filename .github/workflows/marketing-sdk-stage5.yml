@@ -1,0 +1,26 @@
+name: Marketing SDK Stage 5
+
+on:
+  pull_request:
+    paths:
+      - 'python/codestra_sdk/**'
+      - 'tests/test_marketing_sdk_contract.py'
+      - '.github/workflows/marketing-sdk-stage5.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --upgrade pip
+      - run: pip install pytest httpx
+      - run: PYTHONPATH=python python -m compileall -q python/codestra_sdk tests/test_marketing_sdk_contract.py
+      - run: PYTHONPATH=python pytest -q tests/test_marketing_sdk_contract.py
+      - run: PYTHONPATH=python python -c "from codestra_sdk.marketing import MarketingClient; from codestra_sdk.ai import AIClient; from codestra_sdk.communication import CommunicationClient; from codestra_sdk.social import SocialClient; assert MarketingClient and AIClient and CommunicationClient and SocialClient"
