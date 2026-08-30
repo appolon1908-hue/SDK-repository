@@ -46,7 +46,6 @@ export interface SurveyContext {
   leadId?: string;
   anonymous?: boolean;
   locale?: string;
-  attribution?: Record<string, string | undefined>;
   metadata?: Record<string, unknown>;
 }
 export interface SurveyValidationError { questionId: string; code: string; message: string }
@@ -54,11 +53,17 @@ export interface SurveyValidationResult { valid: boolean; errors: SurveyValidati
 export interface SurveySubmission {
   tenantId: string;
   siteId: string;
-  campaignId?: string;
-  source: "form" | "landing_page" | "chat" | "voice" | "api" | "other";
   submittedAt: string;
-  formId: string;
-  fields: Record<string, unknown>;
+  source: "form" | "landing_page" | "chat" | "voice" | "api" | "other";
+  surveyId: string;
+  surveyVersion: string;
+  surveyCategory: SurveyDefinition["category"];
+  campaignId?: string;
+  anonymous: boolean;
+  contactId?: string;
+  leadId?: string;
+  locale?: string;
+  answers: Record<string, unknown>;
   metadata: Record<string, unknown>;
 }
 
@@ -114,26 +119,22 @@ export function buildSurveySubmission(definition: SurveyDefinition, context: Sur
   if (context.anonymous && !definition.anonymousAllowed) {
     throw new SurveyValidationException([{ questionId: "$survey", code: "anonymous_not_allowed", message: "Anonymous responses are not allowed for this survey." }]);
   }
+  const anonymous = Boolean(context.anonymous);
   return {
     tenantId: context.tenantId,
     siteId: context.siteId,
-    campaignId: context.campaignId,
-    source: context.source ?? "form",
     submittedAt: new Date().toISOString(),
-    formId: `survey:${definition.id}@${definition.version}`,
-    fields: { surveyAnswers: pickVisibleAnswers(definition, answers) },
-    metadata: {
-      ...context.metadata,
-      intakeKind: "survey",
-      surveyId: definition.id,
-      surveyVersion: definition.version,
-      surveyCategory: definition.category,
-      anonymous: Boolean(context.anonymous),
-      locale: context.locale,
-      contactId: context.anonymous ? undefined : context.contactId,
-      leadId: context.anonymous ? undefined : context.leadId,
-      attribution: context.attribution,
-    },
+    source: context.source ?? "form",
+    surveyId: definition.id,
+    surveyVersion: definition.version,
+    surveyCategory: definition.category,
+    campaignId: context.campaignId,
+    anonymous,
+    contactId: anonymous ? undefined : context.contactId,
+    leadId: anonymous ? undefined : context.leadId,
+    locale: context.locale,
+    answers: pickVisibleAnswers(definition, answers),
+    metadata: { ...context.metadata, intakeKind: "survey" },
   };
 }
 
