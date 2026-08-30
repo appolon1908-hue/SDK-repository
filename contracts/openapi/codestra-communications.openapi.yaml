@@ -21,7 +21,67 @@ tags:
   - name: Provider health
   - name: Usage
   - name: Reputation
+  - name: Voice controls
 paths:
+  /api/codestra/voice/session:
+    post:
+      operationId: startSameOriginVoiceSession
+      tags: [Voice controls]
+      summary: Start a browser-safe same-origin voice session
+      description: >
+        Same-origin BFF control route used by website voice controls. The BFF
+        must exchange this request for a governed Middleware command through
+        Caddy and Kong; browser clients never receive SIP, provider, Kong,
+        Keycloak client-secret, or Middleware credentials.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoiceSessionStartRequest' }
+      responses:
+        '202':
+          description: Voice session accepted for governed startup
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSessionStartResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/codestra/voice/session/{sessionId}:
+    delete:
+      operationId: stopSameOriginVoiceSession
+      tags: [Voice controls]
+      summary: Stop a browser-safe same-origin voice session
+      description: >
+        Stops or cancels a voice session created through the same-origin BFF
+        control route. Stop is idempotent: missing/unknown remote sessions may
+        be treated as already stopped after tenant/session ownership checks.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/VoiceSessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoiceSessionStopRequest' }
+      responses:
+        '202':
+          description: Voice session stop accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSessionStopResult' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /v1/communications/messages:
     get:
       operationId: listCommunicationMessages
@@ -650,6 +710,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    VoiceSessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 180 }
   responses:
     Error:
       description: Canonical API error response
@@ -660,6 +725,48 @@ components:
     CommunicationChannel:
       type: string
       enum: [email, sms, voice]
+    VoiceSessionStartRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, siteId, source]
+      properties:
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        siteId: { type: string, minLength: 1, maxLength: 128 }
+        campaignId: { type: string, minLength: 1, maxLength: 128 }
+        conversationId: { type: string, minLength: 1, maxLength: 180 }
+        locale: { type: string, pattern: '^[a-z]{2}(?:-[A-Z]{2})?$' }
+        source:
+          type: string
+          enum: [voice]
+        metadata:
+          type: object
+          additionalProperties: true
+    VoiceSessionStartResult:
+      type: object
+      additionalProperties: false
+      required: [sessionId]
+      properties:
+        sessionId: { type: string, minLength: 1, maxLength: 180 }
+        conversationId: { type: string, minLength: 1, maxLength: 180 }
+    VoiceSessionStopRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          enum: [user_ended, disposed, start_failed, timeout, navigation, policy, provider_failure]
+        metadata:
+          type: object
+          additionalProperties: true
+    VoiceSessionStopResult:
+      type: object
+      additionalProperties: false
+      required: [sessionId, status]
+      properties:
+        sessionId: { type: string, minLength: 1, maxLength: 180 }
+        status:
+          type: string
+          enum: [ending, ended, already_ended, indeterminate]
     MessageStatus:
       type: string
       enum:
