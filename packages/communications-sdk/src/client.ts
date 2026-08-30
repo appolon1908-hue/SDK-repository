@@ -10,12 +10,21 @@ import type {
   CodestraCommunicationsClientOptions,
   CommandEnvelope,
   CommandOperation,
+  CommunicationsDateRangeOptions,
+  CommunicationsListOptions,
   CommunicationsMutationOptions,
   CommunicationsRequestOptions,
+  CreateCommunicationMessageInput,
+  DomainCreateInput,
+  PreferenceUpsertInput,
   SendEmailBatchInput,
   SendEmailInput,
   SendSmsBatchInput,
   SendSmsInput,
+  SenderIdentityWriteInput,
+  SuppressionUpsertInput,
+  TemplateRenderInput,
+  TemplateWriteInput,
   VoiceCallInput,
   VoiceTransferInput,
 } from "./types.js";
@@ -28,6 +37,7 @@ import {
   validateSendSmsInput,
   validateVoiceCallInput,
   validateVoiceTransferInput,
+  parseJsonObject,
 } from "./validation.js";
 
 const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
@@ -46,7 +56,7 @@ interface SubmitCommandOptions<TInput> extends CommunicationsMutationOptions {
 }
 
 interface InternalRequestOptions extends CommunicationsRequestOptions {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   body?: unknown;
   idempotencyKey?: string;
@@ -79,6 +89,60 @@ export class CodestraCommunicationsClient {
     get: (commandId: UUID, options?: CommunicationsRequestOptions) => Promise<CommandOperation>;
   };
 
+  readonly messages: {
+    list: (options?: CommunicationsListOptions) => Promise<JsonObject>;
+    create: (input: CreateCommunicationMessageInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+    get: (messageId: UUID, options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+    events: (messageId: UUID, options?: CommunicationsListOptions) => Promise<JsonObject>;
+    cancel: (messageId: UUID, input: CancelCommunicationInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+  };
+
+  readonly templates: {
+    list: (options?: CommunicationsListOptions) => Promise<JsonObject>;
+    create: (input: TemplateWriteInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+    get: (templateId: UUID, options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+    update: (templateId: UUID, input: TemplateWriteInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+    archive: (templateId: UUID, options?: CommunicationsMutationOptions) => Promise<void>;
+    render: (templateId: UUID, input: TemplateRenderInput, options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+  };
+
+  readonly senderIdentities: {
+    list: (options?: CommunicationsListOptions) => Promise<JsonObject>;
+    create: (input: SenderIdentityWriteInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+    get: (senderIdentityId: UUID, options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+    update: (senderIdentityId: UUID, input: SenderIdentityWriteInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+  };
+
+  readonly domains: {
+    list: (options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+    create: (input: DomainCreateInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+    get: (domainId: UUID, options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+    verify: (domainId: UUID, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+  };
+
+  readonly suppressions: {
+    list: (options?: CommunicationsListOptions) => Promise<JsonObject>;
+    upsert: (input: SuppressionUpsertInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+    delete: (suppressionId: UUID, options?: CommunicationsMutationOptions) => Promise<void>;
+  };
+
+  readonly preferences: {
+    list: (options?: CommunicationsListOptions) => Promise<JsonObject>;
+    upsert: (input: PreferenceUpsertInput, options: CommunicationsMutationOptions) => Promise<JsonObject>;
+  };
+
+  readonly providerHealth: {
+    get: (options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+  };
+
+  readonly usage: {
+    get: (options?: CommunicationsDateRangeOptions) => Promise<JsonObject>;
+  };
+
+  readonly reputation: {
+    get: (options?: CommunicationsRequestOptions) => Promise<JsonObject>;
+  };
+
   private readonly baseUrl: URL;
   private readonly tenantId: string;
   private readonly requestedBy: string;
@@ -108,6 +172,89 @@ export class CodestraCommunicationsClient {
 
     this.operations = {
       get: (commandId, requestOptions) => this.getOperation(commandId, requestOptions),
+    };
+
+    this.messages = {
+      list: (requestOptions) => this.getResource("/v1/communications/messages", requestOptions),
+      create: (input, requestOptions) =>
+        this.mutateResource("POST", "/v1/communications/messages", input, requestOptions),
+      get: (messageId, requestOptions) =>
+        this.getResource(`/v1/communications/messages/${encodeURIComponent(requireHeaderValue(messageId, "messageId"))}`, requestOptions),
+      events: (messageId, requestOptions) =>
+        this.getResource(`/v1/communications/messages/${encodeURIComponent(requireHeaderValue(messageId, "messageId"))}/events`, requestOptions),
+      cancel: (messageId, input, requestOptions) =>
+        this.mutateResource(
+          "POST",
+          `/v1/communications/messages/${encodeURIComponent(requireHeaderValue(messageId, "messageId"))}/cancel`,
+          input,
+          requestOptions,
+        ),
+    };
+
+    this.templates = {
+      list: (requestOptions) => this.getResource("/v1/communications/templates", requestOptions),
+      create: (input, requestOptions) => this.mutateResource("POST", "/v1/communications/templates", input, requestOptions),
+      get: (templateId, requestOptions) =>
+        this.getResource(`/v1/communications/templates/${encodeURIComponent(requireUuid(templateId, "templateId"))}`, requestOptions),
+      update: (templateId, input, requestOptions) =>
+        this.mutateResource("PUT", `/v1/communications/templates/${encodeURIComponent(requireUuid(templateId, "templateId"))}`, input, requestOptions),
+      archive: (templateId, requestOptions = { idempotencyKey: `archive:${templateId}` }) =>
+        this.deleteResource(`/v1/communications/templates/${encodeURIComponent(requireUuid(templateId, "templateId"))}`, requestOptions),
+      render: (templateId, input, requestOptions) =>
+        this.request<JsonObject>({
+          method: "POST",
+          path: `/v1/communications/templates/${encodeURIComponent(requireUuid(templateId, "templateId"))}/render`,
+          body: stripUndefined(input),
+          validate: parseJsonObject,
+          ...copyRequestOptions(requestOptions),
+        }),
+    };
+
+    this.senderIdentities = {
+      list: (requestOptions) => this.getResource("/v1/communications/sender-identities", requestOptions),
+      create: (input, requestOptions) => this.mutateResource("POST", "/v1/communications/sender-identities", input, requestOptions),
+      get: (senderIdentityId, requestOptions) =>
+        this.getResource(`/v1/communications/sender-identities/${encodeURIComponent(requireUuid(senderIdentityId, "senderIdentityId"))}`, requestOptions),
+      update: (senderIdentityId, input, requestOptions) =>
+        this.mutateResource(
+          "PUT",
+          `/v1/communications/sender-identities/${encodeURIComponent(requireUuid(senderIdentityId, "senderIdentityId"))}`,
+          input,
+          requestOptions,
+        ),
+    };
+
+    this.domains = {
+      list: (requestOptions) => this.getResource("/v1/communications/domains", requestOptions),
+      create: (input, requestOptions) => this.mutateResource("POST", "/v1/communications/domains", input, requestOptions),
+      get: (domainId, requestOptions) =>
+        this.getResource(`/v1/communications/domains/${encodeURIComponent(requireUuid(domainId, "domainId"))}`, requestOptions),
+      verify: (domainId, requestOptions) =>
+        this.mutateResource("POST", `/v1/communications/domains/${encodeURIComponent(requireUuid(domainId, "domainId"))}/verify`, {}, requestOptions),
+    };
+
+    this.suppressions = {
+      list: (requestOptions) => this.getResource("/v1/communications/suppressions", requestOptions),
+      upsert: (input, requestOptions) => this.mutateResource("POST", "/v1/communications/suppressions", input, requestOptions),
+      delete: (suppressionId, requestOptions = { idempotencyKey: `delete:${suppressionId}` }) =>
+        this.deleteResource(`/v1/communications/suppressions/${encodeURIComponent(requireUuid(suppressionId, "suppressionId"))}`, requestOptions),
+    };
+
+    this.preferences = {
+      list: (requestOptions) => this.getResource("/v1/communications/preferences", requestOptions),
+      upsert: (input, requestOptions) => this.mutateResource("POST", "/v1/communications/preferences", input, requestOptions),
+    };
+
+    this.providerHealth = {
+      get: (requestOptions) => this.getResource("/v1/communications/provider-health", requestOptions),
+    };
+
+    this.usage = {
+      get: (requestOptions) => this.getResource("/v1/communications/usage", requestOptions),
+    };
+
+    this.reputation = {
+      get: (requestOptions) => this.getResource("/v1/communications/reputation", requestOptions),
     };
 
     this.email = {
@@ -260,6 +407,40 @@ export class CodestraCommunicationsClient {
     });
   }
 
+  private async getResource(path: string, options?: CommunicationsListOptions | CommunicationsDateRangeOptions): Promise<JsonObject> {
+    return this.request<JsonObject>({
+      method: "GET",
+      path: appendQuery(path, options),
+      validate: parseJsonObject,
+      ...copyRequestOptions(options),
+    });
+  }
+
+  private async mutateResource(
+    method: "POST" | "PUT",
+    path: string,
+    body: unknown,
+    options: CommunicationsMutationOptions,
+  ): Promise<JsonObject> {
+    return this.request<JsonObject>({
+      method,
+      path,
+      body: stripUndefined(body),
+      idempotencyKey: options.idempotencyKey,
+      validate: parseJsonObject,
+      ...copyRequestOptions(options),
+    });
+  }
+
+  private async deleteResource(path: string, options: CommunicationsMutationOptions): Promise<void> {
+    return this.request<void>({
+      method: "DELETE",
+      path,
+      idempotencyKey: options.idempotencyKey,
+      ...copyRequestOptions(options),
+    });
+  }
+
   private async request<T>(options: InternalRequestOptions): Promise<T> {
     const correlationId = requireHeaderValue(options.correlationId ?? this.correlationIdFactory(), "correlationId");
     const token = requireHeaderValue(await this.getAccessToken(), "access token");
@@ -364,6 +545,17 @@ function ensureTrailingSlash(url: URL): URL {
   const copy = new URL(url);
   if (!copy.pathname.endsWith("/")) copy.pathname += "/";
   return copy;
+}
+
+function appendQuery(path: string, options: CommunicationsListOptions | CommunicationsDateRangeOptions | undefined): string {
+  if (options === undefined) return path;
+  const query = new URLSearchParams();
+  for (const key of ["cursor", "limit", "channel", "status", "from", "to"] as const) {
+    const value = options[key as keyof typeof options];
+    if (value !== undefined) query.set(key, String(value));
+  }
+  const text = query.toString();
+  return text ? `${path}?${text}` : path;
 }
 
 function requireHeaderValue(value: string, name: string): string {

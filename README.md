@@ -49,3 +49,11 @@ Optional runtime integrations are disabled by default and must not activate exte
 ## Production configuration
 
 Password reset, SMTP, OIDC clients, provider credentials, DNS, Kong, and deployed Middleware settings are intentionally outside this SDK repository. Use [docs/PRODUCTION_CONFIGURATION_CHECKLIST.md](docs/PRODUCTION_CONFIGURATION_CHECKLIST.md) to verify those owners and gates before any production activation.
+
+## Communications API v1
+
+Communications API v1 is tracked as a canonical SDK surface in [contracts/openapi/codestra-communications.openapi.yaml](contracts/openapi/codestra-communications.openapi.yaml), [contracts/asyncapi/codestra-events.asyncapi.yaml](contracts/asyncapi/codestra-events.asyncapi.yaml), and [packages/communications-sdk](packages/communications-sdk). The production-readiness gate is documented in [docs/COMMUNICATIONS_PRODUCTION_READINESS.md](docs/COMMUNICATIONS_PRODUCTION_READINESS.md) and enforced by:
+
+```bash
+pnpm communications:ready
+```

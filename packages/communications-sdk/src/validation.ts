@@ -126,6 +126,10 @@ export function parseCommandOperation(value: unknown, path = "response"): Comman
   return operation as unknown as CommandOperation;
 }
 
+export function parseJsonObject(value: unknown, path = "response"): Record<string, unknown> {
+  return object(value, path);
+}
+
 function validateSendEmailInputAtPath(input: unknown, path: string): void {
   const value = object(input, path);
   emailAddress(value.from, `${path}.from`);

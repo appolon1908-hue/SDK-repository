@@ -109,6 +109,51 @@ describe("CodestraCommunicationsClient", () => {
     expect(headers.get("idempotency-key")).toBeNull();
   });
 
+  it("exposes the canonical public Communications API resource surface", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, { items: [] }))
+      .mockResolvedValueOnce(jsonResponse(202, { messageId: commandId }))
+      .mockResolvedValueOnce(jsonResponse(200, { templateId: commandId }))
+      .mockResolvedValueOnce(jsonResponse(201, { domainId: commandId }))
+      .mockResolvedValueOnce(jsonResponse(200, { suppressionId: commandId }))
+      .mockResolvedValueOnce(jsonResponse(200, { preferenceId: commandId }))
+      .mockResolvedValueOnce(jsonResponse(200, { status: "healthy", providers: [] }))
+      .mockResolvedValueOnce(jsonResponse(200, { totals: [] }))
+      .mockResolvedValueOnce(jsonResponse(200, { status: "good", domains: [], providers: [] }));
+    const client = testClient(fetchMock);
+
+    await client.messages.list({ channel: "email", status: "queued", limit: 25 });
+    await client.messages.create(
+      { channel: "email", to: ["customer@example.com"], content: { subject: "Hi", text: "Hello" } },
+      { idempotencyKey: "message-create-0001" },
+    );
+    await client.templates.get(commandId);
+    await client.domains.create({ domain: "codestra.co" }, { idempotencyKey: "domain-create-0001" });
+    await client.suppressions.upsert(
+      { channel: "email", subject: "blocked@example.com", reason: "manual" },
+      { idempotencyKey: "suppression-upsert-0001" },
+    );
+    await client.preferences.upsert(
+      { channel: "sms", subject: "+15551234567", consent: "denied" },
+      { idempotencyKey: "preference-upsert-0001" },
+    );
+    await client.providerHealth.get();
+    await client.usage.get({ from: "2026-08-01T00:00:00Z", to: "2026-08-30T00:00:00Z" });
+    await client.reputation.get();
+
+    expect(pathnameWithSearch(fetchMock, 0)).toBe("/v1/communications/messages?limit=25&channel=email&status=queued");
+    expect(pathnameWithSearch(fetchMock, 1)).toBe("/v1/communications/messages");
+    expect(pathnameWithSearch(fetchMock, 2)).toBe(`/v1/communications/templates/${commandId}`);
+    expect(pathnameWithSearch(fetchMock, 3)).toBe("/v1/communications/domains");
+    expect(pathnameWithSearch(fetchMock, 4)).toBe("/v1/communications/suppressions");
+    expect(pathnameWithSearch(fetchMock, 5)).toBe("/v1/communications/preferences");
+    expect(pathnameWithSearch(fetchMock, 6)).toBe("/v1/communications/provider-health");
+    expect(pathnameWithSearch(fetchMock, 7)).toBe("/v1/communications/usage?from=2026-08-01T00%3A00%3A00Z&to=2026-08-30T00%3A00%3A00Z");
+    expect(pathnameWithSearch(fetchMock, 8)).toBe("/v1/communications/reputation");
+    expect(headersFor(fetchMock, 3).get("idempotency-key")).toBe("domain-create-0001");
+  });
+
   it("rejects invalid caller input before sending", async () => {
     const fetchMock = vi.fn<typeof fetch>();
     const client = testClient(fetchMock);
@@ -201,4 +246,13 @@ function firstJsonRequest(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>): {
 function jsonBody(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, index: number): Record<string, unknown> {
   const init = fetchMock.mock.calls[index]?.[1];
   return JSON.parse(String(init?.body)) as Record<string, unknown>;
+}
+
+function pathnameWithSearch(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, index: number): string {
+  const url = new URL(String(fetchMock.mock.calls[index]?.[0]));
+  return `${url.pathname}${url.search}`;
+}
+
+function headersFor(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, index: number): Headers {
+  return new Headers(fetchMock.mock.calls[index]?.[1]?.headers);
 }

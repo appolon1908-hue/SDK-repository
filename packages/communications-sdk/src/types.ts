@@ -1,4 +1,18 @@
 import type { ISODateTime, JsonObject, UUID } from "@codestra/contracts";
+export type {
+  CommunicationDomain,
+  CommunicationMessage,
+  CommunicationMessageEvent,
+  CommunicationMessageList,
+  CommunicationPreference,
+  CommunicationProviderHealth,
+  CommunicationReputationReport,
+  CommunicationSenderIdentity,
+  CommunicationSuppression,
+  CommunicationTemplate,
+  CommunicationUsageReport,
+  CreateCommunicationMessageInput,
+} from "@codestra/contracts";
 
 export type CommunicationChannel = "email" | "sms" | "voice";
 
@@ -34,6 +48,63 @@ export interface CommunicationsRequestOptions {
 export interface CommunicationsMutationOptions extends CommunicationsRequestOptions {
   idempotencyKey: string;
   commandId?: UUID;
+}
+
+export interface CommunicationsListOptions extends CommunicationsRequestOptions {
+  cursor?: string;
+  limit?: number;
+  channel?: CommunicationChannel;
+  status?: string;
+}
+
+export interface CommunicationsDateRangeOptions extends CommunicationsRequestOptions {
+  from?: ISODateTime;
+  to?: ISODateTime;
+}
+
+export interface TemplateWriteInput {
+  channel: CommunicationChannel;
+  name: string;
+  locale?: string;
+  content: JsonObject;
+  variables?: string[];
+  metadata?: JsonObject;
+}
+
+export interface TemplateRenderInput {
+  variables?: JsonObject;
+  locale?: string;
+}
+
+export interface SenderIdentityWriteInput {
+  channel: CommunicationChannel;
+  address: string;
+  displayName?: string;
+  domainId?: UUID;
+  metadata?: JsonObject;
+}
+
+export interface DomainCreateInput {
+  domain: string;
+  metadata?: JsonObject;
+}
+
+export interface SuppressionUpsertInput {
+  channel: CommunicationChannel;
+  subject: string;
+  reason: "hard_bounce" | "complaint" | "unsubscribe" | "sms_opt_out" | "policy" | "manual";
+  scope?: "tenant" | "global";
+  source?: string;
+  metadata?: JsonObject;
+}
+
+export interface PreferenceUpsertInput {
+  subject: string;
+  channel: CommunicationChannel;
+  topic?: string;
+  consent: "granted" | "denied" | "unknown";
+  source?: string;
+  metadata?: JsonObject;
 }
 
 export interface CommandOperation {
