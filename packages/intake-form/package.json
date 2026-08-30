@@ -1,0 +1,27 @@
+{
+  "name": "@codestra/intake-form",
+  "version": "0.1.0",
+  "description": "Industry-aware schema and form engine for Codestra unified intake.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./presets": {
+      "types": "./dist/presets.d.ts",
+      "default": "./dist/presets.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
