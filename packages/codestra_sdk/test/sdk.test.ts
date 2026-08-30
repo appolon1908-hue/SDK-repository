@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCodestraSdk } from "../src/index.js";
+import { CodestraSdkConfigurationError, createCodestraSdk } from "../src/index.js";
 
 const tenantId = "tenant-001";
 const correlationId = "correlation-0001";
@@ -55,6 +55,47 @@ describe("codestra_sdk facade", () => {
     expect(headersFor(fetchMock, 1).get("x-codestra-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 2).get("x-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 3).get("x-codestra-tenant-id")).toBe(tenantId);
+  });
+
+  it("certifies endpoint and credential hygiene for unified facade requests", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { runId: "run-001" }));
+    const sdk = testSdk(fetchMock);
+
+    await sdk.workflow.runs.trigger(
+      { workflow: "lead-intake", payload: { source: "sdk-test" } },
+      { idempotencyKey, correlationId: "correlation-explicit-0001" },
+    );
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    const headers = new Headers(init?.headers);
+    expect(init?.method).toBe("POST");
+    expect(init?.credentials).toBe("omit");
+    expect(init?.redirect).toBe("error");
+    expect(headers.get("authorization")).toBe("Bearer test-token");
+    expect(headers.get("x-codestra-tenant-id")).toBe(tenantId);
+    expect(headers.get("x-correlation-id")).toBe("correlation-explicit-0001");
+    expect(headers.get("idempotency-key")).toBe(idempotencyKey);
+    expect(String(init?.body)).not.toContain("test-token");
+  });
+
+  it("rejects credential-bearing or insecure base URLs before requests leave the process", () => {
+    expect(() =>
+      createCodestraSdk({
+        baseUrl: "https://user:pass@api.codestra.co",
+        tenantId,
+        requestedBy: "moneybee-backend",
+        getAccessToken: () => "test-token",
+      }),
+    ).toThrow(CodestraSdkConfigurationError);
+
+    expect(() =>
+      createCodestraSdk({
+        baseUrl: "http://api.codestra.co",
+        tenantId,
+        requestedBy: "moneybee-backend",
+        getAccessToken: () => "test-token",
+      }),
+    ).toThrow(CodestraSdkConfigurationError);
   });
 });
 

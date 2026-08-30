@@ -6,7 +6,49 @@
     "openapi": "contracts/openapi/codestra-communications.openapi.yaml",
     "asyncapi": "contracts/asyncapi/codestra-events.asyncapi.yaml",
     "typescriptSdk": "packages/communications-sdk",
+    "unifiedSdk": "packages/codestra_sdk",
     "sharedTypes": "packages/contracts"
+  },
+  "requiredUnifiedSdkModules": [
+    "auth",
+    "marketing",
+    "ai",
+    "communication",
+    "social",
+    "crm",
+    "workflow",
+    "events",
+    "common"
+  ],
+  "requiredUnifiedSdkEndpointPaths": [
+    "/v1/auth/session",
+    "/v1/marketing/campaigns",
+    "/v1/ai/generate",
+    "/v1/communications/messages",
+    "/v1/social/posts",
+    "/v1/crm/leads",
+    "/v1/workflow/runs",
+    "/v1/webhook-subscriptions"
+  ],
+  "credentialCertification": {
+    "requiredClientRules": [
+      "baseUrl must use HTTPS except loopback development",
+      "baseUrl must reject username/password/query/fragment credential material",
+      "access token must be supplied at request time through getAccessToken",
+      "authorization must be sent as a bearer header only",
+      "browser cookies and ambient credentials must be omitted",
+      "tenant and correlation headers must be set on every request",
+      "mutations must require Idempotency-Key"
+    ],
+    "forbiddenSourcePatterns": [
+      "BEGIN PRIVATE KEY",
+      "Bearer eyJ",
+      "smtp://",
+      "postgres://",
+      "redis://",
+      "password=",
+      "client_secret="
+    ]
   },
   "requiredOpenApiPaths": [
     "/v1/communications/messages",
