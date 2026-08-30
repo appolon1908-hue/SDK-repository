@@ -153,7 +153,7 @@ export function calculateNps(values: readonly number[]): { score: number; promot
 }
 
 function validateAnswer(question: SurveyQuestion, value: unknown, errors: SurveyValidationError[]): void {
-  const fail = (code: string, message: string) => errors.push({ questionId: question.id, code, message });
+  const fail = (code: string, message: string): void => { errors.push({ questionId: question.id, code, message }); };
   if (["text", "textarea", "single_choice", "yes_no"].includes(question.type) && typeof value !== "string") return fail("type", `${question.label} has an invalid value.`);
   if (question.type === "multiple_choice" && (!Array.isArray(value) || value.some((item) => typeof item !== "string"))) return fail("type", `${question.label} has an invalid value.`);
   if (["rating", "nps"].includes(question.type) && typeof value !== "number") return fail("type", `${question.label} must be numeric.`);
