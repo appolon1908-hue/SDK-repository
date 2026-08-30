@@ -23,9 +23,10 @@ describe("intake survey", () => {
 
   it("does not attach contact identity to anonymous responses", () => {
     const definition = new IntakeSurveyRegistry(SURVEY_PRESETS).get("customer_csat");
-    const submission = buildSurveySubmission(definition, { tenantId: "tenant-a", siteId: "site-a", anonymous: true, contactId: "contact-secret" }, { satisfaction: 5 });
-    expect(submission.metadata.anonymous).toBe(true);
-    expect(submission.metadata.contactId).toBeUndefined();
+    const submission = buildSurveySubmission(definition, { tenantId: "tenant-a", siteId: "site-a", anonymous: true, contactId: "contact-secret", leadId: "lead-secret" }, { satisfaction: 5 });
+    expect(submission.anonymous).toBe(true);
+    expect(submission.contactId).toBeUndefined();
+    expect(submission.leadId).toBeUndefined();
   });
 
   it("blocks anonymous responses when definition does not allow them", () => {
