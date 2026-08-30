@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "1.0",
+  "status": "CONTRACT_READY_STAGING_PROOF_REQUIRED",
+  "authority": "SDK-repository",
+  "canonicalContracts": {
+    "openapi": "contracts/openapi/codestra-communications.openapi.yaml",
+    "asyncapi": "contracts/asyncapi/codestra-events.asyncapi.yaml",
+    "typescriptSdk": "packages/communications-sdk",
+    "unifiedSdk": "packages/codestra_sdk",
+    "sharedTypes": "packages/contracts"
+  },
+  "requiredUnifiedSdkModules": [
+    "auth",
+    "marketing",
+    "ai",
+    "communication",
+    "social",
+    "crm",
+    "workflow",
+    "events",
+    "common"
+  ],
+  "requiredUnifiedSdkEndpointPaths": [
+    "/v1/auth/session",
+    "/v1/marketing/campaigns",
+    "/v1/ai/generate",
+    "/v1/communications/messages",
+    "/v1/social/posts",
+    "/v1/crm/leads",
+    "/v1/workflow/runs",
+    "/v1/webhook-subscriptions"
+  ],
+  "credentialCertification": {
+    "requiredClientRules": [
+      "baseUrl must use HTTPS except loopback development",
+      "baseUrl must reject username/password/query/fragment credential material",
+      "access token must be supplied at request time through getAccessToken",
+      "authorization must be sent as a bearer header only",
+      "browser cookies and ambient credentials must be omitted",
+      "tenant and correlation headers must be set on every request",
+      "mutations must require Idempotency-Key"
+    ],
+    "forbiddenSourcePatterns": [
+      "BEGIN PRIVATE KEY",
+      "Bearer eyJ",
+      "smtp://",
+      "postgres://",
+      "redis://",
+      "password=",
+      "client_secret="
+    ]
+  },
+  "requiredOpenApiPaths": [
+    "/v1/communications/messages",
+    "/v1/communications/messages/{messageId}",
+    "/v1/communications/messages/{messageId}/events",
+    "/v1/communications/messages/{messageId}/cancel",
+    "/v1/communications/templates",
+    "/v1/communications/templates/{templateId}",
+    "/v1/communications/templates/{templateId}/render",
+    "/v1/communications/sender-identities",
+    "/v1/communications/sender-identities/{senderIdentityId}",
+    "/v1/communications/domains",
+    "/v1/communications/domains/{domainId}",
+    "/v1/communications/domains/{domainId}/verify",
+    "/v1/communications/suppressions",
+    "/v1/communications/suppressions/{suppressionId}",
+    "/v1/communications/preferences",
+    "/v1/communications/provider-health",
+    "/v1/communications/usage",
+    "/v1/communications/reputation"
+  ],
+  "requiredAsyncApiChannels": [
+    "codestra.communications.message.status.v1",
+    "codestra.communications.message.event.v1",
+    "codestra.communications.reputation.changed.v1",
+    "codestra.communications.provider.health.changed.v1",
+    "codestra.events.call_disposition_updated",
+    "codestra.events.sms_received"
+  ],
+  "requiredSdkFacades": [
+    "messages",
+    "templates",
+    "senderIdentities",
+    "domains",
+    "suppressions",
+    "preferences",
+    "providerHealth",
+    "usage",
+    "reputation",
+    "email",
+    "sms",
+    "voice",
+    "operations"
+  ],
+  "requiredCommandPlane": {
+    "submit": "POST /v1/commands",
+    "readback": "GET /v1/operations/{command_id}",
+    "requiredHeaders": [
+      "Authorization",
+      "X-Tenant-ID",
+      "X-Correlation-ID",
+      "Idempotency-Key"
+    ]
+  },
+  "productAdoptionTargets": [
+    "Moneybee-Backend",
+    "beyvra-backend",
+    "social.codestra.co",
+    "kyqra",
+    "klyrow.com",
+    "transportation-backend-",
+    "Breero.com"
+  ],
+  "providerCanaryTargets": [
+    "klyrow-email",
+    "telnexa-sms",
+    "vicidialer-codestra",
+    "postly-social",
+    "kyqra-crawler"
+  ],
+  "productionActivationGates": [
+    "Keycloak product clients exist with scoped service identities",
+    "Kong validates Keycloak JWTs before Middleware routes",
+    "Valid token, no token, invalid token, wrong scope, wrong caller target, and header enforcement matrix passes",
+    "Generated Python, TypeScript, and PHP clients pass smoke tests",
+    "Provider staging canaries pass with operation read-back evidence",
+    "Secrets are installed through the external secret store only",
+    "Backup restore evidence exists",
+    "Rollback rehearsal evidence exists",
+    "Observability alerts and dashboards are verified",
+    "Live provider capability flags are enabled only after approval"
+  ]
+}

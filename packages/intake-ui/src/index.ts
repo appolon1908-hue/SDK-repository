@@ -50,12 +50,13 @@ export function buildCallbackUiModel(title = "Request a callback"): IntakeUiMode
 export interface MountOptions { onSubmit: (values: Record<string, unknown>) => Promise<unknown>; document?: Document }
 export function mountIntakeUi(root: HTMLElement, model: IntakeUiModel, options: MountOptions): () => void {
   const doc = options.document ?? root.ownerDocument;
-  const form = doc.createElement("form"); form.noValidate = true; form.setAttribute("aria-labelledby", `${model.id}-title`);
+  const form = doc.createElement("form"); form.setAttribute("aria-labelledby", `${model.id}-title`);
+  form.dataset.modelId = model.id;
   const title = doc.createElement("h2"); title.id = `${model.id}-title`; title.textContent = model.title; form.append(title);
   for (const section of model.sections) { const fieldset = doc.createElement("fieldset"); if (section.title) { const legend = doc.createElement("legend"); legend.textContent = section.title; fieldset.append(legend); } for (const control of section.controls) fieldset.append(renderControl(doc, control)); form.append(fieldset); }
   const status = doc.createElement("div"); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
   const button = doc.createElement("button"); button.type = "submit"; button.textContent = model.submitLabel; form.append(button, status);
-  const submit = async (event: Event) => { event.preventDefault(); button.disabled = true; status.textContent = "Submitting…"; try { await options.onSubmit(formValues(form)); status.textContent = "Submitted successfully."; } catch (error) { status.textContent = error instanceof Error ? error.message : "Submission failed."; } finally { button.disabled = false; } };
+  const submit = async (event: Event) => { event.preventDefault(); if (!form.reportValidity()) return; button.disabled = true; status.textContent = "Submitting..."; try { await options.onSubmit(formValues(form, model)); status.textContent = "Submitted successfully."; } catch (error) { status.textContent = error instanceof Error ? error.message : "Submission failed."; } finally { button.disabled = false; } };
   form.addEventListener("submit", submit); root.replaceChildren(form); return () => { form.removeEventListener("submit", submit); root.replaceChildren(); };
 }
 
@@ -64,9 +65,32 @@ function renderControl(doc: Document, control: UiControl): HTMLElement {
   let element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
   if (control.type === "textarea") element = doc.createElement("textarea");
   else if (control.type === "select") { const select = doc.createElement("select"); for (const option of control.options ?? []) { const node = doc.createElement("option"); node.value = option.value; node.textContent = option.label; select.append(node); } element = select; }
+  else if (control.type === "radio" && control.options?.length) { const group = doc.createElement("div"); group.setAttribute("role", "radiogroup"); group.setAttribute("aria-labelledby", `${control.id}-label`); label.id = `${control.id}-label`; for (const option of control.options) { const optionLabel = doc.createElement("label"); const input = doc.createElement("input"); input.type = "radio"; input.name = control.name; input.value = option.value; input.required = control.required; optionLabel.append(input, doc.createTextNode(option.label)); group.append(optionLabel); } wrapper.append(group); if (control.helpText) { const help = doc.createElement("small"); help.textContent = control.helpText; wrapper.append(help); } return wrapper; }
   else { const input = doc.createElement("input"); input.type = control.type === "yes_no" ? "checkbox" : control.type === "nps" || control.type === "rating" ? "number" : control.type === "radio" ? "radio" : control.type; if (control.min !== undefined) input.min = String(control.min); if (control.max !== undefined) input.max = String(control.max); if (control.autocomplete) input.setAttribute("autocomplete", control.autocomplete); if (control.inputMode) input.inputMode = control.inputMode; element = input; }
   element.id = control.id; element.setAttribute("name", control.name); if (control.required) element.required = true; if (control.maxLength !== undefined && "maxLength" in element) element.maxLength = control.maxLength; if (control.ariaDescription) element.setAttribute("aria-description", control.ariaDescription); wrapper.append(element);
   if (control.helpText) { const help = doc.createElement("small"); help.textContent = control.helpText; wrapper.append(help); }
   return wrapper;
 }
-function formValues(form: HTMLFormElement): Record<string, unknown> { const result: Record<string, unknown> = {}; const data = new FormData(form); for (const [key, value] of data.entries()) { const current = result[key]; const normalized = typeof value === "string" ? value : value.name; if (current === undefined) result[key] = normalized; else result[key] = Array.isArray(current) ? [...current, normalized] : [current, normalized]; } for (const checkbox of form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name]')) { if (!(checkbox.name in result)) result[checkbox.name] = false; else result[checkbox.name] = checkbox.checked; } return result; }
+function formValues(form: HTMLFormElement, model: IntakeUiModel): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const controls = new Map(model.sections.flatMap((section) => section.controls.map((control) => [control.name, control])));
+  const data = new FormData(form);
+  for (const [key, value] of data.entries()) {
+    const control = controls.get(key);
+    const current = result[key];
+    const normalized = normalizeValue(control, value);
+    if (current === undefined) result[key] = normalized;
+    else result[key] = Array.isArray(current) ? [...current, normalized] : [current, normalized];
+  }
+  for (const checkbox of form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name]')) {
+    if (!(checkbox.name in result)) result[checkbox.name] = false;
+    else result[checkbox.name] = checkbox.checked;
+  }
+  return result;
+}
+
+function normalizeValue(control: UiControl | undefined, value: FormDataEntryValue): string | number {
+  const raw = typeof value === "string" ? value : value.name;
+  if (control?.type === "number" || control?.type === "rating" || control?.type === "nps") return Number(raw);
+  return raw;
+}
