@@ -9,6 +9,10 @@ describe("loadEventCatalogue", () => {
     const channels = loadEventCatalogue();
     expect(channels.map((channel) => channel.address).sort()).toEqual(
       [
+        "codestra.communications.message.event.v1",
+        "codestra.communications.message.status.v1",
+        "codestra.communications.provider.health.changed.v1",
+        "codestra.communications.reputation.changed.v1",
         "codestra.events.call_disposition_updated",
         "codestra.events.sms_received",
         "codestra.social.post.status.v1",
@@ -59,6 +63,10 @@ describe("listKnownEventTypes", () => {
     expect(listKnownEventTypes().sort()).toEqual(
       [
         "call_disposition_updated",
+        "codestra.communications.message.event.v1",
+        "codestra.communications.message.status.v1",
+        "codestra.communications.provider.health.changed.v1",
+        "codestra.communications.reputation.changed.v1",
         "codestra.social.post.status.v1",
         "codestra.webhook.delivery.status.v1",
         "sms_received",

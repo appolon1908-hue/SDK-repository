@@ -15,6 +15,30 @@ channels:
     messages:
       webhookDeliveryStatusChanged:
         $ref: '#/components/messages/WebhookDeliveryStatusChanged'
+  communicationMessageStatus:
+    address: codestra.communications.message.status.v1
+    description: Normalized lifecycle updates for email, SMS, and voice messages.
+    messages:
+      communicationMessageStatusChanged:
+        $ref: '#/components/messages/CommunicationMessageStatusChanged'
+  communicationMessageEvent:
+    address: codestra.communications.message.event.v1
+    description: Normalized provider event evidence for one communications message.
+    messages:
+      communicationMessageEventRecorded:
+        $ref: '#/components/messages/CommunicationMessageEventRecorded'
+  communicationReputationChanged:
+    address: codestra.communications.reputation.changed.v1
+    description: Tenant, domain, or provider reputation changed.
+    messages:
+      communicationReputationChanged:
+        $ref: '#/components/messages/CommunicationReputationChanged'
+  communicationProviderHealthChanged:
+    address: codestra.communications.provider.health.changed.v1
+    description: Provider health changed for email, SMS, or voice delivery.
+    messages:
+      communicationProviderHealthChanged:
+        $ref: '#/components/messages/CommunicationProviderHealthChanged'
   call_disposition_updated:
     address: codestra.events.call_disposition_updated
     description: >
@@ -42,6 +66,30 @@ operations:
     action: receive
     channel:
       $ref: '#/channels/webhookDeliveryStatus'
+  receiveCommunicationMessageStatus:
+    action: receive
+    channel:
+      $ref: '#/channels/communicationMessageStatus'
+  receiveCommunicationMessageEvent:
+    action: receive
+    channel:
+      $ref: '#/channels/communicationMessageEvent'
+  receiveCommunicationReputationChanged:
+    action: receive
+    channel:
+      $ref: '#/channels/communicationReputationChanged'
+  receiveCommunicationProviderHealthChanged:
+    action: receive
+    channel:
+      $ref: '#/channels/communicationProviderHealthChanged'
+  receiveCallDispositionUpdated:
+    action: receive
+    channel:
+      $ref: '#/channels/call_disposition_updated'
+  receiveSmsReceived:
+    action: receive
+    channel:
+      $ref: '#/channels/sms_received'
 components:
   messages:
     SocialPostStatusChanged:
@@ -74,6 +122,50 @@ components:
                   status: { type: string, enum: [queued, attempting, delivered, failed, dead_lettered] }
                   attempt: { type: integer, minimum: 0 }
                   occurredAt: { type: string, format: date-time }
+    CommunicationMessageStatusChanged:
+      name: codestra.communications.message.status.v1
+      title: Communication message status changed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: codestra.communications.message.status.v1 }
+              data:
+                $ref: '#/components/schemas/CommunicationMessageStatusPayload'
+    CommunicationMessageEventRecorded:
+      name: codestra.communications.message.event.v1
+      title: Communication message event recorded
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: codestra.communications.message.event.v1 }
+              data:
+                $ref: '#/components/schemas/CommunicationMessageEventPayload'
+    CommunicationReputationChanged:
+      name: codestra.communications.reputation.changed.v1
+      title: Communication reputation changed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: codestra.communications.reputation.changed.v1 }
+              data:
+                $ref: '#/components/schemas/CommunicationReputationPayload'
+    CommunicationProviderHealthChanged:
+      name: codestra.communications.provider.health.changed.v1
+      title: Communication provider health changed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEventEnvelope'
+          - type: object
+            properties:
+              type: { const: codestra.communications.provider.health.changed.v1 }
+              data:
+                $ref: '#/components/schemas/CommunicationProviderHealthPayload'
     CallDispositionUpdated:
       name: CallDispositionUpdated
       title: Call disposition updated
@@ -103,6 +195,86 @@ components:
         datacontenttype: { const: application/json }
         dataschema: { type: string, format: uri }
         data: {}
+    CommunicationChannel:
+      type: string
+      enum: [email, sms, voice]
+    CommunicationMessageStatus:
+      type: string
+      enum: [accepted, queued, dispatched, delivered, failed, cancelled, suppressed, expired, indeterminate]
+    CommunicationMessageStatusPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - messageId
+        - tenantId
+        - channel
+        - status
+        - correlationId
+        - occurredAt
+      properties:
+        messageId: { type: string, format: uuid }
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        previousStatus: { $ref: '#/components/schemas/CommunicationMessageStatus' }
+        status: { $ref: '#/components/schemas/CommunicationMessageStatus' }
+        correlationId: { type: string, minLength: 1, maxLength: 180 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 180 }
+        provider: { type: [string, 'null'] }
+        providerReference: { type: [string, 'null'] }
+        failureCode: { type: [string, 'null'] }
+        failureMessage: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+        metadata:
+          type: object
+          additionalProperties: true
+    CommunicationMessageEventPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - messageId
+        - tenantId
+        - channel
+        - status
+        - correlationId
+        - occurredAt
+      properties:
+        eventId: { type: string, format: uuid }
+        messageId: { type: string, format: uuid }
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        status: { $ref: '#/components/schemas/CommunicationMessageStatus' }
+        provider: { type: [string, 'null'] }
+        providerEventType: { type: [string, 'null'] }
+        providerReference: { type: [string, 'null'] }
+        correlationId: { type: string, minLength: 1, maxLength: 180 }
+        occurredAt: { type: string, format: date-time }
+        metadata:
+          type: object
+          additionalProperties: true
+    CommunicationReputationPayload:
+      type: object
+      additionalProperties: false
+      required: [tenantId, status, scope, occurredAt]
+      properties:
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        status: { type: string, enum: [good, watch, limited, suspended] }
+        scope: { type: string, enum: [tenant, domain, provider] }
+        domain: { type: [string, 'null'] }
+        provider: { type: [string, 'null'] }
+        reason: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+    CommunicationProviderHealthPayload:
+      type: object
+      additionalProperties: false
+      required: [tenantId, provider, channel, status, occurredAt]
+      properties:
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        provider: { type: string }
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
+        reason: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
     CallDispositionUpdatedPayload:
       type: object
       required:
