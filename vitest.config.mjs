@@ -33,6 +33,8 @@ export default defineConfig({
         "packages/contracts/src/**/*.ts",
         "packages/social-sdk/src/**/*.ts",
         "packages/webhook-sdk/src/**/*.ts",
+        "packages/intake-sdk/src/**/*.ts",
+        "packages/intake-bff/src/**/*.ts",
         "packages/connector-kit/src/**/*.ts",
         "packages/provider-adapters/src/**/*.ts",
         "packages/svix-delivery/src/**/*.ts",
