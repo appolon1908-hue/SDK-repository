@@ -67,9 +67,15 @@ interface MiddlewareIntakeReceipt {
 }
 
 export interface IntakeClientOptions {
-  /** Browser lead endpoint, normally the same-origin BFF route. */
+  /**
+   * Browser usage should normally point to a same-origin BFF route such as
+   * /api/codestra/intake. Do not embed Middleware bearer tokens in a browser.
+   */
   endpoint?: string;
-  /** Browser survey endpoint, normally a separate same-origin BFF route configured for surveys.write. */
+  /**
+   * Browser survey usage should normally point to a same-origin BFF route
+   * configured for surveys.write. Do not embed Middleware bearer tokens in a browser.
+   */
   surveyEndpoint?: string;
   bearerToken?: string;
   fetchImpl?: typeof fetch;
