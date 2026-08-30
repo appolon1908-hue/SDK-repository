@@ -279,6 +279,18 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))(tsx@4.23.12)(yaml@2.9.0)
 
+  packages/intake-bff: {}
+
+  packages/intake-form: {}
+
+  packages/intake-sdk: {}
+
+  packages/intake-survey: {}
+
+  packages/intake-ui: {}
+
+  packages/intake-voice-controls: {}
+
   packages/provider-adapters:
     dependencies:
       '@codestra/connector-kit':

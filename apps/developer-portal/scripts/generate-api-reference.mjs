@@ -16,13 +16,18 @@ const output = join(outDir, "api-reference.html");
 
 mkdirSync(outDir, { recursive: true });
 
+const command = process.env.npm_execpath ? process.execPath : "pnpm";
+const args = process.env.npm_execpath
+  ? [process.env.npm_execpath, "exec", "redocly", "build-docs", source, "-o", output, "--title", "Codestra Public API Reference"]
+  : ["exec", "redocly", "build-docs", source, "-o", output, "--title", "Codestra Public API Reference"];
 const result = spawnSync(
-  "pnpm",
-  ["exec", "redocly", "build-docs", source, "-o", output, "--title", "Codestra Public API Reference"],
+  command,
+  args,
   { stdio: "inherit", cwd: repoRoot },
 );
 
 if (result.status !== 0) {
+  if (result.error) console.error(result.error.message);
   console.error(
     "Failed to generate public/api-reference.html from contracts/openapi/codestra-public.openapi.yaml.",
   );
