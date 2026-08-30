@@ -44,6 +44,7 @@ export class VoiceControlController {
   private microphoneGranted = false;
   private state: VoiceSessionState = "idle";
   private error?: string;
+  private endRequested = false;
   private readonly listeners = new Set<(snapshot: VoiceControlSnapshot) => void>();
   private readonly mediaDevices?: Pick<MediaDevices, "getUserMedia">;
 
@@ -82,18 +83,34 @@ export class VoiceControlController {
   }
 
   async start(): Promise<VoiceSessionStartResult> {
+    this.endRequested = false;
     if (!this.stream) await this.requestMicrophone();
     this.transition("connecting");
+    let started: VoiceSessionStartResult | undefined;
     try {
-      const started = await this.options.transport.start(this.context);
+      started = await this.options.transport.start(this.context);
       this.sessionId = started.sessionId;
       this.conversationId = started.conversationId ?? this.context.conversationId;
+      if (this.endRequested) {
+        await this.options.transport.stop(started.sessionId, "user_ended");
+        this.stopTracks();
+        this.muted = false;
+        this.transition("ended");
+        return started;
+      }
       if (this.options.transport.attachStream && this.stream) {
         await this.options.transport.attachStream(started.sessionId, this.stream);
       }
       this.transition("connected");
       return started;
     } catch (error) {
+      if (started?.sessionId) {
+        try {
+          await this.options.transport.stop(started.sessionId, "start_failed");
+        } catch {
+          // The start path is already failing; keep the original error for callers.
+        }
+      }
       this.stopTracks();
       this.fail(error, "Unable to start the voice session.");
       throw error;
@@ -102,10 +119,18 @@ export class VoiceControlController {
 
   async setMuted(muted: boolean): Promise<void> {
     if (!this.sessionId || !["connected", "muted"].includes(this.state)) throw new Error("Voice session is not connected.");
-    for (const track of this.stream?.getAudioTracks() ?? []) track.enabled = !muted;
-    if (this.options.transport.setMuted) await this.options.transport.setMuted(this.sessionId, muted);
-    this.muted = muted;
-    this.transition(muted ? "muted" : "connected");
+    const tracks = this.stream?.getAudioTracks() ?? [];
+    const previousTrackState = tracks.map((track) => track.enabled);
+    for (const track of tracks) track.enabled = !muted;
+    try {
+      if (this.options.transport.setMuted) await this.options.transport.setMuted(this.sessionId, muted);
+      this.muted = muted;
+      this.transition(muted ? "muted" : "connected");
+    } catch (error) {
+      tracks.forEach((track, index) => { track.enabled = previousTrackState[index]; });
+      this.fail(error, "Unable to update microphone mute state.");
+      throw error;
+    }
   }
 
   async toggleMute(): Promise<void> { await this.setMuted(!this.muted); }
@@ -116,18 +141,31 @@ export class VoiceControlController {
       this.transition("ended");
       return;
     }
+    this.endRequested = true;
     this.transition("ending");
     try {
       if (this.sessionId) await this.options.transport.stop(this.sessionId, reason);
-    } finally {
       this.stopTracks();
       this.muted = false;
       this.transition("ended");
+    } catch (error) {
+      this.stopTracks();
+      this.muted = false;
+      this.fail(error, "Unable to end the voice session.");
+      throw error;
     }
   }
 
-  dispose(): void {
-    this.stopTracks();
+  async dispose(): Promise<void> {
+    if (this.sessionId || this.state === "connecting") {
+      try {
+        await this.end("disposed");
+      } catch {
+        // Teardown cannot surface asynchronous failures to the DOM cleanup caller.
+      }
+    } else {
+      this.stopTracks();
+    }
     this.listeners.clear();
   }
 
@@ -203,7 +241,7 @@ export function mountVoiceControls(
     start.removeEventListener("click", onStart);
     mute.removeEventListener("click", onMute);
     end.removeEventListener("click", onEnd);
-    controller.dispose();
+    void controller.dispose();
     root.replaceChildren();
   };
 }
@@ -212,6 +250,8 @@ export interface IntakeVoiceTransportOptions {
   endpoint?: string;
   fetchImpl?: typeof fetch;
   tenantId: string;
+  correlationId?: string;
+  idempotencyKey?: string;
 }
 
 export function createSameOriginVoiceTransport(options: IntakeVoiceTransportOptions): VoiceTransport {
@@ -221,7 +261,7 @@ export function createSameOriginVoiceTransport(options: IntakeVoiceTransportOpti
     async start(context) {
       const response = await fetchImpl(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Tenant-ID": options.tenantId },
+        headers: voiceHeaders(options, options.idempotencyKey ?? randomId("voice-start")),
         body: JSON.stringify({ ...context, source: "voice" }),
       });
       if (!response.ok) throw new Error(`Voice session start failed (${response.status})`);
@@ -230,11 +270,20 @@ export function createSameOriginVoiceTransport(options: IntakeVoiceTransportOpti
     async stop(sessionId, reason) {
       const response = await fetchImpl(`${endpoint}/${encodeURIComponent(sessionId)}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "X-Tenant-ID": options.tenantId },
+        headers: voiceHeaders(options, randomId("voice-stop")),
         body: JSON.stringify({ reason }),
       });
       if (!response.ok && response.status !== 404) throw new Error(`Voice session stop failed (${response.status})`);
     },
+  };
+}
+
+function voiceHeaders(options: IntakeVoiceTransportOptions, idempotencyKey: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "X-Tenant-ID": options.tenantId,
+    "X-Correlation-ID": options.correlationId ?? randomId("corr"),
+    "Idempotency-Key": idempotencyKey,
   };
 }
 
@@ -250,4 +299,10 @@ function humanStatus(snapshot: VoiceControlSnapshot): string {
     case "error": return snapshot.error ?? "Voice session error.";
     default: return "Voice ready to start.";
   }
+}
+
+function randomId(prefix: string): string {
+  const value = globalThis.crypto?.randomUUID?.();
+  if (value) return `${prefix}-${value}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
 }
