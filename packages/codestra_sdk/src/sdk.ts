@@ -9,6 +9,16 @@ import type {
   CreateSocialPostInput,
   JsonObject,
   ListSocialPostsInput,
+  OperationsDashboardAuthGatewayStatus,
+  OperationsDashboardCanaryStatusList,
+  OperationsDashboardMessageLifecycleStatus,
+  OperationsDashboardOverview,
+  OperationsDashboardProviderStatusList,
+  OperationsDashboardQueueStatus,
+  OperationsDashboardReleaseGateStatus,
+  OperationsDashboardRouteStatusList,
+  OperationsDashboardTenantActivityStatus,
+  OperationsDashboardWebhookDeliveryStatus,
   SocialPost,
   SocialPostList,
   UUID,
@@ -128,6 +138,19 @@ export class CodestraSdk {
       trigger: (input: TriggerWorkflowInput, options: CodestraMutationOptions) => Promise<JsonObject>;
       get: (runId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
     };
+  };
+
+  readonly operationsDashboard: {
+    overview: (options?: CodestraRequestOptions) => Promise<OperationsDashboardOverview>;
+    authGateway: (options?: CodestraRequestOptions) => Promise<OperationsDashboardAuthGatewayStatus>;
+    routes: (options?: CodestraRequestOptions) => Promise<OperationsDashboardRouteStatusList>;
+    providers: (options?: CodestraRequestOptions) => Promise<OperationsDashboardProviderStatusList>;
+    messageLifecycle: (options?: CodestraRequestOptions) => Promise<OperationsDashboardMessageLifecycleStatus>;
+    webhooks: (options?: CodestraRequestOptions) => Promise<OperationsDashboardWebhookDeliveryStatus>;
+    tenant: (tenantId: string, options?: CodestraRequestOptions) => Promise<OperationsDashboardTenantActivityStatus>;
+    queues: (options?: CodestraRequestOptions) => Promise<OperationsDashboardQueueStatus>;
+    releaseGates: (options?: CodestraRequestOptions) => Promise<OperationsDashboardReleaseGateStatus>;
+    canaries: (options?: CodestraRequestOptions) => Promise<OperationsDashboardCanaryStatusList>;
   };
 
   readonly events: {
@@ -263,6 +286,29 @@ export class CodestraSdk {
       },
     };
 
+    this.operationsDashboard = {
+      overview: (requestOptions) =>
+        this.request<OperationsDashboardOverview>({ method: "GET", path: "/v1/operations-dashboard/overview", ...copyRequestOptions(requestOptions) }),
+      authGateway: (requestOptions) =>
+        this.request<OperationsDashboardAuthGatewayStatus>({ method: "GET", path: "/v1/operations-dashboard/auth-gateway", ...copyRequestOptions(requestOptions) }),
+      routes: (requestOptions) =>
+        this.request<OperationsDashboardRouteStatusList>({ method: "GET", path: "/v1/operations-dashboard/routes", ...copyRequestOptions(requestOptions) }),
+      providers: (requestOptions) =>
+        this.request<OperationsDashboardProviderStatusList>({ method: "GET", path: "/v1/operations-dashboard/providers", ...copyRequestOptions(requestOptions) }),
+      messageLifecycle: (requestOptions) =>
+        this.request<OperationsDashboardMessageLifecycleStatus>({ method: "GET", path: "/v1/operations-dashboard/messages/lifecycle", ...copyRequestOptions(requestOptions) }),
+      webhooks: (requestOptions) =>
+        this.request<OperationsDashboardWebhookDeliveryStatus>({ method: "GET", path: "/v1/operations-dashboard/webhooks", ...copyRequestOptions(requestOptions) }),
+      tenant: (tenantId, requestOptions) =>
+        this.request<OperationsDashboardTenantActivityStatus>({ method: "GET", path: `/v1/operations-dashboard/tenants/${encodeURIComponent(requirePathSegment(tenantId, "tenantId"))}`, ...copyRequestOptions(requestOptions) }),
+      queues: (requestOptions) =>
+        this.request<OperationsDashboardQueueStatus>({ method: "GET", path: "/v1/operations-dashboard/queues", ...copyRequestOptions(requestOptions) }),
+      releaseGates: (requestOptions) =>
+        this.request<OperationsDashboardReleaseGateStatus>({ method: "GET", path: "/v1/operations-dashboard/release-gates", ...copyRequestOptions(requestOptions) }),
+      canaries: (requestOptions) =>
+        this.request<OperationsDashboardCanaryStatusList>({ method: "GET", path: "/v1/operations-dashboard/canaries", ...copyRequestOptions(requestOptions) }),
+    };
+
     this.events = {
       webhooks: socialClient.webhooks,
     };
@@ -273,13 +319,14 @@ export class CodestraSdk {
     };
   }
 
-  private async request<T extends JsonObject = JsonObject>(options: InternalRequestOptions): Promise<T> {
+  private async request<T = JsonObject>(options: InternalRequestOptions): Promise<T> {
     const correlationId = requireHeaderValue(options.correlationId ?? this.correlationIdFactory(), "correlationId");
     const token = requireHeaderValue(await this.getAccessToken(), "access token");
     const url = new URL(options.path.replace(/^\/+/, ""), ensureTrailingSlash(this.baseUrl));
     const headers = new Headers({
       accept: "application/json",
       authorization: `Bearer ${token}`,
+      "x-tenant-id": this.tenantId,
       "x-codestra-tenant-id": this.tenantId,
       "x-correlation-id": correlationId,
     });
