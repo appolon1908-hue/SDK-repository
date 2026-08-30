@@ -56,11 +56,3 @@ export const INDUSTRY_FORM_PRESETS: readonly FormDefinition[] = [
     fields: [...contact, { key: "language", label: "Language", type: "text", maxLength: 60 }, { key: "preferredCallbackTime", label: "Preferred callback time", type: "text", maxLength: 80 }, { key: "reason", label: "Reason", type: "textarea", maxLength: 2000 }], consents: privacy,
   },
 ];
-
-export function createDefaultIndustryRegistry() {
-  return new (requireRegistry())(INDUSTRY_FORM_PRESETS);
-}
-
-function requireRegistry(): typeof import("./index.js").IntakeFormRegistry {
-  throw new Error("Use new IntakeFormRegistry(INDUSTRY_FORM_PRESETS) to create a registry.");
-}
