@@ -46,6 +46,41 @@ SDKs and connectors never bypass Codestra Middleware. Middleware remains the onl
 
 Optional runtime integrations are disabled by default and must not activate external delivery or production mutations merely by installing this repository.
 
+## Unified SDK surface
+
+Product teams should import one stable SDK facade from [packages/codestra_sdk](packages/codestra_sdk). Domain-specific packages such as `@codestra/communications-sdk` and `@codestra/social-sdk` remain reusable implementation packages, but application code should depend on the facade when it needs the complete Codestra platform surface:
+
+```text
+codestra_sdk
+  auth
+  marketing
+  ai
+  communication
+  social
+  crm
+  workflow
+  events
+  common
+```
+
+```ts
+codestra.marketing.campaigns.list();
+codestra.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey });
+codestra.communication.messages.send(message, { idempotencyKey });
+codestra.social.posts.schedule(post, { idempotencyKey });
+codestra.crm.leads.get(leadId);
+```
+
+The facade is the programming contract product developers see. Backend implementations can move between Middleware, product services, or provider adapters without forcing product teams to hand-roll HTTP calls or chase service topology changes.
+
 ## Production configuration
 
 Password reset, SMTP, OIDC clients, provider credentials, DNS, Kong, and deployed Middleware settings are intentionally outside this SDK repository. Use [docs/PRODUCTION_CONFIGURATION_CHECKLIST.md](docs/PRODUCTION_CONFIGURATION_CHECKLIST.md) to verify those owners and gates before any production activation.
+
+## Communications API v1
+
+Communications API v1 is tracked as a canonical SDK surface in [contracts/openapi/codestra-communications.openapi.yaml](contracts/openapi/codestra-communications.openapi.yaml), [contracts/asyncapi/codestra-events.asyncapi.yaml](contracts/asyncapi/codestra-events.asyncapi.yaml), and [packages/communications-sdk](packages/communications-sdk). The production-readiness gate is documented in [docs/COMMUNICATIONS_PRODUCTION_READINESS.md](docs/COMMUNICATIONS_PRODUCTION_READINESS.md) and enforced by:
+
+```bash
+pnpm communications:ready
+```
