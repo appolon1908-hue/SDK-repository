@@ -196,6 +196,98 @@ export interface CommunicationReputationReport {
   }>;
 }
 
+export type OperationsDashboardStatus =
+  | "healthy"
+  | "degraded"
+  | "unavailable"
+  | "disabled"
+  | "pending_staging_evidence"
+  | "blocked";
+
+export type OperationsDashboardStatusCounts = Record<string, number>;
+
+export interface OperationsDashboardBase {
+  schemaVersion: "1.0";
+  checkedAt: ISODateTime;
+  tenantId: string;
+}
+
+export interface OperationsDashboardOverview extends OperationsDashboardBase {
+  environment: string;
+  release?: JsonObject;
+  readiness: JsonObject;
+  messages: OperationsDashboardStatusCounts;
+  commands: OperationsDashboardStatusCounts;
+  externalEffects: Record<string, boolean>;
+  productionActivationConfigured: boolean;
+}
+
+export interface OperationsDashboardAuthGatewayStatus extends OperationsDashboardBase {
+  issuer: string;
+  gateway: "kong";
+  expectedAudience: string;
+  runtimeProfileId?: string;
+  requiredHeaders: string[];
+  commandPlaneHeaders: string[];
+}
+
+export interface OperationsDashboardRouteStatusList extends OperationsDashboardBase {
+  routes: Array<{
+    method: "GET" | "POST" | "PUT" | "DELETE";
+    path: string;
+    scope: string;
+  }>;
+}
+
+export interface OperationsDashboardProviderStatusList extends OperationsDashboardBase {
+  summaryStatus: OperationsDashboardStatus;
+  providers: Array<{
+    provider: string;
+    channel: string;
+    status: OperationsDashboardStatus;
+    reason?: string | null;
+  } & JsonObject>;
+}
+
+export interface OperationsDashboardMessageLifecycleStatus extends OperationsDashboardBase {
+  counts: OperationsDashboardStatusCounts;
+}
+
+export interface OperationsDashboardWebhookDeliveryStatus extends OperationsDashboardBase {
+  delivery: {
+    available: boolean;
+    reason?: string;
+  } & JsonObject;
+}
+
+export interface OperationsDashboardTenantActivityStatus extends OperationsDashboardBase {
+  messages: OperationsDashboardStatusCounts;
+  commands: OperationsDashboardStatusCounts;
+}
+
+export interface OperationsDashboardQueueStatus extends OperationsDashboardBase {
+  commands: OperationsDashboardStatusCounts;
+  messageLifecycle: OperationsDashboardStatusCounts;
+}
+
+export interface OperationsDashboardReleaseGateStatus extends OperationsDashboardBase {
+  gates: {
+    stagingSafe: boolean;
+    allExternalEffectsDisabled: boolean;
+    providerEffectsDisabled: boolean;
+    productionActivationConfigured: boolean;
+    productionDialing: string;
+  };
+}
+
+export interface OperationsDashboardCanaryStatusList extends OperationsDashboardBase {
+  canaries: Array<{
+    id: string;
+    channel: string;
+    status: OperationsDashboardStatus;
+  }>;
+}
+
 export type SocialChannel =
   | "facebook"
   | "instagram"

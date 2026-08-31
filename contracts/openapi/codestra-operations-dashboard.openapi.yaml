@@ -1,0 +1,391 @@
+openapi: 3.1.0
+info:
+  title: Codestra Operations Dashboard API
+  version: 0.1.0
+  description: >
+    Read-only operator API for Codestra production readiness, runtime health,
+    gateway/auth status, communications lifecycle, provider canaries, queues,
+    webhooks, tenant activity, and release gates. Responses must not include
+    secrets, customer message content, recordings, raw tokens, email addresses,
+    phone numbers, or provider credentials.
+servers:
+  - url: https://api.codestra.co
+security:
+  - oidc: []
+tags:
+  - name: Operations dashboard
+paths:
+  /v1/operations-dashboard/overview:
+    get:
+      operationId: getOperationsDashboardOverview
+      tags: [Operations dashboard]
+      summary: Read the top-level production readiness overview
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Aggregated dashboard overview
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardOverview' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/auth-gateway:
+    get:
+      operationId: getOperationsDashboardAuthGateway
+      tags: [Operations dashboard]
+      summary: Read Keycloak and Kong contract status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Auth and gateway status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthGatewayStatus' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/routes:
+    get:
+      operationId: listOperationsDashboardRoutes
+      tags: [Operations dashboard]
+      summary: List canonical protected routes and required scopes
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Protected route catalogue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RouteStatusList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/providers:
+    get:
+      operationId: listOperationsDashboardProviders
+      tags: [Operations dashboard]
+      summary: List provider status for email, SMS, voice, social, and crawler capabilities
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Provider health catalogue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderStatusList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/messages/lifecycle:
+    get:
+      operationId: getOperationsDashboardMessageLifecycle
+      tags: [Operations dashboard]
+      summary: Read aggregate message lifecycle counts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Message lifecycle status counts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageLifecycleStatus' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/webhooks:
+    get:
+      operationId: getOperationsDashboardWebhooks
+      tags: [Operations dashboard]
+      summary: Read aggregate webhook delivery status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Webhook delivery aggregate status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookDeliveryStatus' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/tenants/{tenantId}:
+    get:
+      operationId: getOperationsDashboardTenant
+      tags: [Operations dashboard]
+      summary: Read one tenant's aggregate operational activity
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Tenant operational activity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TenantActivityStatus' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/queues:
+    get:
+      operationId: getOperationsDashboardQueues
+      tags: [Operations dashboard]
+      summary: Read queue, command, outbox, inbox, and reconciliation status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Queue and reconciliation status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueueStatus' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/release-gates:
+    get:
+      operationId: getOperationsDashboardReleaseGates
+      tags: [Operations dashboard]
+      summary: Read production activation and capability gate status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Release gate status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReleaseGateStatus' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/operations-dashboard/canaries:
+    get:
+      operationId: listOperationsDashboardCanaries
+      tags: [Operations dashboard]
+      summary: List latest staging or production canary status by provider
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Provider canary status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CanaryStatusList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    TenantIdPath:
+      name: tenantId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 180 }
+  responses:
+    Error:
+      description: Canonical API error response
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    DashboardStatus:
+      type: string
+      enum: [healthy, degraded, unavailable, disabled, pending_staging_evidence, blocked]
+    StatusCounts:
+      type: object
+      additionalProperties:
+        type: integer
+        minimum: 0
+    DashboardBase:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, checkedAt, tenantId]
+      properties:
+        schemaVersion: { type: string, enum: ['1.0'] }
+        checkedAt: { type: string, format: date-time }
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+    DashboardOverview:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [environment, readiness, messages, commands, externalEffects, productionActivationConfigured]
+          properties:
+            environment: { type: string }
+            release:
+              type: object
+              additionalProperties: true
+            readiness:
+              type: object
+              additionalProperties: true
+            messages: { $ref: '#/components/schemas/StatusCounts' }
+            commands: { $ref: '#/components/schemas/StatusCounts' }
+            externalEffects:
+              type: object
+              additionalProperties: { type: boolean }
+            productionActivationConfigured: { type: boolean }
+    AuthGatewayStatus:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [issuer, gateway, expectedAudience, requiredHeaders, commandPlaneHeaders]
+          properties:
+            issuer: { type: string, format: uri }
+            gateway: { type: string, enum: [kong] }
+            expectedAudience: { type: string }
+            runtimeProfileId: { type: string }
+            requiredHeaders:
+              type: array
+              items: { type: string }
+            commandPlaneHeaders:
+              type: array
+              items: { type: string }
+    RouteStatusList:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [routes]
+          properties:
+            routes:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [method, path, scope]
+                properties:
+                  method: { type: string, enum: [GET, POST, PUT, DELETE] }
+                  path: { type: string }
+                  scope: { type: string }
+    ProviderStatusList:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [summaryStatus, providers]
+          properties:
+            summaryStatus: { $ref: '#/components/schemas/DashboardStatus' }
+            providers:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+                required: [provider, channel, status]
+                properties:
+                  provider: { type: string }
+                  channel: { type: string }
+                  status: { $ref: '#/components/schemas/DashboardStatus' }
+                  reason: { type: [string, 'null'] }
+    MessageLifecycleStatus:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [counts]
+          properties:
+            counts: { $ref: '#/components/schemas/StatusCounts' }
+    WebhookDeliveryStatus:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [delivery]
+          properties:
+            delivery:
+              type: object
+              additionalProperties: true
+              required: [available]
+              properties:
+                available: { type: boolean }
+                reason: { type: string }
+    TenantActivityStatus:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [messages, commands]
+          properties:
+            messages: { $ref: '#/components/schemas/StatusCounts' }
+            commands: { $ref: '#/components/schemas/StatusCounts' }
+    QueueStatus:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [commands, messageLifecycle]
+          properties:
+            commands: { $ref: '#/components/schemas/StatusCounts' }
+            messageLifecycle: { $ref: '#/components/schemas/StatusCounts' }
+    ReleaseGateStatus:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [gates]
+          properties:
+            gates:
+              type: object
+              additionalProperties: false
+              required:
+                - stagingSafe
+                - allExternalEffectsDisabled
+                - providerEffectsDisabled
+                - productionActivationConfigured
+                - productionDialing
+              properties:
+                stagingSafe: { type: boolean }
+                allExternalEffectsDisabled: { type: boolean }
+                providerEffectsDisabled: { type: boolean }
+                productionActivationConfigured: { type: boolean }
+                productionDialing: { type: string }
+    CanaryStatusList:
+      allOf:
+        - $ref: '#/components/schemas/DashboardBase'
+        - type: object
+          additionalProperties: false
+          required: [canaries]
+          properties:
+            canaries:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [id, channel, status]
+                properties:
+                  id: { type: string }
+                  channel: { type: string }
+                  status: { $ref: '#/components/schemas/DashboardStatus' }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId, retryable]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: string }
+            retryable: { type: boolean }
+            details:
+              type: object
+              additionalProperties: true
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.codestra.co/realms/codestra/.well-known/openid-configuration

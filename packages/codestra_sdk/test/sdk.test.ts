@@ -16,6 +16,7 @@ describe("codestra_sdk facade", () => {
     expect(sdk).toHaveProperty("social");
     expect(sdk).toHaveProperty("crm");
     expect(sdk).toHaveProperty("workflow");
+    expect(sdk).toHaveProperty("operationsDashboard");
     expect(sdk).toHaveProperty("events");
     expect(sdk).toHaveProperty("common");
   });
@@ -53,8 +54,43 @@ describe("codestra_sdk facade", () => {
     expect(pathname(fetchMock, 3)).toBe("/v1/social/posts");
     expect(pathname(fetchMock, 4)).toBe("/v1/crm/leads/lead-001");
     expect(headersFor(fetchMock, 1).get("x-codestra-tenant-id")).toBe(tenantId);
+    expect(headersFor(fetchMock, 1).get("x-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 2).get("x-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 3).get("x-codestra-tenant-id")).toBe(tenantId);
+  });
+
+  it("exposes read-only operations dashboard endpoints", async () => {
+    const dashboardResponse = {
+      schemaVersion: "1.0",
+      checkedAt: "2026-08-30T00:00:00Z",
+      tenantId,
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(200, dashboardResponse));
+    const sdk = testSdk(fetchMock);
+
+    await sdk.operationsDashboard.overview();
+    await sdk.operationsDashboard.authGateway();
+    await sdk.operationsDashboard.routes();
+    await sdk.operationsDashboard.providers();
+    await sdk.operationsDashboard.messageLifecycle();
+    await sdk.operationsDashboard.webhooks();
+    await sdk.operationsDashboard.tenant("tenant-002");
+    await sdk.operationsDashboard.queues();
+    await sdk.operationsDashboard.releaseGates();
+    await sdk.operationsDashboard.canaries();
+
+    expect(pathname(fetchMock, 0)).toBe("/v1/operations-dashboard/overview");
+    expect(pathname(fetchMock, 1)).toBe("/v1/operations-dashboard/auth-gateway");
+    expect(pathname(fetchMock, 2)).toBe("/v1/operations-dashboard/routes");
+    expect(pathname(fetchMock, 3)).toBe("/v1/operations-dashboard/providers");
+    expect(pathname(fetchMock, 4)).toBe("/v1/operations-dashboard/messages/lifecycle");
+    expect(pathname(fetchMock, 5)).toBe("/v1/operations-dashboard/webhooks");
+    expect(pathname(fetchMock, 6)).toBe("/v1/operations-dashboard/tenants/tenant-002");
+    expect(pathname(fetchMock, 7)).toBe("/v1/operations-dashboard/queues");
+    expect(pathname(fetchMock, 8)).toBe("/v1/operations-dashboard/release-gates");
+    expect(pathname(fetchMock, 9)).toBe("/v1/operations-dashboard/canaries");
+    expect(headersFor(fetchMock, 0).get("x-tenant-id")).toBe(tenantId);
+    expect(fetchMock.mock.calls.every(([, init]) => init?.method === "GET")).toBe(true);
   });
 
   it("certifies endpoint and credential hygiene for unified facade requests", async () => {
