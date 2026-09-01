@@ -257,6 +257,41 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))(tsx@4.23.12)(yaml@2.9.0)
 
+  packages/codestra_sdk:
+    dependencies:
+      '@codestra/communications-sdk':
+        specifier: workspace:^
+        version: link:../communications-sdk
+      '@codestra/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@codestra/social-sdk':
+        specifier: workspace:^
+        version: link:../social-sdk
+    devDependencies:
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))(tsx@4.23.12)(yaml@2.9.0)
+
+  packages/communications-sdk:
+    dependencies:
+      '@codestra/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+    devDependencies:
+      '@codestra/testing':
+        specifier: workspace:^
+        version: link:../testing
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))(tsx@4.23.12)(yaml@2.9.0)
+
   packages/connector-kit:
     dependencies:
       '@codestra/contracts':
@@ -278,6 +313,18 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))(tsx@4.23.12)(yaml@2.9.0)
+
+  packages/intake-bff: {}
+
+  packages/intake-form: {}
+
+  packages/intake-sdk: {}
+
+  packages/intake-survey: {}
+
+  packages/intake-ui: {}
+
+  packages/intake-voice-controls: {}
 
   packages/provider-adapters:
     dependencies:

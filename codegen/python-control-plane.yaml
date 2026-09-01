@@ -1,0 +1,10 @@
+packageName: codestra_middleware_sdk
+projectName: codestra-middleware-sdk
+packageVersion: 0.1.0
+library: urllib3
+generateSourceCodeOnly: false
+disallowAdditionalPropertiesIfNotPresent: false
+enumUnknownDefaultCase: true
+useOneOfDiscriminatorLookup: true
+hideGenerationTimestamp: true
+licenseName: MIT
