@@ -50,6 +50,20 @@ const cases = [
     corrupt: (text) => text.replace("security:\n  - oidc: []", "security:\n  - serviceBearer: []"),
     expectedSubstring: "now requires security scheme not previously required",
   },
+  {
+    // Codex review finding on PR #47: the parameter-diff loop only ever
+    // iterated base.parameters, so a brand-new parameter on the current
+    // side -- one no existing generated client could possibly send --
+    // was invisible to the check whenever it was marked required.
+    name: "a brand-new required parameter with no equivalent in the base contract",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: cursor",
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: newRequiredThing\n          in: query\n          required: true\n          schema: { type: string }\n        - name: cursor",
+      ),
+    expectedSubstring: "new required parameter",
+  },
 ];
 
 const failures = [];

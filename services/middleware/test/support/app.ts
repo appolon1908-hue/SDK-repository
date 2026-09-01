@@ -24,6 +24,7 @@ export async function createTestContext(
     restrictedGatewayBaseUrl?: string;
     allowInsecureWebhookDestinationsForTests?: boolean;
     rateLimitMax?: number;
+    trustedProxyCidrs?: string;
   } = {},
 ): Promise<TestContext> {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL must be set to run services/middleware integration tests.");
@@ -43,6 +44,7 @@ export async function createTestContext(
     // local FakeWebhookReceiver opt in explicitly.
     WEBHOOK_SSRF_ALLOW_INSECURE_FOR_TESTS: options.allowInsecureWebhookDestinationsForTests ? "true" : "false",
     ...(options.rateLimitMax === undefined ? {} : { RATE_LIMIT_MAX: String(options.rateLimitMax) }),
+    ...(options.trustedProxyCidrs === undefined ? {} : { TRUSTED_PROXY_CIDRS: options.trustedProxyCidrs }),
   });
 
   const prisma = new PrismaClient({ datasources: { db: { url: env.DATABASE_URL } } });

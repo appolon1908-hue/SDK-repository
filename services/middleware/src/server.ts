@@ -27,7 +27,16 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   const app = Fastify({
     logger: options.logger ?? true,
     genReqId: () => randomUUID(),
-    trustProxy: true,
+    // Only trust X-Forwarded-For from explicitly configured proxy
+    // addresses (TRUSTED_PROXY_CIDRS -- e.g. Kong's real address once
+    // deployed). An unconditional `true` here previously let request.ip
+    // be taken from a client-supplied header regardless of whether the
+    // request actually came through a trusted proxy -- both a direct
+    // caller and one reaching Middleware through an edge that merely
+    // appends (rather than strips and re-sets) forwarding headers could
+    // spoof it. With no proxy configured, request.ip falls back to the
+    // real socket peer address.
+    trustProxy: options.env.TRUSTED_PROXY_CIDRS.length > 0 ? options.env.TRUSTED_PROXY_CIDRS : false,
   });
 
   // Defense-in-depth headers and per-IP rate limiting. Kong (or whatever
@@ -47,15 +56,15 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   await app.register(rateLimit, {
     max: options.env.RATE_LIMIT_MAX,
     timeWindow: options.env.RATE_LIMIT_WINDOW_MS,
-    // @fastify/rate-limit's default key is request.ip, but this instance
-    // sets trustProxy: true -- so request.ip is taken from a
-    // client-supplied X-Forwarded-For whenever the app is reached
-    // directly (or through an edge that merely appends, rather than
-    // strips and re-sets, forwarding headers). A client can then rotate
-    // that header on every request and get a fresh bucket each time,
-    // defeating the limit entirely. Key on the raw TCP peer address
-    // instead, which the client cannot influence.
-    keyGenerator: (request) => request.socket.remoteAddress ?? request.ip,
+    // Uses @fastify/rate-limit's default key (request.ip). That's now
+    // safe to rely on: trustProxy above only honors X-Forwarded-For from
+    // an explicitly configured proxy, so request.ip is either the real
+    // client address (forwarded by a trusted proxy) or the real socket
+    // peer address (nothing trusted) -- never a value the client itself
+    // can set. A previous version of this code keyed on the raw socket
+    // address directly to close the same spoofing gap, but that breaks
+    // real multi-tenant traffic once a real proxy IS configured: every
+    // tenant behind the same proxy would then share one bucket.
     // @fastify/rate-limit throws whatever this returns; a plain object has
     // no statusCode, so without going through CodestraError here it falls
     // into the generic 500 branch of setErrorHandler below instead of
