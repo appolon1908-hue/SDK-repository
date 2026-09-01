@@ -48,7 +48,7 @@ const cases = [
     name: "the document root's inherited security requirement swapped for an incompatible one",
     file: "contracts/openapi/codestra-public.openapi.yaml",
     corrupt: (text) => text.replace("security:\n  - oidc: []", "security:\n  - serviceBearer: []"),
-    expectedSubstring: "now requires security scheme not previously required",
+    expectedSubstring: "removed previously satisfiable security alternative",
   },
   {
     // Codex review finding on PR #47: the parameter-diff loop only ever
@@ -126,18 +126,25 @@ const cases = [
     // Codex review finding on #54: the top-level `security` array lists
     // alternatives (any one satisfies the requirement), but diffOperation
     // only ever reported schemes newly present on the current side. An
-    // operation-level `security: []` override removes the only alternative
-    // (oidc, inherited from the document root) without adding any new one,
-    // so the previous one-directional check saw nothing to report even
-    // though every caller authenticating via oidc is now locked out.
-    name: "an operation-level security override that drops the only previously-allowed scheme",
+    // operation-level override that replaces the only inherited alternative
+    // (oidc, from the document root) with an incompatible one locks out
+    // every caller authenticating via oidc, but the previous
+    // one-directional check saw nothing to report.
+    //
+    // (An earlier version of this fixture instead overrode with `security:
+    // []` -- weakening to no auth at all. Codex review on #68 correctly
+    // flagged that a *conjunctive* removal like that is not what "removed
+    // alternative" should mean, and pointed out that dropping to no auth
+    // doesn't lock out any caller who already held the old credential, so
+    // it isn't actually breaking. Replaced with a real incompatible swap.)
+    name: "an operation-level security override that replaces the only inherited alternative with an incompatible one",
     file: "contracts/openapi/codestra-public.openapi.yaml",
     corrupt: (text) =>
       text.replace(
         "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      parameters:",
-        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      security: []\n      parameters:",
+        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      security:\n        - serviceBearer: []\n      parameters:",
       ),
-    expectedSubstring: "removed previously allowed security scheme alternative",
+    expectedSubstring: "removed previously satisfiable security alternative",
   },
   {
     // Proves codestra-platform.openapi.yaml (the auth/marketing/ai/crm/

@@ -234,18 +234,47 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
   // fired against a real document.
   const baseSecurity = base.security ?? documentBaseSecurity ?? [];
   const currentSecurity = current.security ?? documentCurrentSecurity ?? [];
-  const baseSchemes = new Set(baseSecurity.flatMap((requirement) => Object.keys(requirement)));
-  const currentSchemes = new Set(currentSecurity.flatMap((requirement) => Object.keys(requirement)));
-  for (const scheme of currentSchemes) {
-    if (!baseSchemes.has(scheme)) output.push(`[${file}] ${label} now requires security scheme not previously required: ${scheme}`);
+  compareSecurityAlternatives(file, label, baseSecurity, currentSecurity, output);
+}
+
+/**
+ * Codex review finding on #68: within one Security Requirement Object the
+ * keys are conjunctive (all required together), but across the top-level
+ * array, requirement objects are alternatives (any one satisfies the
+ * operation) -- flattening every requirement object into one Set of scheme
+ * names, as an earlier version of this check did, loses that structure:
+ * relaxing `[{oidc: [], apiKey: []}]` to `[{oidc: []}]` (dropping a
+ * conjunctive co-requirement, which only makes auth *easier*) got reported
+ * identically to actually removing an alternative.
+ *
+ * The correct test: a base alternative is still satisfiable after the
+ * change if some current alternative needs no more than what that base
+ * alternative already required -- a caller holding every credential the
+ * base alternative demanded can trivially satisfy a current alternative
+ * that is a subset (or exact match) of it. An empty requirement array
+ * means "no security requirement" (open access), modeled here as a single
+ * alternative with an empty scheme set so that both directions -- open
+ * access becoming gated, and a base alternative losing every satisfying
+ * current alternative -- go through the same check.
+ */
+function compareSecurityAlternatives(file, label, baseSecurity, currentSecurity, output) {
+  const baseAlternatives = baseSecurity.length > 0 ? baseSecurity.map((requirement) => new Set(Object.keys(requirement))) : [new Set()];
+  const currentAlternatives = currentSecurity.length > 0 ? currentSecurity.map((requirement) => new Set(Object.keys(requirement))) : [new Set()];
+
+  for (const baseAlternative of baseAlternatives) {
+    const stillSatisfiable = currentAlternatives.some((currentAlternative) => isSubset(currentAlternative, baseAlternative));
+    if (!stillSatisfiable) {
+      const description = baseAlternative.size > 0 ? [...baseAlternative].sort().join(" + ") : "(no authentication required)";
+      output.push(`[${file}] ${label} removed previously satisfiable security alternative: ${description}`);
+    }
   }
-  // The top-level security array lists alternatives (any one satisfies the
-  // requirement), so a scheme disappearing from every alternative locks out
-  // any caller who was authenticating with it, even though the array is
-  // merely a subset of what it used to be.
-  for (const scheme of baseSchemes) {
-    if (!currentSchemes.has(scheme)) output.push(`[${file}] ${label} removed previously allowed security scheme alternative: ${scheme}`);
+}
+
+function isSubset(subset, superset) {
+  for (const value of subset) {
+    if (!superset.has(value)) return false;
   }
+  return true;
 }
 
 function diffAsyncApi(file, base, current, output) {
