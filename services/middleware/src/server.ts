@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import type { PrismaClient } from "@prisma/client";
 import type { ConnectorIdempotencyStore } from "@codestra/connector-kit";
 import type { Env } from "./env.js";
 import { JwtAuthenticator } from "./auth/jwt.js";
 import { RestrictedGatewayClient } from "./connectors/restricted-gateway-client.js";
-import { CodestraError, forbidden } from "./errors.js";
+import { CodestraError, forbidden, tooManyRequests } from "./errors.js";
 import type { AppDeps } from "./app-deps.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerSocialPostRoutes } from "./routes/social-posts.js";
@@ -21,11 +23,35 @@ export interface BuildServerOptions {
   logger?: boolean;
 }
 
-export function buildServer(options: BuildServerOptions): FastifyInstance {
+export async function buildServer(options: BuildServerOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: options.logger ?? true,
     genReqId: () => randomUUID(),
     trustProxy: true,
+  });
+
+  // Defense-in-depth headers and per-IP rate limiting. Kong (or whatever
+  // sits in front of this service in production) is expected to carry the
+  // primary, tenant-aware rate limit and edge security policy; this
+  // ensures the service itself is never defenseless if that layer is
+  // misconfigured, bypassed, or the service is reached directly.
+  //
+  // These registrations are awaited deliberately: an un-awaited
+  // `app.register(...)` call still queues the plugin, but its hooks are
+  // not reliably attached by the time `app.ready()`/`app.listen()`
+  // resolves -- verified directly against a real running server, where an
+  // un-awaited registration silently no-ops the rate limit with no error
+  // at all (no x-ratelimit-* headers, no 429s, ever). Awaiting each
+  // registration here is what makes it real.
+  await app.register(helmet, { global: true });
+  await app.register(rateLimit, {
+    max: options.env.RATE_LIMIT_MAX,
+    timeWindow: options.env.RATE_LIMIT_WINDOW_MS,
+    // @fastify/rate-limit throws whatever this returns; a plain object has
+    // no statusCode, so without going through CodestraError here it falls
+    // into the generic 500 branch of setErrorHandler below instead of
+    // actually responding 429 -- verified against a real running server.
+    errorResponseBuilder: (_request, context) => tooManyRequests(`Rate limit exceeded, retry after ${context.after}.`),
   });
 
   const jwtAuthenticator = options.jwtAuthenticator ?? new JwtAuthenticator(options.env);

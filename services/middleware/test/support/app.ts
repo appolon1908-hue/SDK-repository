@@ -20,7 +20,11 @@ export interface TestContext {
 }
 
 export async function createTestContext(
-  options: { restrictedGatewayBaseUrl?: string; allowInsecureWebhookDestinationsForTests?: boolean } = {},
+  options: {
+    restrictedGatewayBaseUrl?: string;
+    allowInsecureWebhookDestinationsForTests?: boolean;
+    rateLimitMax?: number;
+  } = {},
 ): Promise<TestContext> {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL must be set to run services/middleware integration tests.");
 
@@ -38,6 +42,7 @@ export async function createTestContext(
     // Off by default, exactly like production. Tests that dispatch to a
     // local FakeWebhookReceiver opt in explicitly.
     WEBHOOK_SSRF_ALLOW_INSECURE_FOR_TESTS: options.allowInsecureWebhookDestinationsForTests ? "true" : "false",
+    ...(options.rateLimitMax === undefined ? {} : { RATE_LIMIT_MAX: String(options.rateLimitMax) }),
   });
 
   const prisma = new PrismaClient({ datasources: { db: { url: env.DATABASE_URL } } });
@@ -45,7 +50,7 @@ export async function createTestContext(
   const jwtAuthenticator = new JwtAuthenticator(env);
   const restrictedGatewayClient = new RestrictedGatewayClient(env);
 
-  const app = buildServer({ env, prisma, idempotencyStore, jwtAuthenticator, restrictedGatewayClient, logger: false });
+  const app = await buildServer({ env, prisma, idempotencyStore, jwtAuthenticator, restrictedGatewayClient, logger: false });
   await app.ready();
 
   const createTenant = async (): Promise<string> => {
