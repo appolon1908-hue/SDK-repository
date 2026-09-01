@@ -32,6 +32,7 @@ const OPENAPI_FILES = [
   "contracts/openapi/codestra-communications.openapi.yaml",
   "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
   "contracts/openapi/codestra-control-plane.openapi.yaml",
+  "contracts/openapi/codestra-platform.openapi.yaml",
 ];
 const ASYNCAPI_FILE = "contracts/asyncapi/codestra-events.asyncapi.yaml";
 const METHODS = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
@@ -93,7 +94,12 @@ function bundle(sourcePath, outputPath) {
     env: { ...process.env, REDOCLY_TELEMETRY: "off", REDOCLY_SUPPRESS_UPDATE_NOTICE: "true" },
   });
   if (result.status !== 0) {
-    if (/does not exist/i.test(result.stdout ?? "") || /ENOENT/.test(result.stderr ?? "")) return undefined;
+    // redocly's "does not exist" message lands on stderr, not stdout -- check
+    // both streams for both signals rather than assuming which stream carries
+    // which. Verified: comparing a base ref that predates a brand-new
+    // contract file threw here instead of skipping it as a missing file.
+    const combinedOutput = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (/does not exist/i.test(combinedOutput) || /ENOENT/.test(combinedOutput)) return undefined;
     throw new Error(`redocly bundle failed for ${sourcePath}:\n${[result.stdout, result.stderr].filter(Boolean).join("\n")}`);
   }
   return JSON.parse(readFileSyncOrThrow(outputPath));
