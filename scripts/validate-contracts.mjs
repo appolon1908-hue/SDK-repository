@@ -31,6 +31,11 @@ const definitions = [
     expectedVersion: "3.1.0",
   },
   {
+    kind: "openapi",
+    path: "contracts/openapi/codestra-control-plane.openapi.yaml",
+    expectedVersion: "3.1.0",
+  },
+  {
     kind: "asyncapi",
     path: "contracts/asyncapi/codestra-events.asyncapi.yaml",
     expectedVersion: "3.0.0",
