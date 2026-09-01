@@ -42,11 +42,17 @@ export default defineConfig({
         "integrations/n8n-nodes/src/**/*.ts",
       ],
       exclude: ["**/*.d.ts"],
+      // Raised from the pre-remediation baseline (20/15/20/20) to reflect
+      // real current coverage (73/61.3/89.49/73 as of this change) with a
+      // deliberate margin below actual so normal work doesn't trip CI on
+      // minor fluctuation -- while still catching a real regression, like
+      // a package losing its test file outright or a large new module
+      // landing untested.
       thresholds: {
-        statements: 20,
-        branches: 15,
-        functions: 20,
-        lines: 20,
+        statements: 65,
+        branches: 55,
+        functions: 80,
+        lines: 65,
       },
     },
   },

@@ -7,7 +7,7 @@ async function main(): Promise<void> {
   const env = loadEnv();
   const prisma = createPrismaClient(env.DATABASE_URL);
   const idempotencyStore = new PrismaIdempotencyStore(prisma);
-  const app = buildServer({ env, prisma, idempotencyStore });
+  const app = await buildServer({ env, prisma, idempotencyStore });
 
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info({ signal }, "Shutting down Codestra Middleware");
