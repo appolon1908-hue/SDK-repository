@@ -76,3 +76,7 @@ export function unauthorized(code: string, message: string): CodestraError {
 export function forbidden(code: string, message: string): CodestraError {
   return new CodestraError(403, code, message, { retryable: false });
 }
+
+export function tooManyRequests(message: string): CodestraError {
+  return new CodestraError(429, "RATE_LIMITED", message, { retryable: true });
+}

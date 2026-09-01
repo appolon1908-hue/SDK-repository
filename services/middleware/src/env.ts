@@ -29,6 +29,14 @@ const EnvSchema = z.object({
   RESTRICTED_GATEWAY_SERVICE_TOKEN: z.string().default(""),
   RESTRICTED_GATEWAY_WORKLOAD_ID: z.string().default("codestra-middleware"),
   RESTRICTED_GATEWAY_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+
+  // Per-IP defense-in-depth rate limit. Kong (or whatever sits in front of
+  // this service) is expected to carry the primary, tenant-aware limit;
+  // this is a fallback so the service itself never has zero protection if
+  // that layer is misconfigured or bypassed. 300/min comfortably covers
+  // the largest existing test file (21 requests) with headroom.
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

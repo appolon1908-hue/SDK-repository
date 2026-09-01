@@ -41,6 +41,12 @@ for (const file of files) {
           failures.push(`${path}:${jobName}: checkout must set persist-credentials: false`);
         }
       }
+      if (typeof step.uses === "string" && !step.uses.startsWith("./") && !step.uses.startsWith("docker://")) {
+        const ref = step.uses.split("@")[1];
+        if (!ref || !/^[0-9a-f]{40}$/u.test(ref)) {
+          failures.push(`${path}:${jobName}: ${step.uses} must be pinned to a full commit SHA, not a mutable tag`);
+        }
+      }
     }
   }
 }
