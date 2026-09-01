@@ -1,0 +1,1170 @@
+openapi: 3.1.0
+info:
+  title: Codestra Communications API
+  version: 0.1.0
+  description: >
+    Canonical provider-neutral Communications API v1. This contract is the
+    public product authority for email, SMS, and voice messaging surfaces.
+    Runtime writes are still executed through Kong and Middleware; provider
+    credentials and provider-specific payloads never cross this boundary.
+servers:
+  - url: https://api.codestra.co
+security:
+  - oidc: []
+tags:
+  - name: Messages
+  - name: Templates
+  - name: Sender identities
+  - name: Domains
+  - name: Suppressions
+  - name: Preferences
+  - name: Provider health
+  - name: Usage
+  - name: Reputation
+  - name: Voice controls
+paths:
+  /api/codestra/voice/session:
+    post:
+      operationId: startSameOriginVoiceSession
+      tags: [Voice controls]
+      summary: Start a browser-safe same-origin voice session
+      description: >
+        Same-origin BFF control route used by website voice controls. The BFF
+        must exchange this request for a governed Middleware command through
+        Caddy and Kong; browser clients never receive SIP, provider, Kong,
+        Keycloak client-secret, or Middleware credentials.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoiceSessionStartRequest' }
+      responses:
+        '202':
+          description: Voice session accepted for governed startup
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSessionStartResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/codestra/voice/session/{sessionId}:
+    delete:
+      operationId: stopSameOriginVoiceSession
+      tags: [Voice controls]
+      summary: Stop a browser-safe same-origin voice session
+      description: >
+        Stops or cancels a voice session created through the same-origin BFF
+        control route. Stop is idempotent: missing/unknown remote sessions may
+        be treated as already stopped after tenant/session ownership checks.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/VoiceSessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoiceSessionStopRequest' }
+      responses:
+        '202':
+          description: Voice session stop accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSessionStopResult' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/messages:
+    get:
+      operationId: listCommunicationMessages
+      tags: [Messages]
+      summary: List tenant communications messages
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: channel
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/CommunicationChannel' }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/MessageStatus' }
+      responses:
+        '200':
+          description: Current tenant messages
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCommunicationMessage
+      tags: [Messages]
+      summary: Submit one email, SMS, or voice message
+      description: >
+        Creates a tenant-scoped message intent and maps it to a durable
+        Middleware command. Implementations must enforce consent, suppression,
+        sender/domain verification, production gates, and idempotency before
+        any provider-side delivery.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMessageRequest' }
+      responses:
+        '202':
+          description: Message accepted for governed asynchronous processing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/communications/messages/{messageId}:
+    get:
+      operationId: getCommunicationMessage
+      tags: [Messages]
+      summary: Read one tenant communications message
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '200':
+          description: Current message state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/communications/messages/{messageId}/cancel:
+    post:
+      operationId: cancelCommunicationMessage
+      tags: [Messages]
+      summary: Cancel a queued or scheduled message
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '202':
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/messages/{messageId}/events:
+    get:
+      operationId: listCommunicationMessageEvents
+      tags: [Messages]
+      summary: List normalized lifecycle events for one message
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Message lifecycle events
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageEventList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/communications/templates:
+    get:
+      operationId: listCommunicationTemplates
+      tags: [Templates]
+      summary: List communications templates
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: channel
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/CommunicationChannel' }
+      responses:
+        '200':
+          description: Current templates
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCommunicationTemplate
+      tags: [Templates]
+      summary: Create a communications template
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TemplateWrite' }
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationTemplate' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/templates/{templateId}:
+    get:
+      operationId: getCommunicationTemplate
+      tags: [Templates]
+      summary: Read one communications template
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Current template
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationTemplate' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: updateCommunicationTemplate
+      tags: [Templates]
+      summary: Update a draft communications template
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TemplateWrite' }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationTemplate' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteCommunicationTemplate
+      tags: [Templates]
+      summary: Archive a communications template
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Template archived
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/templates/{templateId}/render:
+    post:
+      operationId: renderCommunicationTemplate
+      tags: [Templates]
+      summary: Render a template preview with supplied variables
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TemplateRenderRequest' }
+      responses:
+        '200':
+          description: Rendered preview
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateRenderResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/communications/sender-identities:
+    get:
+      operationId: listCommunicationSenderIdentities
+      tags: [Sender identities]
+      summary: List sender identities
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Sender identities
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SenderIdentityList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCommunicationSenderIdentity
+      tags: [Sender identities]
+      summary: Register a sender identity
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SenderIdentityWrite' }
+      responses:
+        '201':
+          description: Sender identity registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SenderIdentity' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/sender-identities/{senderIdentityId}:
+    get:
+      operationId: getCommunicationSenderIdentity
+      tags: [Sender identities]
+      summary: Read one sender identity
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/SenderIdentityId'
+      responses:
+        '200':
+          description: Sender identity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SenderIdentity' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: updateCommunicationSenderIdentity
+      tags: [Sender identities]
+      summary: Update sender identity metadata and policy
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/SenderIdentityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SenderIdentityWrite' }
+      responses:
+        '200':
+          description: Sender identity updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SenderIdentity' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/domains:
+    get:
+      operationId: listCommunicationDomains
+      tags: [Domains]
+      summary: List sending domains
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Sending domains
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DomainList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCommunicationDomain
+      tags: [Domains]
+      summary: Register a sending domain
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DomainWrite' }
+      responses:
+        '201':
+          description: Domain registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Domain' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/domains/{domainId}:
+    get:
+      operationId: getCommunicationDomain
+      tags: [Domains]
+      summary: Read one sending domain
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/DomainId'
+      responses:
+        '200':
+          description: Sending domain
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Domain' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/communications/domains/{domainId}/verify:
+    post:
+      operationId: verifyCommunicationDomain
+      tags: [Domains]
+      summary: Re-check DNS and provider verification for a sending domain
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/DomainId'
+      responses:
+        '202':
+          description: Verification check accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Domain' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/suppressions:
+    get:
+      operationId: listCommunicationSuppressions
+      tags: [Suppressions]
+      summary: List suppression records
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: channel
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/CommunicationChannel' }
+      responses:
+        '200':
+          description: Suppression records
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuppressionList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCommunicationSuppression
+      tags: [Suppressions]
+      summary: Add a suppression record
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SuppressionWrite' }
+      responses:
+        '201':
+          description: Suppression created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Suppression' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/suppressions/{suppressionId}:
+    delete:
+      operationId: deleteCommunicationSuppression
+      tags: [Suppressions]
+      summary: Remove a tenant-managed suppression record
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/SuppressionId'
+      responses:
+        '204':
+          description: Suppression removed
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/preferences:
+    get:
+      operationId: listCommunicationPreferences
+      tags: [Preferences]
+      summary: List consent and preference records
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: subject
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 300 }
+      responses:
+        '200':
+          description: Preferences
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreferenceList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: upsertCommunicationPreference
+      tags: [Preferences]
+      summary: Upsert consent and communication preferences
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PreferenceWrite' }
+      responses:
+        '200':
+          description: Preference stored
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Preference' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/communications/provider-health:
+    get:
+      operationId: getCommunicationProviderHealth
+      tags: [Provider health]
+      summary: Read provider and channel health
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Provider health snapshot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderHealth' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/communications/usage:
+    get:
+      operationId: getCommunicationUsage
+      tags: [Usage]
+      summary: Read tenant communications usage
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+        - name: channel
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/CommunicationChannel' }
+      responses:
+        '200':
+          description: Usage metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsageReport' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/communications/reputation:
+    get:
+      operationId: getCommunicationReputation
+      tags: [Reputation]
+      summary: Read deliverability and reputation state
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Reputation snapshot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReputationReport' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.codestra.co/realms/codestra/.well-known/openid-configuration
+  parameters:
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 180 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 180 }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 1000 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100 }
+    MessageId:
+      name: messageId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TemplateId:
+      name: templateId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SenderIdentityId:
+      name: senderIdentityId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DomainId:
+      name: domainId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SuppressionId:
+      name: suppressionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    VoiceSessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 180 }
+  responses:
+    Error:
+      description: Canonical API error response
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    CommunicationChannel:
+      type: string
+      enum: [email, sms, voice]
+    VoiceSessionStartRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, siteId, source]
+      properties:
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        siteId: { type: string, minLength: 1, maxLength: 128 }
+        campaignId: { type: string, minLength: 1, maxLength: 128 }
+        conversationId: { type: string, minLength: 1, maxLength: 180 }
+        locale: { type: string, pattern: '^[a-z]{2}(?:-[A-Z]{2})?$' }
+        source:
+          type: string
+          enum: [voice]
+        metadata:
+          type: object
+          additionalProperties: true
+    VoiceSessionStartResult:
+      type: object
+      additionalProperties: false
+      required: [sessionId]
+      properties:
+        sessionId: { type: string, minLength: 1, maxLength: 180 }
+        conversationId: { type: string, minLength: 1, maxLength: 180 }
+    VoiceSessionStopRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          enum: [user_ended, disposed, start_failed, timeout, navigation, policy, provider_failure]
+        metadata:
+          type: object
+          additionalProperties: true
+    VoiceSessionStopResult:
+      type: object
+      additionalProperties: false
+      required: [sessionId, status]
+      properties:
+        sessionId: { type: string, minLength: 1, maxLength: 180 }
+        status:
+          type: string
+          enum: [ending, ended, already_ended, indeterminate]
+    MessageStatus:
+      type: string
+      enum:
+        - accepted
+        - queued
+        - dispatched
+        - delivered
+        - failed
+        - cancelled
+        - suppressed
+        - expired
+        - indeterminate
+    MessageDirection:
+      type: string
+      enum: [outbound, inbound]
+    MessageContent:
+      type: object
+      additionalProperties: false
+      properties:
+        subject: { type: string, maxLength: 998 }
+        text: { type: string, maxLength: 200000 }
+        html: { type: string, maxLength: 200000 }
+        templateId: { type: string, format: uuid }
+        templateVersion: { type: integer, minimum: 1 }
+        variables:
+          type: object
+          additionalProperties: true
+        mediaUrls:
+          type: array
+          maxItems: 20
+          items: { type: string, format: uri }
+    CreateMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [channel, to, content]
+      properties:
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        from:
+          type: string
+          minLength: 1
+          maxLength: 300
+        to:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { type: string, minLength: 1, maxLength: 300 }
+        senderIdentityId: { type: string, format: uuid }
+        domainId: { type: string, format: uuid }
+        content: { $ref: '#/components/schemas/MessageContent' }
+        scheduledAt: { type: string, format: date-time }
+        metadata:
+          type: object
+          additionalProperties: true
+    CommunicationMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - messageId
+        - tenantId
+        - channel
+        - direction
+        - status
+        - correlationId
+        - idempotencyKey
+        - createdAt
+        - updatedAt
+      properties:
+        messageId: { type: string, format: uuid }
+        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        direction: { $ref: '#/components/schemas/MessageDirection' }
+        status: { $ref: '#/components/schemas/MessageStatus' }
+        correlationId: { type: string }
+        idempotencyKey: { type: string }
+        operationId: { type: [string, 'null'], format: uuid }
+        provider: { type: [string, 'null'] }
+        providerReference: { type: [string, 'null'] }
+        failureCode: { type: [string, 'null'] }
+        failureMessage: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        acceptedAt: { type: [string, 'null'], format: date-time }
+        dispatchedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        updatedAt: { type: string, format: date-time }
+        metadata:
+          type: object
+          additionalProperties: true
+    MessageList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CommunicationMessage' }
+        nextCursor: { type: string }
+    MessageEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, messageId, type, status, occurredAt]
+      properties:
+        eventId: { type: string, format: uuid }
+        messageId: { type: string, format: uuid }
+        type: { type: string }
+        status: { $ref: '#/components/schemas/MessageStatus' }
+        occurredAt: { type: string, format: date-time }
+        provider: { type: [string, 'null'] }
+        providerReference: { type: [string, 'null'] }
+        metadata:
+          type: object
+          additionalProperties: true
+    MessageEventList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MessageEvent' }
+        nextCursor: { type: string }
+    TemplateWrite:
+      type: object
+      additionalProperties: false
+      required: [channel, name, locale, content, variables]
+      properties:
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        locale: { type: string, pattern: '^[a-z]{2}(?:-[A-Z]{2})?$' }
+        content: { $ref: '#/components/schemas/MessageContent' }
+        variables:
+          type: array
+          maxItems: 200
+          items: { type: string, minLength: 1, maxLength: 80 }
+        metadata:
+          type: object
+          additionalProperties: true
+    CommunicationTemplate:
+      allOf:
+        - $ref: '#/components/schemas/TemplateWrite'
+        - type: object
+          additionalProperties: false
+          required: [templateId, version, status, createdAt, updatedAt]
+          properties:
+            templateId: { type: string, format: uuid }
+            version: { type: integer, minimum: 1 }
+            status: { type: string, enum: [draft, active, archived] }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    TemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CommunicationTemplate' }
+        nextCursor: { type: string }
+    TemplateRenderRequest:
+      type: object
+      additionalProperties: false
+      required: [variables]
+      properties:
+        variables:
+          type: object
+          additionalProperties: true
+    TemplateRenderResult:
+      type: object
+      additionalProperties: false
+      required: [content, missingVariables]
+      properties:
+        content: { $ref: '#/components/schemas/MessageContent' }
+        missingVariables:
+          type: array
+          items: { type: string }
+    SenderIdentityWrite:
+      type: object
+      additionalProperties: false
+      required: [channel, address]
+      properties:
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        address: { type: string, minLength: 1, maxLength: 300 }
+        displayName: { type: string, maxLength: 160 }
+        domainId: { type: string, format: uuid }
+        metadata:
+          type: object
+          additionalProperties: true
+    SenderIdentity:
+      allOf:
+        - $ref: '#/components/schemas/SenderIdentityWrite'
+        - type: object
+          additionalProperties: false
+          required: [senderIdentityId, status, createdAt, updatedAt]
+          properties:
+            senderIdentityId: { type: string, format: uuid }
+            status: { type: string, enum: [pending, active, suspended, removed] }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    SenderIdentityList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SenderIdentity' }
+        nextCursor: { type: string }
+    DomainWrite:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: { type: string, minLength: 1, maxLength: 253 }
+        metadata:
+          type: object
+          additionalProperties: true
+    Domain:
+      allOf:
+        - $ref: '#/components/schemas/DomainWrite'
+        - type: object
+          additionalProperties: false
+          required: [domainId, status, checks, createdAt, updatedAt]
+          properties:
+            domainId: { type: string, format: uuid }
+            status:
+              type: string
+              enum: [pending, dns_required, verifying, verified, sending_enabled, suspended, removed]
+            checks:
+              type: object
+              additionalProperties: false
+              required: [spf, dkim, dmarc, reverseDns, tls, bimi]
+              properties:
+                spf: { $ref: '#/components/schemas/VerificationState' }
+                dkim: { $ref: '#/components/schemas/VerificationState' }
+                dmarc: { $ref: '#/components/schemas/VerificationState' }
+                reverseDns: { $ref: '#/components/schemas/VerificationState' }
+                tls: { $ref: '#/components/schemas/VerificationState' }
+                bimi: { $ref: '#/components/schemas/VerificationState' }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    VerificationState:
+      type: string
+      enum: [not_configured, pending, valid, invalid, degraded]
+    DomainList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Domain' }
+        nextCursor: { type: string }
+    SuppressionWrite:
+      type: object
+      additionalProperties: false
+      required: [channel, subject, reason, scope]
+      properties:
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        subject: { type: string, minLength: 1, maxLength: 300 }
+        reason:
+          type: string
+          enum: [hard_bounce, complaint, unsubscribe, sms_opt_out, policy, manual]
+        scope: { type: string, enum: [tenant, global] }
+        source: { type: string, minLength: 1, maxLength: 120 }
+        metadata:
+          type: object
+          additionalProperties: true
+    Suppression:
+      allOf:
+        - $ref: '#/components/schemas/SuppressionWrite'
+        - type: object
+          additionalProperties: false
+          required: [suppressionId, createdAt]
+          properties:
+            suppressionId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+    SuppressionList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Suppression' }
+        nextCursor: { type: string }
+    PreferenceWrite:
+      type: object
+      additionalProperties: false
+      required: [subject, channel, consent]
+      properties:
+        subject: { type: string, minLength: 1, maxLength: 300 }
+        channel: { $ref: '#/components/schemas/CommunicationChannel' }
+        topic: { type: string, minLength: 1, maxLength: 120 }
+        consent: { type: string, enum: [granted, denied, unknown] }
+        source: { type: string, minLength: 1, maxLength: 120 }
+        metadata:
+          type: object
+          additionalProperties: true
+    Preference:
+      allOf:
+        - $ref: '#/components/schemas/PreferenceWrite'
+        - type: object
+          additionalProperties: false
+          required: [preferenceId, updatedAt]
+          properties:
+            preferenceId: { type: string, format: uuid }
+            updatedAt: { type: string, format: date-time }
+    PreferenceList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Preference' }
+        nextCursor: { type: string }
+    ProviderHealth:
+      type: object
+      additionalProperties: false
+      required: [status, checkedAt, providers]
+      properties:
+        status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
+        checkedAt: { type: string, format: date-time }
+        providers:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [provider, channel, status]
+            properties:
+              provider: { type: string }
+              channel: { $ref: '#/components/schemas/CommunicationChannel' }
+              status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
+              reason: { type: [string, 'null'] }
+    UsageReport:
+      type: object
+      additionalProperties: false
+      required: [from, to, totals]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        totals:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [channel, accepted, delivered, failed, suppressed]
+            properties:
+              channel: { $ref: '#/components/schemas/CommunicationChannel' }
+              accepted: { type: integer, minimum: 0 }
+              delivered: { type: integer, minimum: 0 }
+              failed: { type: integer, minimum: 0 }
+              suppressed: { type: integer, minimum: 0 }
+              costMinorUnits: { type: integer, minimum: 0 }
+              currency: { type: string, minLength: 3, maxLength: 3 }
+    ReputationReport:
+      type: object
+      additionalProperties: false
+      required: [status, checkedAt, domains, providers]
+      properties:
+        status: { type: string, enum: [good, watch, limited, suspended] }
+        checkedAt: { type: string, format: date-time }
+        domains:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [domain, status]
+            properties:
+              domain: { type: string }
+              status: { type: string, enum: [good, watch, limited, suspended] }
+              dkim: { $ref: '#/components/schemas/VerificationState' }
+              spf: { $ref: '#/components/schemas/VerificationState' }
+              dmarc: { $ref: '#/components/schemas/VerificationState' }
+        providers:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [provider, channel, status]
+            properties:
+              provider: { type: string }
+              channel: { $ref: '#/components/schemas/CommunicationChannel' }
+              status: { type: string, enum: [good, watch, limited, suspended] }
+              queueDepth: { type: integer, minimum: 0 }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId, retryable]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: string }
+            retryable: { type: boolean }
+            details:
+              type: object
+              additionalProperties: true

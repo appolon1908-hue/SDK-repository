@@ -17,7 +17,22 @@ const definitions = [
   },
   {
     kind: "openapi",
+    path: "contracts/openapi/codestra-communications.openapi.yaml",
+    expectedVersion: "3.1.0",
+  },
+  {
+    kind: "openapi",
+    path: "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
+    expectedVersion: "3.1.0",
+  },
+  {
+    kind: "openapi",
     path: "contracts/openapi/codestra-restricted-gateway.openapi.yaml",
+    expectedVersion: "3.1.0",
+  },
+  {
+    kind: "openapi",
+    path: "contracts/openapi/codestra-control-plane.openapi.yaml",
     expectedVersion: "3.1.0",
   },
   {
