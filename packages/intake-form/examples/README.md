@@ -1,0 +1,1 @@
+Examples demonstrate schema selection and payload construction only. A real site should pass the returned payload to `@codestra/intake-sdk`, which submits to the site's same-origin BFF. The browser must never call Keycloak, Caddy/Kong, Middleware or Odoo with service credentials directly.

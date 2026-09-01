@@ -11,13 +11,14 @@ cross-tenant activity list.
   the webhook-subscription list this app reads (via `@codestra/social-sdk`'s
   `CodestraClient`, shared through `@codestra/apps-shared`), and the login
   redirect/session-gate flow.
-- **Mocked**: all page *data*. Connector health, connector-command records,
-  and the webhook-delivery feed have no corresponding public API operation
-  yet (see `contracts/openapi/codestra-public.openapi.yaml`), so
-  `@codestra/apps-shared/fixtures` provides synthetic, contract-shaped data
-  for them unconditionally. The webhook-subscription list *would* be real
-  once a Middleware is deployed (see below) -- until then it also comes from
-  the in-memory mock API client.
+- **API contract ready**: production dashboard read models are now defined in
+  `contracts/openapi/codestra-operations-dashboard.openapi.yaml` and exposed by
+  the unified SDK as `codestra.operationsDashboard.*`.
+- **Mocked until runtime cutover**: page data still uses
+  `@codestra/apps-shared/fixtures` until the deployed Middleware endpoint is
+  wired through `getApiClient`/the unified SDK. The webhook-subscription list
+  *would* be real once a Middleware is deployed (see below) -- until then it
+  also comes from the in-memory mock API client.
 - **Auth**: `/login` is a development stub (see
   `apps/_shared/src/auth/session.ts`) that sets a plain, unsigned cookie --
   it is not connected to any identity provider. `app/(protected)/layout.tsx`
@@ -37,9 +38,17 @@ cross-tenant activity list.
    `apps/_shared/src/client.ts` already switches to the real
    `CodestraClient` whenever the env var above is set -- once real
    `getAccessToken` wiring lands, nothing else in this app needs to change.
-4. Connector-command health and the webhook-delivery feed will keep reading
-   `@codestra/apps-shared/fixtures` until Middleware exposes a telemetry API
-   for them; swap those imports for real API calls once that API exists.
+4. Replace fixture-backed pages with read-only calls to:
+   - `GET /v1/operations-dashboard/overview`
+   - `GET /v1/operations-dashboard/auth-gateway`
+   - `GET /v1/operations-dashboard/routes`
+   - `GET /v1/operations-dashboard/providers`
+   - `GET /v1/operations-dashboard/messages/lifecycle`
+   - `GET /v1/operations-dashboard/webhooks`
+   - `GET /v1/operations-dashboard/tenants/{tenantId}`
+   - `GET /v1/operations-dashboard/queues`
+   - `GET /v1/operations-dashboard/release-gates`
+   - `GET /v1/operations-dashboard/canaries`
 
 ## Development
 
