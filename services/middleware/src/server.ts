@@ -47,6 +47,15 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   await app.register(rateLimit, {
     max: options.env.RATE_LIMIT_MAX,
     timeWindow: options.env.RATE_LIMIT_WINDOW_MS,
+    // @fastify/rate-limit's default key is request.ip, but this instance
+    // sets trustProxy: true -- so request.ip is taken from a
+    // client-supplied X-Forwarded-For whenever the app is reached
+    // directly (or through an edge that merely appends, rather than
+    // strips and re-sets, forwarding headers). A client can then rotate
+    // that header on every request and get a fresh bucket each time,
+    // defeating the limit entirely. Key on the raw TCP peer address
+    // instead, which the client cannot influence.
+    keyGenerator: (request) => request.socket.remoteAddress ?? request.ip,
     // @fastify/rate-limit throws whatever this returns; a plain object has
     // no statusCode, so without going through CodestraError here it falls
     // into the generic 500 branch of setErrorHandler below instead of

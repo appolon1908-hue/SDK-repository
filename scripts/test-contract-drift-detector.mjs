@@ -28,6 +28,28 @@ const cases = [
     corrupt: (text) => text.replace('"occurredAt"],', '"occurredAt", "newlyRequiredField"],'),
     expectedSubstring: "new required property",
   },
+  {
+    // Codex review finding on PR #46: flattening oneOf/anyOf branches the
+    // same way as allOf silently discarded which alternative was removed.
+    name: "the null alternative removed from a oneOf, leaving the response no longer nullable",
+    file: "contracts/openapi/codestra-restricted-gateway.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        result:\n          oneOf:\n            - $ref: '#/components/schemas/RestrictedGatewayCommandReceipt'\n            - type: 'null'",
+        "        result:\n          oneOf:\n            - $ref: '#/components/schemas/RestrictedGatewayCommandReceipt'",
+      ),
+    expectedSubstring: "removed oneOf alternative",
+  },
+  {
+    // Codex review finding on PR #46: only operation-level `security` was
+    // compared, but no operation in any of these contracts declares it --
+    // every operation inherits the document root's, so this was always a
+    // comparison of two empty arrays until the root was threaded through.
+    name: "the document root's inherited security requirement swapped for an incompatible one",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) => text.replace("security:\n  - oidc: []", "security:\n  - serviceBearer: []"),
+    expectedSubstring: "now requires security scheme not previously required",
+  },
 ];
 
 const failures = [];

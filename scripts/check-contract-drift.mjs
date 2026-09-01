@@ -118,12 +118,12 @@ function diffOpenApi(file, base, current, output) {
         output.push(`[${file}] removed operation: ${label}`);
         continue;
       }
-      diffOperation(file, label, baseOperation, currentOperation, output);
+      diffOperation(file, label, baseOperation, currentOperation, base.security, current.security, output);
     }
   }
 }
 
-function diffOperation(file, label, base, current, output) {
+function diffOperation(file, label, base, current, documentBaseSecurity, documentCurrentSecurity, output) {
   if (base.operationId && current.operationId && base.operationId !== current.operationId) {
     output.push(`[${file}] operationId changed for ${label}: ${base.operationId} -> ${current.operationId}`);
   }
@@ -179,8 +179,15 @@ function diffOperation(file, label, base, current, output) {
     }
   }
 
-  const baseSecurity = base.security ?? [];
-  const currentSecurity = current.security ?? [];
+  // Per OpenAPI semantics, an operation's own `security` (even an empty
+  // array, meaning explicitly no auth) overrides the document root; only
+  // an operation that omits `security` entirely inherits the root's.
+  // None of this repo's operations declare it per-operation today, so
+  // without this fallback every comparison here was silently comparing
+  // two empty arrays -- verified: this is exactly why the check never
+  // fired against a real document.
+  const baseSecurity = base.security ?? documentBaseSecurity ?? [];
+  const currentSecurity = current.security ?? documentCurrentSecurity ?? [];
   const baseSchemes = new Set(baseSecurity.flatMap((requirement) => Object.keys(requirement)));
   const currentSchemes = new Set(currentSecurity.flatMap((requirement) => Object.keys(requirement)));
   for (const scheme of currentSchemes) {
@@ -211,15 +218,53 @@ function diffAsyncApi(file, base, current, output) {
   }
 }
 
-/** Flattens allOf/oneOf/anyOf composition into a single merged {properties, required} view. */
+/**
+ * Flattens allOf composition into a single merged {properties, required}
+ * view -- valid because every allOf branch's constraints apply
+ * simultaneously. oneOf/anyOf are deliberately NOT flattened here: they
+ * are alternatives, not a union, so merging them the same way as allOf
+ * would erase which branch is which -- e.g. a `oneOf [receiptSchema,
+ * {type: "null"}]` response would flatten to just receiptSchema's
+ * properties, silently accepting the removal of the null alternative
+ * (making the response no longer nullable) as a no-op. See
+ * compareAlternatives, which handles oneOf/anyOf on their own terms.
+ */
 function flattenComposedSchema(schema, properties = {}, required = new Set()) {
   if (!schema || typeof schema !== "object") return { properties, required };
   for (const [name, definition] of Object.entries(schema.properties ?? {})) properties[name] = definition;
   for (const name of schema.required ?? []) required.add(name);
-  for (const branch of [...(schema.allOf ?? []), ...(schema.oneOf ?? []), ...(schema.anyOf ?? [])]) {
+  for (const branch of schema.allOf ?? []) {
     flattenComposedSchema(branch, properties, required);
   }
   return { properties, required };
+}
+
+/**
+ * oneOf/anyOf branches are alternatives: each base branch must still have
+ * a structurally equivalent branch on the current side, or a valid shape
+ * that used to be accepted no longer is (e.g. removing a `{type: "null"}`
+ * branch means the field is no longer nullable). Branches are matched by
+ * a coarse signature (type/const/required keys) rather than deep
+ * equality -- enough to catch a branch disappearing outright without
+ * needing full JSON Schema equivalence.
+ */
+function compareAlternatives(path, keyword, beforeBranches, afterBranches, output, file) {
+  if (!Array.isArray(beforeBranches) || !Array.isArray(afterBranches)) return;
+  const afterSignatures = new Set(afterBranches.map(branchSignature));
+  for (const branch of beforeBranches) {
+    if (!afterSignatures.has(branchSignature(branch))) {
+      output.push(`[${file}] removed ${keyword} alternative at ${path}: ${branchSignature(branch)}`);
+    }
+  }
+}
+
+function branchSignature(branch) {
+  if (!branch || typeof branch !== "object") return JSON.stringify(branch);
+  return JSON.stringify({
+    type: branch.type,
+    const: branch.const,
+    required: Array.isArray(branch.required) ? [...branch.required].sort() : undefined,
+  });
 }
 
 function compareSchema(path, before, after, output, file) {
@@ -252,6 +297,9 @@ function compareSchema(path, before, after, output, file) {
   for (const property of afterFlat.required) {
     if (!beforeFlat.required.has(property)) output.push(`[${file}] new required property ${path}.${property}`);
   }
+
+  compareAlternatives(path, "oneOf", before.oneOf, after.oneOf, output, file);
+  compareAlternatives(path, "anyOf", before.anyOf, after.anyOf, output, file);
 
   if (before.items && after.items) compareSchema(`${path}[]`, before.items, after.items, output, file);
 }

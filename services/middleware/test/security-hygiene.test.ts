@@ -58,4 +58,26 @@ describe("security hygiene", () => {
     expect(limited.statusCode).toBe(429);
     expect(limited.headers["x-content-type-options"]).toBe("nosniff");
   });
+
+  it("does not let a spoofed X-Forwarded-For reset the limit (Codex review finding on PR #46)", async () => {
+    // This instance sets trustProxy: true, so the default rate-limit key
+    // (request.ip) is taken from a client-supplied X-Forwarded-For -- a
+    // caller could rotate that header on every request and get a fresh
+    // bucket each time. server.ts keys on the raw socket peer address
+    // instead, which app.inject()'s simulated connection cannot spoof via
+    // headers, exactly like a real client can't spoof its own TCP source.
+    ctx = await createTestContext({ rateLimitMax: 3 });
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/health/ready",
+        headers: { "x-forwarded-for": `10.0.0.${i}` },
+      });
+      statuses.push(response.statusCode);
+    }
+
+    expect(statuses).toEqual([200, 200, 200, 429, 429]);
+  });
 });
