@@ -42,6 +42,7 @@ paths:
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
     post:
       operationId: createSocialPost
       summary: Create or schedule a social post
@@ -89,6 +90,7 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/social/posts/{postId}/cancel:
     post:
       operationId: cancelSocialPost
@@ -130,6 +132,7 @@ paths:
                 $ref: '#/components/schemas/WebhookSubscriptionList'
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
     post:
       operationId: createWebhookSubscription
       summary: Register a tenant-owned HTTPS webhook endpoint for verification
@@ -156,6 +159,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions/{subscriptionId}:
     get:
       operationId: getWebhookSubscription
@@ -174,6 +178,7 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
     delete:
       operationId: deleteWebhookSubscription
       summary: Delete one tenant-owned webhook subscription
@@ -189,6 +194,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions/{subscriptionId}/test:
     post:
       operationId: testWebhookSubscription
@@ -211,6 +217,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions/{subscriptionId}/rotate-secret:
     post:
       operationId: rotateWebhookSubscriptionSecret
@@ -232,6 +239,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions/{subscriptionId}/enable:
     post:
       operationId: enableWebhookSubscription
@@ -252,6 +260,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/webhook-subscriptions/{subscriptionId}/disable:
     post:
       operationId: disableWebhookSubscription
@@ -272,6 +281,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     oidc:

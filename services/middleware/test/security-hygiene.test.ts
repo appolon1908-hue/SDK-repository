@@ -59,13 +59,11 @@ describe("security hygiene", () => {
     expect(limited.headers["x-content-type-options"]).toBe("nosniff");
   });
 
-  it("does not let a spoofed X-Forwarded-For reset the limit (Codex review finding on PR #46)", async () => {
-    // This instance sets trustProxy: true, so the default rate-limit key
-    // (request.ip) is taken from a client-supplied X-Forwarded-For -- a
-    // caller could rotate that header on every request and get a fresh
-    // bucket each time. server.ts keys on the raw socket peer address
-    // instead, which app.inject()'s simulated connection cannot spoof via
-    // headers, exactly like a real client can't spoof its own TCP source.
+  it("does not let a spoofed X-Forwarded-For reset the limit when no proxy is trusted (Codex finding on PR #46)", async () => {
+    // With no TRUSTED_PROXY_CIDRS configured (the default), trustProxy is
+    // false: request.ip always falls back to the real connection address,
+    // never a client-supplied header. A caller rotating X-Forwarded-For on
+    // every request must not get a fresh bucket each time.
     ctx = await createTestContext({ rateLimitMax: 3 });
 
     const statuses: number[] = [];
@@ -79,5 +77,35 @@ describe("security hygiene", () => {
     }
 
     expect(statuses).toEqual([200, 200, 200, 429, 429]);
+  });
+
+  it("honors X-Forwarded-For, with separate buckets per client, once a proxy is explicitly trusted (Codex finding on PR #47)", async () => {
+    // A first fix for the above (keying on the raw socket address
+    // unconditionally) closed the spoofing gap but broke real multi-tenant
+    // traffic: every tenant behind the same real proxy would then share
+    // one bucket, so one busy or malicious tenant could get every other
+    // tenant rate-limited. The real fix is for trustProxy itself to only
+    // honor X-Forwarded-For from an explicitly configured proxy address --
+    // app.inject()'s simulated connection is 127.0.0.1, so trusting that
+    // address here stands in for trusting Kong's real one in production.
+    ctx = await createTestContext({ rateLimitMax: 3, trustedProxyCidrs: "127.0.0.1" });
+
+    const statusesFor = async (clientIp: string): Promise<number[]> => {
+      const statuses: number[] = [];
+      for (let i = 0; i < 4; i++) {
+        const response = await ctx!.app.inject({
+          method: "GET",
+          url: "/health/ready",
+          headers: { "x-forwarded-for": clientIp },
+        });
+        statuses.push(response.statusCode);
+      }
+      return statuses;
+    };
+
+    // Two distinct forwarded client IPs behind the one trusted proxy each
+    // get their own independent bucket, not one shared between them.
+    expect(await statusesFor("10.0.0.1")).toEqual([200, 200, 200, 429]);
+    expect(await statusesFor("10.0.0.2")).toEqual([200, 200, 200, 429]);
   });
 });

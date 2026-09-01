@@ -159,6 +159,11 @@ function diffOperation(file, label, base, current, documentBaseSecurity, documen
     }
     if (baseParam.schema && currentParam.schema) compareSchema(`${label} parameters.${key}`, baseParam.schema, currentParam.schema, output, file);
   }
+  for (const [key, currentParam] of currentParams) {
+    if (!baseParams.has(key) && currentParam.required) {
+      output.push(`[${file}] new required parameter ${key} on ${label}`);
+    }
+  }
 
   const baseBody = base.requestBody;
   const currentBody = current.requestBody;
