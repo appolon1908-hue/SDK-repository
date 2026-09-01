@@ -80,6 +80,65 @@ const cases = [
       ),
     expectedSubstring: "new required parameter",
   },
+  {
+    // Codex review finding on the main-into-development reconciliation PR
+    // (#54): OPENAPI_FILES omitted the communications, operations-dashboard,
+    // and control-plane contracts even though validate-contracts.mjs treats
+    // all three as canonical -- a breaking change to any of them would have
+    // passed this gate silently. Corrupting the communications contract
+    // (one of the three) proves it is now actually diffed.
+    name: "a new required property on the communications contract, previously omitted from the drift gate entirely",
+    file: "contracts/openapi/codestra-communications.openapi.yaml",
+    corrupt: (text) => text.replace("required: [channel, to, content]", "required: [channel, to, content, newlyRequiredField]"),
+    expectedSubstring: "new required property",
+  },
+  {
+    // Codex review finding on #54: an operation with no requestBody at all
+    // has every existing caller sending none. diffOperation only compared
+    // requestBody.required when the base side already had a requestBody --
+    // a current side that adds one and marks it required broke every such
+    // caller identically to an optional body becoming required, but was
+    // invisible because the `if (baseBody)` branch never ran.
+    name: "a brand-new required request body on an operation that previously had none",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      parameters:",
+        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      requestBody:\n        required: true\n        content:\n          application/json:\n            schema: { type: object }\n      parameters:",
+      ),
+    expectedSubstring: "new required request body",
+  },
+  {
+    // Codex review finding on #54: compareSchema checked type/format/enum
+    // but not tightened scalar bounds -- raising minLength on a shared,
+    // $ref'd parameter schema silently passed even though previously valid
+    // requests (using the old, shorter minimum) would now be rejected.
+    name: "minLength raised on a shared, $ref'd parameter schema",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "    CorrelationId:\n      name: X-Correlation-Id\n      in: header\n      required: false\n      schema: { type: string, minLength: 8, maxLength: 128 }",
+        "    CorrelationId:\n      name: X-Correlation-Id\n      in: header\n      required: false\n      schema: { type: string, minLength: 9, maxLength: 128 }",
+      ),
+    expectedSubstring: "minLength tightened",
+  },
+  {
+    // Codex review finding on #54: the top-level `security` array lists
+    // alternatives (any one satisfies the requirement), but diffOperation
+    // only ever reported schemes newly present on the current side. An
+    // operation-level `security: []` override removes the only alternative
+    // (oidc, inherited from the document root) without adding any new one,
+    // so the previous one-directional check saw nothing to report even
+    // though every caller authenticating via oidc is now locked out.
+    name: "an operation-level security override that drops the only previously-allowed scheme",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      parameters:",
+        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      security: []\n      parameters:",
+      ),
+    expectedSubstring: "removed previously allowed security scheme alternative",
+  },
 ];
 
 const failures = [];

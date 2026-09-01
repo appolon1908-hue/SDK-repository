@@ -29,6 +29,9 @@ const OPENAPI_FILES = [
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
   "contracts/openapi/codestra-restricted-gateway.openapi.yaml",
+  "contracts/openapi/codestra-communications.openapi.yaml",
+  "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
+  "contracts/openapi/codestra-control-plane.openapi.yaml",
 ];
 const ASYNCAPI_FILE = "contracts/asyncapi/codestra-events.asyncapi.yaml";
 const METHODS = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
@@ -208,6 +211,12 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
         if (baseSchema && currentSchema) compareSchema(`${label} requestBody.${mediaType}`, baseSchema, currentSchema, output, file);
       }
     }
+  } else if (currentBody?.required) {
+    // The base operation had no request body at all, so every existing
+    // caller sends none. A current side that adds one and marks it
+    // required is valid OpenAPI but breaks every such caller identically
+    // to a body that was optional becoming required.
+    output.push(`[${file}] new required request body on ${label}`);
   }
 
   // Per OpenAPI semantics, an operation's own `security` (even an empty
@@ -223,6 +232,13 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
   const currentSchemes = new Set(currentSecurity.flatMap((requirement) => Object.keys(requirement)));
   for (const scheme of currentSchemes) {
     if (!baseSchemes.has(scheme)) output.push(`[${file}] ${label} now requires security scheme not previously required: ${scheme}`);
+  }
+  // The top-level security array lists alternatives (any one satisfies the
+  // requirement), so a scheme disappearing from every alternative locks out
+  // any caller who was authenticating with it, even though the array is
+  // merely a subset of what it used to be.
+  for (const scheme of baseSchemes) {
+    if (!currentSchemes.has(scheme)) output.push(`[${file}] ${label} removed previously allowed security scheme alternative: ${scheme}`);
   }
 }
 
@@ -311,6 +327,14 @@ function compareSchema(path, before, after, output, file) {
     output.push(`[${file}] additionalProperties newly restricted to false at ${path}`);
   }
 
+  compareTightenedBound(path, "minLength", before, after, output, file, (b, a) => a > b);
+  compareTightenedBound(path, "maxLength", before, after, output, file, (b, a) => a < b);
+  compareTightenedBound(path, "minimum", before, after, output, file, (b, a) => a > b);
+  compareTightenedBound(path, "maximum", before, after, output, file, (b, a) => a < b);
+  if (after.pattern !== undefined && after.pattern !== before.pattern) {
+    output.push(`[${file}] pattern ${before.pattern === undefined ? "added" : "changed"} at ${path}: ${JSON.stringify(before.pattern)} -> ${JSON.stringify(after.pattern)}`);
+  }
+
   const beforeEnum = Array.isArray(before.enum) ? before.enum : undefined;
   const afterEnum = Array.isArray(after.enum) ? after.enum : undefined;
   if (beforeEnum && afterEnum) {
@@ -333,6 +357,26 @@ function compareSchema(path, before, after, output, file) {
   compareAlternatives(path, "anyOf", before.anyOf, after.anyOf, output, file);
 
   if (before.items && after.items) compareSchema(`${path}[]`, before.items, after.items, output, file);
+}
+
+/**
+ * A previously valid value can stop validating if a numeric/length bound is
+ * tightened (e.g. minLength raised, maximum lowered) -- or if the bound is
+ * newly introduced where none existed before, which is tightening from
+ * "unconstrained" to "constrained". `isTighter(before, after)` decides
+ * which direction counts as tightening for the given keyword.
+ */
+function compareTightenedBound(path, keyword, before, after, output, file, isTighter) {
+  const beforeValue = before[keyword];
+  const afterValue = after[keyword];
+  if (afterValue === undefined) return;
+  if (beforeValue === undefined) {
+    output.push(`[${file}] ${keyword} newly introduced at ${path}: ${afterValue}`);
+    return;
+  }
+  if (isTighter(beforeValue, afterValue)) {
+    output.push(`[${file}] ${keyword} tightened at ${path}: ${beforeValue} -> ${afterValue}`);
+  }
 }
 
 function typesEquivalent(before, after) {
