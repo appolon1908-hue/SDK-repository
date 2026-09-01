@@ -6,6 +6,18 @@ const EnvSchema = z.object({
   HOST: z.string().min(1).default("0.0.0.0"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 
+  // Comma-separated IPs/CIDRs of proxies allowed to set X-Forwarded-For
+  // (e.g. Kong's real address once deployed). Empty by default: no proxy
+  // is trusted until an operator configures one, so request.ip always
+  // falls back to the real socket peer address rather than trusting an
+  // unconditional `trustProxy: true`, which lets any direct caller (or
+  // one reaching Middleware through an edge that merely appends, rather
+  // than strips and re-sets, forwarding headers) spoof its own address.
+  TRUSTED_PROXY_CIDRS: z
+    .string()
+    .optional()
+    .transform((value) => (value ? value.split(",").map((entry) => entry.trim()).filter(Boolean) : [])),
+
   // OIDC/JWT verification. There is no real identity provider deployed with
   // this repository — these are the seam a real OIDC provider (Keycloak or
   // similar) plugs into. See services/middleware/README.md.
@@ -29,6 +41,14 @@ const EnvSchema = z.object({
   RESTRICTED_GATEWAY_SERVICE_TOKEN: z.string().default(""),
   RESTRICTED_GATEWAY_WORKLOAD_ID: z.string().default("codestra-middleware"),
   RESTRICTED_GATEWAY_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+
+  // Per-IP defense-in-depth rate limit. Kong (or whatever sits in front of
+  // this service) is expected to carry the primary, tenant-aware limit;
+  // this is a fallback so the service itself never has zero protection if
+  // that layer is misconfigured or bypassed. 300/min comfortably covers
+  // the largest existing test file (21 requests) with headroom.
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

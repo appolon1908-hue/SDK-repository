@@ -44,6 +44,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /v1/connectors/{connectorKey}/reconciliation:
     post:
       operationId: reconcileConnector
@@ -78,6 +79,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReconciliationPage' }
         '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     serviceBearer:
