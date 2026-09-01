@@ -118,12 +118,38 @@ function diffOpenApi(file, base, current, output) {
         output.push(`[${file}] removed operation: ${label}`);
         continue;
       }
-      diffOperation(file, label, baseOperation, currentOperation, base.security, current.security, output);
+      diffOperation(
+        file,
+        label,
+        baseOperation,
+        currentOperation,
+        effectiveParameters(basePathItem, baseOperation),
+        effectiveParameters(currentPathItem, currentOperation),
+        base.security,
+        current.security,
+        output,
+      );
     }
   }
 }
 
-function diffOperation(file, label, base, current, documentBaseSecurity, documentCurrentSecurity, output) {
+/**
+ * OpenAPI permits `parameters` on the Path Item Object (a sibling of
+ * get/post/etc.), applying to every operation under that path unless an
+ * operation redeclares the same name+in. Merging this in is what lets a
+ * newly-added required path-item-level parameter -- one no existing
+ * generated client could send -- actually get compared, instead of the
+ * check only ever looking at operation.parameters.
+ */
+function effectiveParameters(pathItem, operation) {
+  const merged = new Map((pathItem?.parameters ?? []).map((parameter) => [`${parameter.in}:${parameter.name}`, parameter]));
+  for (const parameter of operation?.parameters ?? []) {
+    merged.set(`${parameter.in}:${parameter.name}`, parameter);
+  }
+  return [...merged.values()];
+}
+
+function diffOperation(file, label, base, current, baseParameters, currentParameters, documentBaseSecurity, documentCurrentSecurity, output) {
   if (base.operationId && current.operationId && base.operationId !== current.operationId) {
     output.push(`[${file}] operationId changed for ${label}: ${base.operationId} -> ${current.operationId}`);
   }
@@ -146,8 +172,8 @@ function diffOperation(file, label, base, current, documentBaseSecurity, documen
     }
   }
 
-  const baseParams = new Map((base.parameters ?? []).map((parameter) => [`${parameter.in}:${parameter.name}`, parameter]));
-  const currentParams = new Map((current.parameters ?? []).map((parameter) => [`${parameter.in}:${parameter.name}`, parameter]));
+  const baseParams = new Map(baseParameters.map((parameter) => [`${parameter.in}:${parameter.name}`, parameter]));
+  const currentParams = new Map(currentParameters.map((parameter) => [`${parameter.in}:${parameter.name}`, parameter]));
   for (const [key, baseParam] of baseParams) {
     const currentParam = currentParams.get(key);
     if (!currentParam) {

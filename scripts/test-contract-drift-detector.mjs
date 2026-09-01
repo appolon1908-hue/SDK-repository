@@ -64,6 +64,22 @@ const cases = [
       ),
     expectedSubstring: "new required parameter",
   },
+  {
+    // Codex review finding on PR #48: OpenAPI permits `parameters` on the
+    // Path Item Object (a sibling of get/post/etc.), applying to every
+    // operation under that path -- diffOperation only ever saw
+    // operation-level parameters, so a new required one declared at the
+    // path-item level was invisible even though it's valid OpenAPI no
+    // existing generated client could satisfy.
+    name: "a brand-new required parameter declared at the path-item level, not the operation level",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "  /v1/social/posts/{postId}:\n    get:\n      operationId: getSocialPost",
+        "  /v1/social/posts/{postId}:\n    parameters:\n      - name: newPathLevelRequired\n        in: query\n        required: true\n        schema: { type: string }\n    get:\n      operationId: getSocialPost",
+      ),
+    expectedSubstring: "new required parameter",
+  },
 ];
 
 const failures = [];
