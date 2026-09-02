@@ -85,6 +85,22 @@ try {
     throw new Error("Alignment gate did not reject an SDK response shape not guaranteed by Middleware.");
   }
 
+  const enumDrift = parse(await readFile(communicationsPath, "utf8"));
+  enumDrift.components.schemas.MessageStatus.enum.push("fictional_status");
+  const enumDriftPath = join(directory, "enum-drift-communications.openapi.yaml");
+  await writeFile(enumDriftPath, stringify(enumDrift));
+  sdkContracts[3] = enumDriftPath;
+  const enumSchemaCheck = run(
+    ["scripts/check-middleware-runtime-alignment.mjs"],
+    { MIDDLEWARE_SDK_CONTRACTS: sdkContracts.join(",") },
+  );
+  if (
+    enumSchemaCheck.status === 0 ||
+    !`${enumSchemaCheck.stderr}${enumSchemaCheck.stdout}`.includes("RESPONSE_SCHEMA_MISMATCH")
+  ) {
+    throw new Error("Alignment gate did not reject SDK response enum drift.");
+  }
+
   const repository = join(directory, "middleware");
   const canonicalPath = "contracts/platform/middleware-openapi.generated.json";
   const checkoutPath = join(repository, canonicalPath);
