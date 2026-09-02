@@ -11,8 +11,25 @@ const AUTH_MODES = new Set(['public-only','oidc-pkce','api-session','same-origin
 const STORAGE = new Set(['forbidden','legacy-session-storage-migration-required','vendor-managed','n/a']);
 const SOURCE_EXTENSIONS = new Set(['.css','.scss','.sass','.less','.tsx','.ts','.jsx','.js','.vue','.html']);
 const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch|color)\s*\(/i;
-const LOGIN_MARKERS = ['/auth/login','.login(',' login(','protocol/openid-connect/auth','authorization_code'];
-const LOGOUT_MARKERS = ['/auth/logout','.logout(',' logout(','protocol/openid-connect/logout','end_session'];
+const LOGIN_MARKERS = [
+  '/auth/login',
+  '.login(',
+  ' login(',
+  'useLogin(',
+  'loginPost',
+  'protocol/openid-connect/auth',
+  'authorization_code',
+];
+const LOGOUT_MARKERS = [
+  '/auth/logout',
+  '.logout(',
+  ' logout(',
+  'logoutSession',
+  'logoutCustomerSession',
+  'VITE_AUTH_LOGOUT_ENDPOINT',
+  'protocol/openid-connect/logout',
+  'end_session',
+];
 const GUARD_MARKERS = ['router.replace','router.push','<Navigate','beforeEach','middleware','requireAuth','onUnauthorized','session-expired'];
 const CANONICAL_ISSUER = 'https://auth.codestra.co/realms/codestra';
 
