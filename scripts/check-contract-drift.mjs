@@ -35,6 +35,9 @@ const OPENAPI_FILES = [
 ];
 const ASYNCAPI_FILE = "contracts/asyncapi/codestra-events.asyncapi.yaml";
 const METHODS = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
+const TRANSPORT_INJECTED_HEADERS = new Map([
+  ["X-Tenant-ID", '"x-tenant-id": this.tenantId'],
+]);
 
 const workDir = await mkdtemp(join(tmpdir(), "codestra-contract-drift-"));
 const failures = [];
@@ -189,8 +192,7 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
     if (baseParam.schema && currentParam.schema) compareSchema(`${label} parameters.${key}`, baseParam.schema, currentParam.schema, output, file);
   }
   for (const [key, currentParam] of currentParams) {
-    if (!baseParams.has(key) && currentParam.required) {
-      if (isTenantBindingCorrection(currentParam, baseParameters)) continue;
+    if (!baseParams.has(key) && currentParam.required && !isProvenTransportInjectedHeader(currentParam)) {
       output.push(`[${file}] new required parameter ${key} on ${label}`);
     }
   }
@@ -243,13 +245,23 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
   }
 }
 
-function isTenantBindingCorrection(parameter, baseParameters) {
-  if (parameter.in !== "header" || String(parameter.name).toLowerCase() !== "x-tenant-id") return false;
-  return baseParameters.some((candidate) =>
-    candidate.in === "path"
-    && candidate.required === true
-    && ["tenantid", "tenant_id"].includes(String(candidate.name).toLowerCase()),
-  );
+/**
+ * A required header that the public transport has always supplied is not a
+ * new caller obligation. Keep this exception deliberately narrow: the
+ * contract must opt in, the header must be on the reviewed allowlist, and
+ * the checked source must still contain the corresponding injection. This
+ * prevents an annotation alone from concealing an arbitrary breaking API
+ * change.
+ */
+function isProvenTransportInjectedHeader(parameter) {
+  if (parameter.in !== "header" || parameter["x-codestra-sdk-transport-injected"] !== true) return false;
+  const sourceInvariant = TRANSPORT_INJECTED_HEADERS.get(parameter.name);
+  if (!sourceInvariant) return false;
+  const sdkSource = readFileSyncOrThrow("packages/codestra_sdk/src/sdk.ts");
+  if (!sdkSource.includes(sourceInvariant)) {
+    throw new Error(`Contract marks ${parameter.name} as transport-injected, but the SDK transport invariant is absent`);
+  }
+  return true;
 }
 
 function diffAsyncApi(file, base, current, output) {
