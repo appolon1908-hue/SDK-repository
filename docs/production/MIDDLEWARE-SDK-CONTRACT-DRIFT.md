@@ -3,12 +3,12 @@
 ## Authority
 
 - Runtime repository: `appolon1908-hue/Middleware-`
-- Protected source SHA: `f3437709c06747249586598590145234ea2c7327`
+- Protected source SHA: `5d830ab1c3629447a873b45dca19a043adea78e0`
 - Source contract: `contracts/platform/middleware-openapi.generated.json`
 - Vendored evidence: `contracts/middleware-runtime-current.openapi.json`
 - OpenAPI: 3.1.0
-- Registered runtime paths: 115
-- Registered runtime operations: 116
+- Registered runtime paths: 132
+- Registered runtime operations: 133
 
 The vendored document is an evidence snapshot, not an SDK-owned API. `pnpm
 contracts:middleware` verifies its repository/SHA/content binding and checks the
@@ -60,7 +60,7 @@ older wrappers remain present so this change does not silently break consumers:
 - `/v1/crm/leads*`
 - `/v1/workflow/runs*`
 
-These compatibility routes are absent from Middleware SHA `f3437709…`; they
+These compatibility routes are absent from Middleware SHA `5d830ab1…`; they
 must not be used as evidence for staging or production certification and need
 a published sunset before removal. The canonical runtime
 families are `/v1/marketing/commands`, `/v1/ai/commands`, `/v1/crm/commands`,

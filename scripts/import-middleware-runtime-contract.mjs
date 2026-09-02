@@ -32,8 +32,8 @@ const operationCount = Object.values(document.paths ?? {}).reduce(
   (count, item) => count + Object.keys(item).filter((key) => methods.has(key)).length,
   0,
 );
-if (operationCount !== 116) {
-  throw new Error(`Expected 116 registered operations at ${authority.source_sha}; found ${operationCount}.`);
+if (operationCount !== 133) {
+  throw new Error(`Expected 133 registered operations at ${authority.source_sha}; found ${operationCount}.`);
 }
 
 const canonicalBytes = `${JSON.stringify(document, null, 2)}\n`;
