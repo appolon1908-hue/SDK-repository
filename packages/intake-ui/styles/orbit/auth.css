@@ -1,0 +1,109 @@
+@import "./tokens.css";
+
+.cx-auth-shell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-rows: auto 1fr auto;
+  background: var(--cx-canvas);
+}
+
+.cx-auth-main {
+  display: grid;
+  place-items: center;
+  padding: var(--cx-space-10) var(--cx-space-4);
+}
+
+.cx-auth-panel {
+  width: min(100%, var(--cx-auth-width));
+}
+
+.cx-auth-panel__header {
+  margin-bottom: var(--cx-space-8);
+}
+
+.cx-auth-panel__title {
+  margin-bottom: var(--cx-space-3);
+  color: var(--cx-text-main);
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 500;
+}
+
+.cx-auth-panel__description {
+  margin: 0;
+  color: var(--cx-text-supporting);
+}
+
+.cx-auth-form {
+  display: grid;
+  gap: var(--cx-space-4);
+}
+
+.cx-auth-form__actions {
+  display: grid;
+  gap: var(--cx-space-3);
+  margin-top: var(--cx-space-2);
+}
+
+.cx-auth-form__secondary {
+  display: flex;
+  min-height: var(--cx-control-compact);
+  align-items: center;
+  justify-content: center;
+  color: var(--cx-text-supporting);
+  font-size: var(--cx-font-size-sm);
+}
+
+.cx-auth-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--cx-space-3);
+  margin-block: var(--cx-space-5);
+  color: var(--cx-text-muted);
+  font-size: var(--cx-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--cx-letter-label);
+}
+
+.cx-auth-divider::before,
+.cx-auth-divider::after {
+  height: 1px;
+  content: "";
+  background: var(--cx-border-default);
+}
+
+.cx-auth-notice {
+  margin-top: var(--cx-space-6);
+  color: var(--cx-text-muted);
+  font-size: var(--cx-font-size-xs);
+}
+
+.cx-auth-status {
+  min-height: 24px;
+  margin: 0;
+  color: var(--cx-text-supporting);
+  font-size: var(--cx-font-size-sm);
+}
+
+.cx-auth-status[role="alert"] {
+  color: var(--cx-error);
+}
+
+[data-orbit-header="auth"] .cx-header {
+  min-height: var(--cx-header-mobile);
+}
+
+[data-orbit-footer="auth-compact"] .cx-footer {
+  border-top-color: transparent;
+  padding-block: var(--cx-space-6);
+}
+
+@media (min-width: 768px) {
+  .cx-auth-main {
+    padding: var(--cx-space-16) var(--cx-space-6);
+  }
+
+  [data-orbit-header="auth"] .cx-header {
+    min-height: var(--cx-header-tablet);
+  }
+}
