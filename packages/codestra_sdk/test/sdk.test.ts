@@ -45,6 +45,7 @@ describe("codestra_sdk facade", () => {
       { idempotencyKey },
     );
     await sdk.control.n8n.list({ state: "RECONCILIATION_REQUIRED", limit: 25 });
+    await sdk.control.marketing.list({ correlationId: "domain-list-correlation" });
 
     expect(pathname(fetchMock, 0)).toBe("/v1/marketing/commands");
     expect(pathname(fetchMock, 1)).toBe(`/v1/ai/operations/${operationId}`);
@@ -54,6 +55,7 @@ describe("codestra_sdk facade", () => {
       limit: "25",
       state: "RECONCILIATION_REQUIRED",
     });
+    expect(new URL(String(fetchMock.mock.calls[4]?.[0])).search).toBe("");
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       command_id: operationId,
       command_type: "marketing.campaign.create.v1",
