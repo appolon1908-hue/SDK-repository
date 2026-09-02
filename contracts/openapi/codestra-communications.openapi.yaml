@@ -874,7 +874,7 @@ components:
           items: { $ref: '#/components/schemas/CommunicationMessage' }
         nextCursor:
           type: [string, 'null']
-          x-codestra-corrects-runtime-nullability: 4357fa8030b5f7879766436049a92c6eeb135617
+          x-codestra-corrects-runtime-nullability: 9cd3fd3e46fb0366fbff69aeef251a1b85beff1d
     MessageEvent:
       type: object
       additionalProperties: false
@@ -900,7 +900,7 @@ components:
           items: { $ref: '#/components/schemas/MessageEvent' }
         nextCursor:
           type: [string, 'null']
-          x-codestra-corrects-runtime-nullability: 4357fa8030b5f7879766436049a92c6eeb135617
+          x-codestra-corrects-runtime-nullability: 9cd3fd3e46fb0366fbff69aeef251a1b85beff1d
     TemplateWrite:
       type: object
       additionalProperties: false
