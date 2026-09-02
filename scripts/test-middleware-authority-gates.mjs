@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +14,11 @@ const directory = await mkdtemp(join(tmpdir(), "codestra-middleware-authority-")
 try {
   const source = JSON.parse(await readFile("contracts/middleware-runtime-current.openapi.json", "utf8"));
   source.info.title = "Tampered Middleware API";
+  const tamperedCanonical = structuredClone(source);
+  delete tamperedCanonical["x-codestra-source-authority"];
+  source["x-codestra-source-authority"].source_sha256 = createHash("sha256")
+    .update(`${JSON.stringify(tamperedCanonical, null, 2)}\n`)
+    .digest("hex");
   const tampered = join(directory, "tampered.openapi.json");
   await writeFile(tampered, `${JSON.stringify(source, null, 2)}\n`);
   const digestCheck = run(["scripts/check-middleware-runtime-alignment.mjs"], {
@@ -46,6 +52,22 @@ try {
     throw new Error("Alignment gate did not compare a weakened handwritten contract independently.");
   }
 
+  communications.components.parameters.TenantId.required = true;
+  communications.components.schemas.CommunicationMessage.required.push("contractOnly");
+  const overstatedCommunications = join(directory, "overstated-communications.openapi.yaml");
+  await writeFile(overstatedCommunications, stringify(communications));
+  sdkContracts[3] = overstatedCommunications;
+  const responseSchemaCheck = run(
+    ["scripts/check-middleware-runtime-alignment.mjs"],
+    { MIDDLEWARE_SDK_CONTRACTS: sdkContracts.join(",") },
+  );
+  if (
+    responseSchemaCheck.status === 0 ||
+    !`${responseSchemaCheck.stderr}${responseSchemaCheck.stdout}`.includes("RESPONSE_SCHEMA_MISMATCH")
+  ) {
+    throw new Error("Alignment gate did not reject an SDK response shape not guaranteed by Middleware.");
+  }
+
   const repository = join(directory, "middleware");
   const canonicalPath = "contracts/platform/middleware-openapi.generated.json";
   const checkoutPath = join(repository, canonicalPath);
@@ -67,6 +89,7 @@ try {
     repository: "https://example.invalid/codestra/Middleware-",
     source_sha: revision,
     source_path: canonicalPath,
+    source_sha256: createHash("sha256").update(`${JSON.stringify(committed, null, 2)}\n`).digest("hex"),
   })}\n`);
   committed.info.title = "Dirty unreviewed contract";
   await writeFile(checkoutPath, `${JSON.stringify(committed, null, 2)}\n`);

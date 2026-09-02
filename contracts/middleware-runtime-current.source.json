@@ -1,5 +1,6 @@
 {
   "repository": "https://github.com/appolon1908-hue/Middleware-",
-  "source_sha": "454d7d659cbb95e5e21443c5d6bb7794ddfe2880",
-  "source_path": "contracts/platform/middleware-openapi.generated.json"
+  "source_sha": "4357fa8030b5f7879766436049a92c6eeb135617",
+  "source_path": "contracts/platform/middleware-openapi.generated.json",
+  "source_sha256": "e22bd67b69557f4a780035d56bb77ffa4af5c8c06ea18fe5b9e6bf31ee0117f4"
 }

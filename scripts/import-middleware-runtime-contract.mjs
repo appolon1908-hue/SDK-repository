@@ -43,11 +43,15 @@ if (operationCount !== 133) {
 }
 
 const canonicalBytes = `${JSON.stringify(document, null, 2)}\n`;
+const sourceSha256 = createHash("sha256").update(canonicalBytes).digest("hex");
+if (sourceSha256 !== authority.source_sha256) {
+  throw new Error(`Pinned Middleware blob digest is ${sourceSha256}; expected ${authority.source_sha256}.`);
+}
 document["x-codestra-source-authority"] = {
   repository: authority.repository,
   source_sha: authority.source_sha,
   source_path: authority.source_path,
-  source_sha256: createHash("sha256").update(canonicalBytes).digest("hex"),
+  source_sha256: sourceSha256,
 };
 
 await writeFile(outputPath, `${JSON.stringify(document, null, 2)}\n`);
