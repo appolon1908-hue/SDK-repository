@@ -7,6 +7,7 @@
     "canvas": "#000000",
     "surface": "#101010",
     "surfaceElevated": "#171717",
+    "surfaceSecondary": "#202020",
     "textPrimary": "#FFFFFF",
     "textSecondary": "#D8D8D8",
     "textMuted": "#9A9A9A",
@@ -14,12 +15,15 @@
     "borderStrong": "#5A5A5A",
     "actionPrimaryBackground": "#FFFFFF",
     "actionPrimaryText": "#000000",
+    "actionPrimaryHover": "#E7E7E7",
+    "actionPrimaryActive": "#CCCCCC",
     "focus": "#FFFFFF",
     "status": {
+      "success": "#36C98F",
+      "warning": "#F4B860",
+      "error": "#FF6469",
       "danger": "#FF6469",
-      "success": "#78D796",
-      "warning": "#F1C86A",
-      "info": "#9CB9E8"
+      "info": "#79B8FF"
     }
   },
   "typography": {
@@ -48,12 +52,18 @@
   },
   "size": {
     "control": 52,
+    "controlCompact": 44,
     "touchTargetMinimum": 44,
+    "socialIconVisual": 20,
+    "socialIconTarget": 44,
     "headerDesktop": 76,
     "headerTablet": 64,
     "headerMobile": 56,
     "authColumnMaximum": 480,
-    "contentMaximum": 1440
+    "contentMain": 1280,
+    "contentWide": 1440,
+    "contentMaximum": 1440,
+    "textColumn": 720
   },
   "radius": {
     "none": 0,
@@ -91,6 +101,7 @@
     "neon": "prohibited",
     "largeRoundedCards": "prohibited",
     "heavyShadow": "prohibited",
-    "statusColors": "status-only-not-branding"
+    "statusColors": "status-only-not-branding",
+    "defaultCorporateActionColor": "monochrome-white-not-blue"
   }
 }
