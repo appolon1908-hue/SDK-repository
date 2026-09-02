@@ -10,9 +10,9 @@ describe("TenantDetailPage", () => {
     resetTenantStore();
   });
 
-  it("renders the tenant, its users, and read-only external-config panels", () => {
+  it("renders the tenant, its users, and read-only external-config panels", async () => {
     const tenant = listTenants()[0]!;
-    render(TenantDetailPage({ params: { tenantId: tenant.id } }));
+    render(await TenantDetailPage({ params: Promise.resolve({ tenantId: tenant.id }) }));
 
     expect(screen.getByRole("heading", { level: 1, name: tenant.name })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Identity provider" })).toBeInTheDocument();

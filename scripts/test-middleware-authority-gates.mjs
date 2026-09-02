@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -20,8 +20,48 @@ try {
   if (digestCheck.status === 0 || !`${digestCheck.stderr}${digestCheck.stdout}`.includes("content digest")) {
     throw new Error("Alignment gate did not reject a modified runtime snapshot.");
   }
+
+  const repository = join(directory, "middleware");
+  const canonicalPath = "contracts/platform/middleware-openapi.generated.json";
+  const checkoutPath = join(repository, canonicalPath);
+  await mkdir(join(repository, "contracts/platform"), { recursive: true });
+  const committed = structuredClone(source);
+  delete committed["x-codestra-source-authority"];
+  committed.info.title = "Codestra Middleware API";
+  await writeFile(checkoutPath, `${JSON.stringify(committed, null, 2)}\n`);
+  git(repository, ["init", "-q"]);
+  git(repository, ["config", "user.email", "authority-test@example.invalid"]);
+  git(repository, ["config", "user.name", "Authority Test"]);
+  git(repository, ["remote", "add", "origin", "https://example.invalid/codestra/Middleware-"]);
+  git(repository, ["add", canonicalPath]);
+  git(repository, ["commit", "-qm", "canonical contract"]);
+  const revision = git(repository, ["rev-parse", "HEAD"]);
+  const testAuthority = join(directory, "authority.json");
+  const imported = join(directory, "imported.json");
+  await writeFile(testAuthority, `${JSON.stringify({
+    repository: "https://example.invalid/codestra/Middleware-",
+    source_sha: revision,
+    source_path: canonicalPath,
+  })}\n`);
+  committed.info.title = "Dirty unreviewed contract";
+  await writeFile(checkoutPath, `${JSON.stringify(committed, null, 2)}\n`);
+  const importResult = run(["scripts/import-middleware-runtime-contract.mjs", checkoutPath], {
+    MIDDLEWARE_RUNTIME_AUTHORITY: testAuthority,
+    MIDDLEWARE_RUNTIME_CONTRACT: imported,
+  });
+  if (importResult.status !== 0) throw new Error(`Pinned-blob import fixture failed: ${importResult.stderr}${importResult.stdout}`);
+  const importedDocument = JSON.parse(await readFile(imported, "utf8"));
+  if (importedDocument.info.title !== "Codestra Middleware API") {
+    throw new Error("Importer read dirty working-tree bytes instead of the pinned Git blob.");
+  }
 } finally {
   await rm(directory, { recursive: true, force: true });
+}
+
+function git(cwd, args) {
+  const result = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  return result.stdout.trim();
 }
 
 console.log("Middleware authority negative gates passed.");

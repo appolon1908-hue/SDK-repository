@@ -13,6 +13,11 @@ const definitions = [
   },
   {
     kind: "openapi",
+    path: "contracts/openapi/codestra-middleware-client.openapi.json",
+    expectedVersion: "3.1.0",
+  },
+  {
+    kind: "openapi",
     path: "contracts/openapi/codestra-public.openapi.yaml",
     expectedVersion: "3.1.0",
   },

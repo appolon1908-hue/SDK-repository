@@ -5,6 +5,7 @@ import { parse } from "yaml";
 const runtimePath = process.env.MIDDLEWARE_RUNTIME_CONTRACT ?? "contracts/middleware-runtime-current.openapi.json";
 const authorityPath = process.env.MIDDLEWARE_RUNTIME_AUTHORITY ?? "contracts/middleware-runtime-current.source.json";
 const sdkContracts = [
+  "contracts/openapi/codestra-middleware-client.openapi.json",
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
   "contracts/openapi/codestra-communications.openapi.yaml",
@@ -32,16 +33,15 @@ if (embedded?.source_sha256 !== canonicalDigest) failures.push("runtime snapshot
 
 const runtimeOperations = operationMap(runtime);
 const declaredSdkOperations = new Map();
+let generatedClientDocument;
 for (const file of sdkContracts) {
   const document = parse(await readFile(file, "utf8"));
+  if (file.endsWith("codestra-middleware-client.openapi.json")) generatedClientDocument = document;
   for (const [key, operation] of operationMap(document)) {
     if (!declaredSdkOperations.has(key)) declaredSdkOperations.set(key, { ...operation, file, document });
   }
 }
-const sdkOperations = new Map([
-  ...[...operationMap(runtime)].map(([key, operation]) => [key, { ...operation, file: runtimePath, document: runtime }]),
-  ...declaredSdkOperations,
-]);
+const sdkOperations = declaredSdkOperations;
 
 // Contracts in this list are asserted to describe the canonical Middleware
 // runtime. Provider gateway contracts are deliberately excluded: they are
@@ -91,6 +91,13 @@ const requiredSdkOperations = new Set([
 for (const key of requiredSdkOperations) {
   if (!sdkOperations.has(key)) failures.push(`SDK_ROUTE_MISSING: ${key}`);
   if (!runtimeOperations.has(key)) failures.push(`RUNTIME_ROUTE_MISSING: ${key}`);
+}
+
+if (JSON.stringify(generatedClientDocument?.["x-codestra-generated-from"]) !== JSON.stringify(embedded)) {
+  failures.push("SDK generated client contract authority does not match the pinned runtime snapshot");
+}
+for (const key of operationMap(generatedClientDocument ?? {}).keys()) {
+  if (!requiredSdkOperations.has(key)) failures.push(`SDK_PRIVATE_ROUTE_EXPOSED: ${key}`);
 }
 
 for (const [key, sdk] of declaredSdkOperations) {
@@ -150,7 +157,10 @@ function compareOperation(key, runtimeOperation, runtimeDocument, sdkOperation, 
   const runtimeErrors = Object.keys(runtimeOperation.responses ?? {}).filter((status) => /^[45]/u.test(status));
   const sdkHasErrorContract = Object.values(sdkOperation.responses ?? {}).some((response) => {
     const resolved = resolve(response, sdkDocument);
-    return Object.values(resolved?.content ?? {}).some((media) => JSON.stringify(media).includes("Error"));
+    return Object.values(resolved?.content ?? {}).some((media) => {
+      const schema = resolve(media?.schema, sdkDocument);
+      return schema?.type === "object" || schema?.properties !== undefined || schema?.oneOf !== undefined || schema?.anyOf !== undefined;
+    });
   });
   if (runtimeErrors.length && !sdkHasErrorContract) output.push(`ERROR_SCHEMA_MISMATCH: ${key} has no typed SDK error contract`);
 }
