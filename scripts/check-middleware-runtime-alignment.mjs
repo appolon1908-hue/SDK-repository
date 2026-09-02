@@ -4,7 +4,7 @@ import { parse } from "yaml";
 
 const runtimePath = process.env.MIDDLEWARE_RUNTIME_CONTRACT ?? "contracts/middleware-runtime-current.openapi.json";
 const authorityPath = process.env.MIDDLEWARE_RUNTIME_AUTHORITY ?? "contracts/middleware-runtime-current.source.json";
-const sdkContracts = [
+const sdkContracts = process.env.MIDDLEWARE_SDK_CONTRACTS?.split(",") ?? [
   "contracts/openapi/codestra-middleware-client.openapi.json",
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
@@ -33,11 +33,13 @@ if (embedded?.source_sha256 !== canonicalDigest) failures.push("runtime snapshot
 
 const runtimeOperations = operationMap(runtime);
 const declaredSdkOperations = new Map();
+const declaredSdkOperationOccurrences = [];
 let generatedClientDocument;
 for (const file of sdkContracts) {
   const document = parse(await readFile(file, "utf8"));
   if (file.endsWith("codestra-middleware-client.openapi.json")) generatedClientDocument = document;
   for (const [key, operation] of operationMap(document)) {
+    declaredSdkOperationOccurrences.push([key, { ...operation, file, document }]);
     if (!declaredSdkOperations.has(key)) declaredSdkOperations.set(key, { ...operation, file, document });
   }
 }
@@ -102,7 +104,7 @@ for (const key of generatedClientOperations.keys()) {
   if (!requiredSdkOperations.has(key)) failures.push(`SDK_PRIVATE_ROUTE_EXPOSED: ${key}`);
 }
 
-for (const [key, sdk] of declaredSdkOperations) {
+for (const [key, sdk] of declaredSdkOperationOccurrences) {
   const runtimeOperation = runtimeOperations.get(key);
   if (!runtimeOperation) continue;
   compareOperation(key, runtimeOperation, runtime, sdk, sdk.document, failures);

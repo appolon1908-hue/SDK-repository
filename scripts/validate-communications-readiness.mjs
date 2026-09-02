@@ -57,10 +57,15 @@ for (const moduleName of manifest.requiredUnifiedSdkModules ?? []) {
 for (const endpointPath of manifest.requiredUnifiedSdkEndpointPaths ?? []) {
   const implementedByCanonicalDomainClient =
     middlewareOpenApi.paths?.[endpointPath] !== undefined &&
+    isCanonicalDomainClientPath(endpointPath) &&
     unifiedSdkSource.includes("private domainClient(domain: string)");
   if (!implementedByCanonicalDomainClient && !unifiedSdkSource.includes(endpointPath) && !clientSource.includes(endpointPath) && !socialClientSource.includes(endpointPath)) {
     failures.push(`Unified SDK endpoint surface is missing path: ${endpointPath}`);
   }
+}
+
+function isCanonicalDomainClientPath(path) {
+  return /^\/v1\/(?:marketing|ai|crm|odoo|social|telephony|integrations\/n8n)\/(?:commands|operations(?:\/\{[^}]+\}(?:\/(?:cancel|reconcile))?)?)$/u.test(path);
 }
 
 for (const endpointPath of manifest.compatibilityOnlyEndpointPaths ?? []) {
