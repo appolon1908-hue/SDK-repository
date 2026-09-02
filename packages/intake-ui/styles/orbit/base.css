@@ -1,0 +1,186 @@
+@import "./tokens.css";
+
+:where([data-orbit-root]) {
+  min-height: 100%;
+  background: var(--cx-canvas);
+  color: var(--cx-text-main);
+  font-family: var(--cx-font-sans);
+  font-size: var(--cx-font-size-md);
+  line-height: var(--cx-line-body);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where([data-orbit-root]),
+:where([data-orbit-root]) *,
+:where([data-orbit-root]) *::before,
+:where([data-orbit-root]) *::after {
+  box-sizing: border-box;
+}
+
+:where(html[data-orbit-root], body[data-orbit-root]) {
+  margin: 0;
+  background: var(--cx-canvas);
+}
+
+:where([data-orbit-root]) body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--cx-canvas);
+  color: var(--cx-text-main);
+}
+
+:where([data-orbit-root]) :is(h1, h2, h3, h4, h5, h6, p) {
+  margin-block-start: 0;
+}
+
+:where([data-orbit-root]) :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--cx-text-main);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: var(--cx-line-tight);
+}
+
+:where([data-orbit-root]) p {
+  color: var(--cx-text-supporting);
+}
+
+:where([data-orbit-root]) a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+:where([data-orbit-root]) :focus-visible {
+  outline: var(--cx-focus-outline);
+  outline-offset: var(--cx-focus-offset);
+}
+
+:where([data-orbit-root]) img,
+:where([data-orbit-root]) video,
+:where([data-orbit-root]) svg {
+  display: block;
+  max-width: 100%;
+}
+
+:where([data-orbit-root]) button,
+:where([data-orbit-root]) input,
+:where([data-orbit-root]) select,
+:where([data-orbit-root]) textarea {
+  font: inherit;
+}
+
+.cx-shell {
+  min-height: 100vh;
+  background: var(--cx-canvas);
+  color: var(--cx-text-main);
+}
+
+.cx-header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  min-height: var(--cx-header-mobile);
+  align-items: center;
+  border-bottom: 1px solid var(--cx-border-default);
+  background: var(--cx-canvas);
+}
+
+.cx-header__inner,
+.cx-main,
+.cx-footer__inner {
+  width: min(100% - 32px, var(--cx-content-main));
+  margin-inline: auto;
+}
+
+.cx-header__inner {
+  display: flex;
+  min-height: inherit;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-6);
+}
+
+.cx-main {
+  padding-block: var(--cx-space-12);
+}
+
+.cx-container {
+  width: min(100% - 32px, var(--cx-content-main));
+  margin-inline: auto;
+}
+
+.cx-container--wide {
+  width: min(100% - 32px, var(--cx-content-wide));
+}
+
+.cx-prose {
+  width: min(100%, var(--cx-content-text));
+}
+
+.cx-eyebrow {
+  color: var(--cx-text-muted);
+  font-size: var(--cx-font-size-xs);
+  font-weight: 600;
+  letter-spacing: var(--cx-letter-label);
+  text-transform: uppercase;
+}
+
+.cx-muted {
+  color: var(--cx-text-muted);
+}
+
+.cx-supporting {
+  color: var(--cx-text-supporting);
+}
+
+.cx-skip-link {
+  position: fixed;
+  top: var(--cx-space-3);
+  left: var(--cx-space-3);
+  z-index: 100;
+  min-height: var(--cx-control-compact);
+  padding: 10px 16px;
+  transform: translateY(-160%);
+  border: 1px solid var(--cx-border-strong);
+  border-radius: var(--cx-radius-default);
+  background: var(--cx-action-primary-bg);
+  color: var(--cx-action-primary-text);
+}
+
+.cx-skip-link:focus {
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .cx-header {
+    min-height: var(--cx-header-tablet);
+  }
+
+  .cx-header__inner,
+  .cx-main,
+  .cx-footer__inner,
+  .cx-container {
+    width: min(100% - 48px, var(--cx-content-main));
+  }
+
+  .cx-main {
+    padding-block: var(--cx-space-16);
+  }
+}
+
+@media (min-width: 1024px) {
+  .cx-header {
+    min-height: var(--cx-header-desktop);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([data-orbit-root]) *,
+  :where([data-orbit-root]) *::before,
+  :where([data-orbit-root]) *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
