@@ -416,7 +416,7 @@ export class CodestraSdk {
       "x-codestra-tenant-id": this.tenantId,
       "x-correlation-id": correlationId,
     });
-    if (options.idempotencyKey !== undefined) headers.set("idempotency-key", requireIdempotencyKey(options.idempotencyKey));
+    if (options.idempotencyKey !== undefined) headers.set("idempotency-key", requireHeaderValue(options.idempotencyKey, "idempotencyKey"));
     if (options.body !== undefined) headers.set("content-type", "application/json");
 
     const requestInit: RequestInit = {
@@ -460,7 +460,7 @@ export class CodestraSdk {
 
   private submitCanonicalCommand(path: string, input: CanonicalCommandInput, options: CodestraMutationOptions): Promise<JsonObject> {
     const correlationId = requireHeaderValue(options.correlationId ?? this.correlationIdFactory(), "correlationId");
-    const idempotencyKey = requireIdempotencyKey(options.idempotencyKey);
+    const idempotencyKey = requireCanonicalIdempotencyKey(options.idempotencyKey);
     const envelope: CanonicalCommandEnvelope = {
       command_id: requireUuid(input.commandId ?? this.commandIdFactory(), "commandId"),
       command_type: requireCommandType(input.commandType),
@@ -487,7 +487,7 @@ export class CodestraSdk {
       method: "POST",
       path: `${root}/${encodeURIComponent(requireUuid(operationId, "operationId"))}/${action}`,
       body: { expected_version: input.expected_version, reason },
-      idempotencyKey: requireIdempotencyKey(options.idempotencyKey),
+      idempotencyKey: requireCanonicalIdempotencyKey(options.idempotencyKey),
       ...copyRequestOptions(options),
     });
   }
@@ -571,6 +571,14 @@ function requireCapability(value: string): string {
 }
 
 function requireIdempotencyKey(value: string): string {
+  const key = requireHeaderValue(value, "idempotencyKey");
+  if (key.length < 16 || key.length > 128) {
+    throw new CodestraSdkConfigurationError("idempotencyKey must contain between 16 and 128 characters.");
+  }
+  return key;
+}
+
+function requireCanonicalIdempotencyKey(value: string): string {
   const key = requireHeaderValue(value, "idempotencyKey");
   if (key.length < 8 || key.length > 180) {
     throw new CodestraSdkConfigurationError("idempotencyKey must contain between 8 and 180 characters.");

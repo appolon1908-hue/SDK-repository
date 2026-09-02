@@ -141,6 +141,20 @@ describe("codestra_sdk facade", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves legacy idempotency-key bounds on legacy calls", () => {
+    const sdk = testSdk(vi.fn<typeof fetch>());
+
+    expect(() => sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey: "12345678" })).toThrow(
+      "idempotencyKey must contain between 16 and 128 characters.",
+    );
+    expect(() =>
+      sdk.workflow.runs.trigger(
+        { workflowId: "workflow-1", input: {} },
+        { idempotencyKey: "x".repeat(129) },
+      ),
+    ).toThrow("idempotencyKey must contain between 16 and 128 characters.");
+  });
+
   it("preserves unknown outcomes as a typed read-back-required error", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
       jsonResponse(409, {

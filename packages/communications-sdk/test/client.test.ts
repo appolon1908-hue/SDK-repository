@@ -110,6 +110,13 @@ describe("CodestraCommunicationsClient", () => {
     expect(headers.get("idempotency-key")).toBeNull();
   });
 
+  it("rejects the undocumented lowercase cancellation state", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { ...operation, state: "cancelled" }));
+    const client = testClient(fetchMock);
+
+    await expect(client.operations.get(commandId)).rejects.toThrow("response.state is not a supported value.");
+  });
+
   it("exposes the canonical public Communications API resource surface", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
