@@ -31,7 +31,9 @@ const canonicalDigest = createHash("sha256").update(canonicalBytes).digest("hex"
 if (embedded?.source_sha256 !== canonicalDigest) failures.push("runtime snapshot content digest does not match the pinned source digest");
 
 const runtimeOperations = operationMap(runtime);
-const sdkOperations = new Map();
+const sdkOperations = new Map(
+  [...operationMap(runtime)].map(([key, operation]) => [key, { ...operation, file: runtimePath }]),
+);
 for (const file of sdkContracts) {
   const document = parse(await readFile(file, "utf8"));
   for (const [key, operation] of operationMap(document)) {
@@ -43,7 +45,15 @@ for (const file of sdkContracts) {
 // runtime. Provider gateway contracts are deliberately excluded: they are
 // independently owned server-only APIs and are never browser SDK routes.
 const requiredSdkOperations = new Set([
+  "GET /health",
+  "GET /readiness",
+  "GET /version",
+  "GET /dependencies",
+  "GET /capabilities",
+  "GET /v1/operations",
   "GET /v1/operations/{command_id}",
+  "POST /v1/operations/{command_id}/cancel",
+  "POST /v1/operations/{command_id}/reconcile",
   "GET /v1/communications/messages",
   "POST /v1/communications/messages",
   "GET /v1/communications/messages/{messageId}",
@@ -61,6 +71,18 @@ const requiredSdkOperations = new Set([
   "GET /v1/operations-dashboard/queues",
   "GET /v1/operations-dashboard/release-gates",
   "GET /v1/operations-dashboard/canaries",
+  ...["marketing", "ai", "crm", "odoo", "social", "telephony"].flatMap((domain) => [
+    `POST /v1/${domain}/commands`,
+    `GET /v1/${domain}/operations`,
+    `GET /v1/${domain}/operations/{operation_id}`,
+    `POST /v1/${domain}/operations/{operation_id}/cancel`,
+    `POST /v1/${domain}/operations/{operation_id}/reconcile`,
+  ]),
+  "POST /v1/integrations/n8n/commands",
+  "GET /v1/integrations/n8n/operations",
+  "GET /v1/integrations/n8n/operations/{operation_id}",
+  "POST /v1/integrations/n8n/operations/{operation_id}/cancel",
+  "POST /v1/integrations/n8n/operations/{operation_id}/reconcile",
 ].map((entry) => entry.replace(/ (\/.*)$/u, (_, path) => ` ${normalizePath(path)}`)));
 
 for (const key of requiredSdkOperations) {

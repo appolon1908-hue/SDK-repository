@@ -23,12 +23,31 @@ await codestra.social.posts.schedule(
   { idempotencyKey },
 );
 await codestra.crm.leads.get(leadId);
+
+// Canonical Middleware command plane. Preserve this Idempotency-Key when
+// retrying the same logical operation.
+const operation = await codestra.control.odoo.submit(
+  {
+    commandType: "crm.lead.upsert",
+    target: "odoo-19",
+    capability: "ODOO_WRITE",
+    payload: { external_id: "lead-123", name: "Example lead" },
+  },
+  { idempotencyKey: "lead-123-upsert-20260902" },
+);
+
+// UNKNOWN and RECONCILIATION_REQUIRED remain visible. They are never
+// converted into an automatic resubmission.
+await codestra.control.odoo.get(operation.operation_id);
 ```
 
 ## Module Map
 
 ```text
 codestra_sdk
+  platform
+  operations
+  control
   auth
   marketing
   ai
