@@ -48,16 +48,19 @@ assert(new Set(registry.domains.map((item)=>item.host)).size === registry.domain
 
 const catalog = readJson('orbit/repository-catalog.json');
 assert(catalog.repositories.length === 56, `repository catalog expected 56 entries, found ${catalog.repositories.length}`);
-const repoNames = new Set(catalog.repositories.map((item)=>item.repository));
-assert(repoNames.size === catalog.repositories.length, 'duplicate repository catalog entries');
-for (const entry of catalog.repositories) {
+const entries = catalog.repositories.map((row) => Object.fromEntries(catalog.columns.map((column, index) => [column, row[index]])));
+const repoNames = new Set(entries.map((item)=>item.repository));
+assert(repoNames.size === entries.length, 'duplicate repository catalog entries');
+for (const entry of entries) {
   assert(entry.targetBranch.startsWith('codex/codestra-orbit-v2-'), `invalid target branch for ${entry.repository}`);
+  const requirements = catalog.requirementsByClassification?.[entry.classification];
+  assert(Boolean(requirements), `missing classification requirements for ${entry.repository}`);
   if (entry.classification === 'first-party-ui') {
-    assert(entry.loginLogoutRequired === true, `${entry.repository} must require login/logout logic`);
-    assert(entry.sharedHeaderFooterRequired === true, `${entry.repository} must require shared header/footer`);
+    assert(requirements.loginLogoutRequired === true, `${entry.repository} must require login/logout logic`);
+    assert(requirements.sharedHeaderFooterRequired === true, `${entry.repository} must require shared header/footer`);
   }
   if (['backend-api','observability-backend','runtime-infrastructure'].includes(entry.classification)) {
-    assert(entry.sharedHeaderFooterRequired === false, `${entry.repository} must not receive fabricated UI shell`);
+    assert(requirements.sharedHeaderFooterRequired === false, `${entry.repository} must not receive fabricated UI shell`);
   }
 }
 
