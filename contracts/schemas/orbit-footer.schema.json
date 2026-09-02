@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.codestra.co/schemas/orbit-footer.v2.json",
+  "title": "Codestra Orbit Footer Resource",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "brand",
+    "resource_version",
+    "publication_status",
+    "default_variant",
+    "copyright",
+    "legal_links",
+    "social_links"
+  ],
+  "properties": {
+    "brand": {
+      "type": "string",
+      "enum": [
+        "codestra",
+        "breero",
+        "beyvra",
+        "moneybee",
+        "larim",
+        "transportation",
+        "telnexa",
+        "klyrow",
+        "social",
+        "restaurant",
+        "neutral"
+      ]
+    },
+    "resource_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "publication_status": {
+      "type": "string",
+      "enum": ["draft", "published", "withdrawn"]
+    },
+    "default_variant": {
+      "$ref": "#/$defs/footerVariant"
+    },
+    "copyright": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_key", "text"],
+      "properties": {
+        "content_key": { "$ref": "#/$defs/contentKey" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 300 }
+      }
+    },
+    "legal_links": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["content_key", "href", "label"],
+        "properties": {
+          "content_key": { "$ref": "#/$defs/contentKey" },
+          "href": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "pattern": "^(?:/|https://)"
+          },
+          "label": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    "social_links": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["network", "url", "label", "published"],
+        "properties": {
+          "network": {
+            "type": "string",
+            "enum": [
+              "linkedin",
+              "facebook",
+              "instagram",
+              "x",
+              "youtube",
+              "github",
+              "tiktok",
+              "threads"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^(?:|https://[^@\\s]+)$"
+          },
+          "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "published": { "type": "boolean" }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "published": { "const": true } },
+              "required": ["published"]
+            },
+            "then": {
+              "properties": {
+                "url": { "type": "string", "pattern": "^https://[^@\\s]+$" }
+              }
+            }
+          }
+        ]
+      },
+      "uniqueItems": true
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "publication_id": {
+      "type": ["string", "null"],
+      "pattern": "^pub_[A-Za-z0-9_-]{8,128}$"
+    }
+  },
+  "$defs": {
+    "footerVariant": {
+      "type": "string",
+      "enum": ["full", "compact", "auth-compact", "legal-only"]
+    },
+    "contentKey": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 180,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){2,}$"
+    }
+  }
+}
