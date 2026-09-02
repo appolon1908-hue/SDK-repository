@@ -20,16 +20,18 @@ const runtime = JSON.parse(runtimeRaw);
 const failures = [];
 
 if (!/^[0-9a-f]{40}$/.test(authority.source_sha)) failures.push("authority source_sha must be a 40-character lowercase Git SHA");
+if (!/^[0-9a-f]{64}$/.test(authority.source_sha256)) failures.push("authority source_sha256 must be a 64-character lowercase SHA-256");
 const embedded = runtime["x-codestra-source-authority"];
 if (embedded?.repository !== authority.repository) failures.push("runtime snapshot repository identity differs from its authority pin");
 if (embedded?.source_sha !== authority.source_sha) failures.push("runtime snapshot source SHA differs from its authority pin");
 if (embedded?.source_path !== authority.source_path) failures.push("runtime snapshot source path differs from its authority pin");
+if (embedded?.source_sha256 !== authority.source_sha256) failures.push("runtime snapshot digest differs from its authority pin");
 
 const normalized = structuredClone(runtime);
 delete normalized["x-codestra-source-authority"];
 const canonicalBytes = `${JSON.stringify(normalized, null, 2)}\n`;
 const canonicalDigest = createHash("sha256").update(canonicalBytes).digest("hex");
-if (embedded?.source_sha256 !== canonicalDigest) failures.push("runtime snapshot content digest does not match the pinned source digest");
+if (authority.source_sha256 !== canonicalDigest) failures.push("runtime snapshot content digest does not match the independently pinned source digest");
 
 const runtimeOperations = operationMap(runtime);
 const declaredSdkOperations = new Map();
@@ -105,6 +107,7 @@ for (const key of generatedClientOperations.keys()) {
 }
 
 for (const [key, sdk] of declaredSdkOperationOccurrences) {
+  if (!requiredSdkOperations.has(key)) continue;
   const runtimeOperation = runtimeOperations.get(key);
   if (!runtimeOperation) continue;
   compareOperation(key, runtimeOperation, runtime, sdk, sdk.document, failures);
@@ -152,6 +155,24 @@ function compareOperation(key, runtimeOperation, runtimeDocument, sdkOperation, 
   const sdkSuccess = new Set(Object.keys(sdkOperation.responses ?? {}).filter((status) => /^2/u.test(status)));
   if (!runtimeSuccess.some((status) => sdkSuccess.has(status))) {
     output.push(`RESPONSE_SCHEMA_MISMATCH: ${key} runtime success ${runtimeSuccess.join("/")} is absent from SDK responses`);
+  }
+  for (const status of runtimeSuccess.filter((entry) => sdkSuccess.has(entry))) {
+    const runtimeResponse = resolve(runtimeOperation.responses?.[status], runtimeDocument);
+    const sdkResponse = resolve(sdkOperation.responses?.[status], sdkDocument);
+    for (const [mediaType, sdkMedia] of Object.entries(sdkResponse?.content ?? {})) {
+      const runtimeMedia = runtimeResponse?.content?.[mediaType];
+      if (!runtimeMedia) {
+        output.push(`RESPONSE_SCHEMA_MISMATCH: ${key} ${status} omits SDK media type ${mediaType} at runtime`);
+        continue;
+      }
+      const runtimeSchema = resolve(runtimeMedia.schema, runtimeDocument);
+      const sdkSchema = resolve(sdkMedia?.schema, sdkDocument);
+      for (const property of sdkSchema?.required ?? []) {
+        if (!(runtimeSchema?.required ?? []).includes(property)) {
+          output.push(`RESPONSE_SCHEMA_MISMATCH: ${key} ${status} does not guarantee SDK property ${property}`);
+        }
+      }
+    }
   }
 
   const runtimeAuth = authKinds(runtimeOperation.security, runtimeDocument);

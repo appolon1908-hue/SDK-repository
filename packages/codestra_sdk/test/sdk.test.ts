@@ -118,6 +118,29 @@ describe("codestra_sdk facade", () => {
     expect(pathname(fetchMock, 0)).toBe(`/v1/operations/${operationId}`);
   });
 
+  it("enforces the canonical 8-to-180 character idempotency-key bounds", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(202, { operation_id: "d0313dba-09f7-4cce-8894-195f72c62126", state: "QUEUED" }),
+    );
+    const sdk = testSdk(fetchMock);
+    const command = {
+      commandType: "marketing.campaign.create.v1",
+      target: "marketing",
+      capability: "MARKETING_WRITE",
+      payload: { name: "Safe draft" },
+    };
+
+    await sdk.control.marketing.submit(command, { idempotencyKey: "12345678" });
+    await sdk.control.marketing.submit(command, { idempotencyKey: "x".repeat(180) });
+    expect(() => sdk.control.marketing.submit(command, { idempotencyKey: "1234567" })).toThrow(
+      "idempotencyKey must contain between 8 and 180 characters.",
+    );
+    expect(() => sdk.control.marketing.submit(command, { idempotencyKey: "x".repeat(181) })).toThrow(
+      "idempotencyKey must contain between 8 and 180 characters.",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("preserves unknown outcomes as a typed read-back-required error", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
       jsonResponse(409, {

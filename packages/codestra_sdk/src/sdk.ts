@@ -572,8 +572,8 @@ function requireCapability(value: string): string {
 
 function requireIdempotencyKey(value: string): string {
   const key = requireHeaderValue(value, "idempotencyKey");
-  if (key.length < 16 || key.length > 128) {
-    throw new CodestraSdkConfigurationError("idempotencyKey must contain between 16 and 128 characters.");
+  if (key.length < 8 || key.length > 180) {
+    throw new CodestraSdkConfigurationError("idempotencyKey must contain between 8 and 180 characters.");
   }
   return key;
 }
