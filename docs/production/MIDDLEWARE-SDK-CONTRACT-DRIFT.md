@@ -21,7 +21,7 @@ SDK routes claimed to target Middleware. Update it only with
 |---|---:|---|
 | SDK_ROUTE_STALE | 19 | Preserved as pre-existing compatibility contracts, but excluded from the canonical Middleware route set because deleting them without a published deprecation window would be a breaking SDK change. They are not staging-certifiable against the pinned Middleware runtime. |
 | VERSION_MISMATCH | 0 | Both authorities use OpenAPI 3.1.0. |
-| HTTP_METHOD_MISMATCH | 0 | The 18 normalized SDK/runtime operations checked by CI use the same methods. |
+| HTTP_METHOD_MISMATCH | 0 | The 61 normalized SDK/runtime operations checked by CI use the same methods. |
 | RUNTIME_ROUTE_MISSING | 0 | Every operation asserted by the Middleware alignment allowlist exists at the pinned runtime SHA. |
 | SDK_ROUTE_MISSING | 0 | Every operation in the current alignment allowlist exists in an SDK OpenAPI document. |
 
@@ -49,9 +49,10 @@ and the least-privilege runtime scope.
 ## Non-runtime compatibility and invented application routes
 
 The communications template, sender-identity, domain, suppression, and
-preference facades are compatibility-only at this SHA. The following unified
-application wrappers also require migration to actual runtime
-command/status contracts before a production package can be released:
+preference facades are compatibility-only at this SHA. The unified SDK now
+exposes canonical platform, global-operation, and domain command/status
+clients for Marketing, AI, CRM, Odoo, n8n, Social, and Telephony. The following
+older wrappers remain present so this change does not silently break consumers:
 
 - `/v1/auth/session`
 - `/v1/marketing/campaigns*`
@@ -59,14 +60,15 @@ command/status contracts before a production package can be released:
 - `/v1/crm/leads*`
 - `/v1/workflow/runs*`
 
-These routes are absent from Middleware SHA `f3437709…`; they must not be used
-as evidence for staging or production certification. The canonical runtime
+These compatibility routes are absent from Middleware SHA `f3437709…`; they
+must not be used as evidence for staging or production certification and need
+a published sunset before removal. The canonical runtime
 families are `/v1/marketing/commands`, `/v1/ai/commands`, `/v1/crm/commands`,
 and `/v1/integrations/n8n/commands`, with operation read-back routes.
 
 ## Gate status
 
-`OPENAPI_ALIGNMENT` is PASS only for the explicitly checked current
-communications and operations-dashboard surface. Whole-SDK production
-readiness remains blocked until the remaining application wrappers above are
-migrated and staging validates the exact runtime contract.
+`OPENAPI_ALIGNMENT` is PASS for the 61 explicitly checked canonical runtime
+operations. Whole-SDK production readiness remains blocked until staging
+validates the exact runtime contract and compatibility consumers complete the
+published migration.

@@ -24,9 +24,13 @@ import type {
   UUID,
 } from "@codestra/contracts";
 import type {
+  CanonicalCommandEnvelope,
+  CanonicalCommandInput,
   CrmLeadListOptions,
   GenerateAiInput,
   MarketingCampaignListOptions,
+  OperationListOptions,
+  OperationMutationInput,
   TriggerWorkflowInput,
 } from "./types.js";
 
@@ -61,6 +65,14 @@ interface InternalRequestOptions extends CodestraRequestOptions {
   idempotencyKey?: string;
 }
 
+export interface CanonicalDomainClient {
+  submit: (input: CanonicalCommandInput, options: CodestraMutationOptions) => Promise<JsonObject>;
+  list: (options?: OperationListOptions) => Promise<JsonObject>;
+  get: (operationId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
+  cancel: (operationId: UUID, input: OperationMutationInput, options: CodestraMutationOptions) => Promise<JsonObject>;
+  reconcile: (operationId: UUID, input: OperationMutationInput, options: CodestraMutationOptions) => Promise<JsonObject>;
+}
+
 export class CodestraSdkError extends Error {
   readonly code: string;
 
@@ -82,17 +94,53 @@ export class CodestraSdkHttpError extends CodestraSdkError {
   readonly status: number;
   readonly requestId: string;
   readonly retryable: boolean;
+  readonly correlationId: string | undefined;
+  readonly operationId: string | undefined;
 
-  constructor(input: { status: number; code: string; message: string; requestId: string; retryable: boolean }) {
+  constructor(input: { status: number; code: string; message: string; requestId: string; retryable: boolean; correlationId: string | undefined; operationId: string | undefined }) {
     super(input.message, input.code);
-    this.name = "CodestraSdkHttpError";
+    this.name = new.target.name;
     this.status = input.status;
     this.requestId = input.requestId;
     this.retryable = input.retryable;
+    this.correlationId = input.correlationId;
+    this.operationId = input.operationId;
   }
 }
 
+export class AuthenticationError extends CodestraSdkHttpError {}
+export class AuthorizationError extends CodestraSdkHttpError {}
+export class TenantAccessError extends CodestraSdkHttpError {}
+export class IdempotencyConflictError extends CodestraSdkHttpError {}
+export class RateLimitError extends CodestraSdkHttpError {}
+export class UnknownOutcomeError extends CodestraSdkHttpError {}
+export class CapabilityDisabledError extends CodestraSdkHttpError {}
+
 export class CodestraSdk {
+  readonly platform: {
+    health: (options?: CodestraRequestOptions) => Promise<JsonObject>;
+    readiness: (options?: CodestraRequestOptions) => Promise<JsonObject>;
+    version: (options?: CodestraRequestOptions) => Promise<JsonObject>;
+    dependencies: (options?: CodestraRequestOptions) => Promise<JsonObject>;
+    capabilities: (options?: CodestraRequestOptions) => Promise<JsonObject>;
+  };
+
+  readonly operations: {
+    list: (options?: OperationListOptions) => Promise<JsonObject>;
+    get: (operationId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
+    cancel: (operationId: UUID, input: OperationMutationInput, options: CodestraMutationOptions) => Promise<JsonObject>;
+    reconcile: (operationId: UUID, input: OperationMutationInput, options: CodestraMutationOptions) => Promise<JsonObject>;
+  };
+
+  readonly control: {
+    marketing: CanonicalDomainClient;
+    ai: CanonicalDomainClient;
+    crm: CanonicalDomainClient;
+    odoo: CanonicalDomainClient;
+    n8n: CanonicalDomainClient;
+    social: CanonicalDomainClient;
+    telephony: CanonicalDomainClient;
+  };
   readonly auth: {
     session: {
       get: (options?: CodestraRequestOptions) => Promise<JsonObject>;
@@ -171,6 +219,7 @@ export class CodestraSdk {
   private readonly maxRetries: number;
   private readonly sleep: (milliseconds: number) => Promise<void>;
   private readonly correlationIdFactory: () => string;
+  private readonly commandIdFactory: () => string;
 
   constructor(options: CodestraSdkOptions) {
     this.baseUrl = validateBaseUrl(options.baseUrl);
@@ -183,6 +232,14 @@ export class CodestraSdk {
     this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
     this.correlationIdFactory =
       options.correlationIdFactory ??
+      (() => {
+        if (!globalThis.crypto?.randomUUID) {
+          throw new CodestraSdkConfigurationError("A cryptographically secure randomUUID implementation is required.");
+        }
+        return globalThis.crypto.randomUUID();
+      });
+    this.commandIdFactory =
+      options.commandIdFactory ??
       (() => {
         if (!globalThis.crypto?.randomUUID) {
           throw new CodestraSdkConfigurationError("A cryptographically secure randomUUID implementation is required.");
@@ -217,6 +274,31 @@ export class CodestraSdk {
       ...(options.commandIdFactory ? { commandIdFactory: options.commandIdFactory } : {}),
       correlationIdFactory: this.correlationIdFactory,
     } satisfies CodestraCommunicationsClientOptions);
+
+    this.platform = {
+      health: (requestOptions) => this.request({ method: "GET", path: "/health", ...copyRequestOptions(requestOptions) }),
+      readiness: (requestOptions) => this.request({ method: "GET", path: "/readiness", ...copyRequestOptions(requestOptions) }),
+      version: (requestOptions) => this.request({ method: "GET", path: "/version", ...copyRequestOptions(requestOptions) }),
+      dependencies: (requestOptions) => this.request({ method: "GET", path: "/dependencies", ...copyRequestOptions(requestOptions) }),
+      capabilities: (requestOptions) => this.request({ method: "GET", path: "/capabilities", ...copyRequestOptions(requestOptions) }),
+    };
+
+    this.operations = {
+      list: (requestOptions) => this.request({ method: "GET", path: withQuery("/v1/operations", requestOptions), ...copyRequestOptions(requestOptions) }),
+      get: (operationId, requestOptions) => this.operationRead("/v1/operations", operationId, requestOptions),
+      cancel: (operationId, input, requestOptions) => this.operationMutation("/v1/operations", operationId, "cancel", input, requestOptions),
+      reconcile: (operationId, input, requestOptions) => this.operationMutation("/v1/operations", operationId, "reconcile", input, requestOptions),
+    };
+
+    this.control = {
+      marketing: this.domainClient("marketing"),
+      ai: this.domainClient("ai"),
+      crm: this.domainClient("crm"),
+      odoo: this.domainClient("odoo"),
+      n8n: this.domainClient("integrations/n8n"),
+      social: this.domainClient("social"),
+      telephony: this.domainClient("telephony"),
+    };
 
     this.auth = {
       session: {
@@ -352,6 +434,51 @@ export class CodestraSdk {
 
     throw await parseHttpError(response, correlationId);
   }
+
+  private domainClient(domain: string): CanonicalDomainClient {
+    const root = `/v1/${domain}`;
+    return {
+      submit: (input, requestOptions) => this.submitCanonicalCommand(`${root}/commands`, input, requestOptions),
+      list: (requestOptions) => this.request({ method: "GET", path: withQuery(`${root}/operations`, requestOptions), ...copyRequestOptions(requestOptions) }),
+      get: (operationId, requestOptions) => this.operationRead(`${root}/operations`, operationId, requestOptions),
+      cancel: (operationId, input, requestOptions) => this.operationMutation(`${root}/operations`, operationId, "cancel", input, requestOptions),
+      reconcile: (operationId, input, requestOptions) => this.operationMutation(`${root}/operations`, operationId, "reconcile", input, requestOptions),
+    };
+  }
+
+  private submitCanonicalCommand(path: string, input: CanonicalCommandInput, options: CodestraMutationOptions): Promise<JsonObject> {
+    const correlationId = requireHeaderValue(options.correlationId ?? this.correlationIdFactory(), "correlationId");
+    const idempotencyKey = requireIdempotencyKey(options.idempotencyKey);
+    const envelope: CanonicalCommandEnvelope = {
+      command_id: requireUuid(input.commandId ?? this.commandIdFactory(), "commandId"),
+      command_type: requireCommandType(input.commandType),
+      command_version: "1.0",
+      target: requireTarget(input.target),
+      tenant_id: this.tenantId,
+      requested_by: this.requestedBy,
+      correlation_id: correlationId,
+      idempotency_key: idempotencyKey,
+      capability: requireCapability(input.capability),
+      payload: input.payload,
+    };
+    return this.request({ method: "POST", path, body: envelope, idempotencyKey, correlationId, ...(options.signal ? { signal: options.signal } : {}) });
+  }
+
+  private operationRead(root: string, operationId: UUID, options?: CodestraRequestOptions): Promise<JsonObject> {
+    return this.request({ method: "GET", path: `${root}/${encodeURIComponent(requireUuid(operationId, "operationId"))}`, ...copyRequestOptions(options) });
+  }
+
+  private operationMutation(root: string, operationId: UUID, action: "cancel" | "reconcile", input: OperationMutationInput, options: CodestraMutationOptions): Promise<JsonObject> {
+    if (!Number.isSafeInteger(input.expected_version) || input.expected_version < 1) throw new CodestraSdkConfigurationError("expected_version must be a positive integer.");
+    const reason = requireHeaderValue(input.reason, "reason");
+    return this.request({
+      method: "POST",
+      path: `${root}/${encodeURIComponent(requireUuid(operationId, "operationId"))}/${action}`,
+      body: { expected_version: input.expected_version, reason },
+      idempotencyKey: requireIdempotencyKey(options.idempotencyKey),
+      ...copyRequestOptions(options),
+    });
+  }
 }
 
 export function createCodestraSdk(options: CodestraSdkOptions): CodestraSdk {
@@ -405,6 +532,32 @@ function requirePathSegment(value: string, name: string): string {
   return normalized;
 }
 
+function requireUuid(value: string, name: string): string {
+  const normalized = requirePathSegment(value, name);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(normalized)) {
+    throw new CodestraSdkConfigurationError(`${name} must be a UUID.`);
+  }
+  return normalized;
+}
+
+function requireCommandType(value: string): string {
+  const normalized = requireHeaderValue(value, "commandType");
+  if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/u.test(normalized) || normalized.length > 180) throw new CodestraSdkConfigurationError("commandType is invalid.");
+  return normalized;
+}
+
+function requireTarget(value: string): string {
+  const normalized = requireHeaderValue(value, "target");
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(normalized) || normalized.length > 100) throw new CodestraSdkConfigurationError("target is invalid.");
+  return normalized;
+}
+
+function requireCapability(value: string): string {
+  const normalized = requireHeaderValue(value, "capability");
+  if (!/^[A-Z][A-Z0-9_]{2,100}$/u.test(normalized)) throw new CodestraSdkConfigurationError("capability is invalid.");
+  return normalized;
+}
+
 function requireIdempotencyKey(value: string): string {
   const key = requireHeaderValue(value, "idempotencyKey");
   if (key.length < 16 || key.length > 128) {
@@ -431,7 +584,7 @@ function withQuery(path: string, query: object | undefined): string {
 }
 
 async function parseHttpError(response: Response, fallbackRequestId: string): Promise<CodestraSdkHttpError> {
-  let body: { error?: { code?: string; message?: string; requestId?: string; retryable?: boolean } } | undefined;
+  let body: { error?: { code?: string; message?: string; requestId?: string; request_id?: string; correlation_id?: string; operation_id?: string; retryable?: boolean } } | undefined;
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.toLowerCase().includes("application/json")) {
     try {
@@ -441,13 +594,28 @@ async function parseHttpError(response: Response, fallbackRequestId: string): Pr
     }
   }
 
-  return new CodestraSdkHttpError({
+  const input = {
     status: response.status,
     code: body?.error?.code ?? `HTTP_${response.status}`,
     message: body?.error?.message ?? `Codestra request failed with HTTP ${response.status}.`,
-    requestId: body?.error?.requestId ?? response.headers.get("x-request-id") ?? fallbackRequestId,
+    requestId: body?.error?.requestId ?? body?.error?.request_id ?? response.headers.get("x-request-id") ?? fallbackRequestId,
     retryable: body?.error?.retryable ?? RETRYABLE_STATUS_CODES.has(response.status),
-  });
+    correlationId: body?.error?.correlation_id,
+    operationId: body?.error?.operation_id,
+  };
+  const ErrorType = errorType(input.code, response.status);
+  return new ErrorType(input);
+}
+
+function errorType(code: string, status: number): typeof CodestraSdkHttpError {
+  if (status === 401 || ["AUTHENTICATION_REQUIRED", "TOKEN_INVALID", "TOKEN_EXPIRED", "AUDIENCE_INVALID"].includes(code)) return AuthenticationError;
+  if (code === "TENANT_ACCESS_DENIED") return TenantAccessError;
+  if (status === 403 || code === "SCOPE_DENIED") return AuthorizationError;
+  if (code === "IDEMPOTENCY_CONFLICT") return IdempotencyConflictError;
+  if (status === 429 || code === "RATE_LIMITED") return RateLimitError;
+  if (["UNKNOWN_OUTCOME", "UNKNOWN_PROVIDER_OUTCOME"].includes(code)) return UnknownOutcomeError;
+  if (code === "CAPABILITY_DISABLED") return CapabilityDisabledError;
+  return CodestraSdkHttpError;
 }
 
 function stripUndefined(value: unknown): unknown {
