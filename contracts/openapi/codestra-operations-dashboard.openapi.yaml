@@ -183,6 +183,7 @@ components:
       name: X-Tenant-ID
       in: header
       required: true
+      x-codestra-sdk-transport-injected: true
       schema: { type: string, minLength: 1, maxLength: 128 }
     TenantIdPath:
       name: tenantId
