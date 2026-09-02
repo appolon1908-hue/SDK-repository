@@ -1,98 +1,42 @@
-# `@codestra/intake-ui/horizon`
+# Horizon compatibility alias
 
-Horizon UI is the framework-neutral visual contract for Codestra-owned websites, customer portals and operator applications. It provides one premium, high-contrast product family while preserving a restrained accent for each brand.
+`@codestra/intake-ui/horizon` was the pre-release name for the Codestra shared visual system. **Codestra Orbit V2 is now the only design authority.**
 
-The package contains no API client, authentication flow, business logic or external-write path.
-
-## Design direction
-
-- dark-first monochrome canvas with an equally complete light appearance
-- spacious editorial layouts and strong full-width sections
-- crisp borders, restrained radii and minimal shadow
-- one visually dominant call to action per decision area
-- uppercase utility labels paired with readable sentence-case content
-- consistent dashboard, table, form, empty, loading and error states
-- product accents limited to navigation, focus, charts and selected emphasis
-- WCAG-oriented focus, motion and responsive defaults
-
-Horizon is an original Codestra system. Do not copy third-party logos, imagery, page copy, proprietary fonts, source code or private account content into an implementation.
-
-## Install
-
-```bash
-pnpm add @codestra/intake-ui
-```
-
-Import the complete style layer once:
+Use:
 
 ```ts
-import "@codestra/intake-ui/horizon/styles";
+import {
+  applyOrbitShell,
+  createOrbitBrandClient,
+  mountOrbitFooter,
+} from "@codestra/intake-ui/orbit";
+import "@codestra/intake-ui/orbit/styles";
 ```
 
-Apply the contract at the application root:
+See [`ORBIT.md`](ORBIT.md) for the complete contract.
 
-```html
-<body
-  data-horizon-root
-  data-horizon-theme="codestra"
-  data-horizon-appearance="dark"
->
-  <!-- application -->
-</body>
+## Compatibility policy
+
+The following exports remain temporarily available so existing adoption branches can migrate without a breaking import failure:
+
+```text
+@codestra/intake-ui/horizon
+@codestra/intake-ui/horizon/styles
+@codestra/intake-ui/horizon/tokens.css
+@codestra/intake-ui/horizon/themes.css
+@codestra/intake-ui/horizon/base.css
+@codestra/intake-ui/horizon/components.css
 ```
 
-Supported built-in themes are `neutral`, `codestra`, `breero`, `beyvra`, `moneybee`, `larim`, `transport`, `telnexa`, `klyrow`, and `social`. The appearances are `dark`, `light`, and `system`.
+They resolve to the Orbit black/white palette and restrained geometry. They do not preserve the abandoned blue-primary, light-mode, gradient, glow, large-radius, or shadow-heavy Horizon proposal.
 
-## React or Next.js
+## Required migration
 
-```tsx
-import "@codestra/intake-ui/horizon/styles";
-import { getHorizonThemeAttributes } from "@codestra/intake-ui/horizon";
+1. Replace Horizon imports with Orbit imports.
+2. Replace `data-horizon-*` root attributes with `data-orbit-*` declarations.
+3. Replace `hz-*` classes with `cx-*` classes as each page is touched.
+4. Add an `orbit/suite.json` manifest and run the shared Orbit validator.
+5. Prove the built artifact contains no prohibited Horizon-only palette or decoration.
+6. Remove compatibility use only after source, tests, documentation, screenshots, and runtime evidence use Orbit.
 
-export function RootLayout({ children }: { children: React.ReactNode }) {
-  const attributes = getHorizonThemeAttributes({
-    theme: "breero",
-    appearance: "dark",
-  });
-
-  return (
-    <html lang="en" {...attributes}>
-      <body>{children}</body>
-    </html>
-  );
-}
-```
-
-## Vue or Nuxt
-
-```ts
-import "@codestra/intake-ui/horizon/styles";
-import { applyHorizonTheme } from "@codestra/intake-ui/horizon";
-
-applyHorizonTheme(document.documentElement, {
-  theme: "telnexa",
-  appearance: "dark",
-});
-```
-
-## Plain HTML or server-rendered templates
-
-Import the CSS files from the installed package or copy the published stylesheet into the application's approved asset pipeline. Keep the three `data-horizon-*` attributes on the outer application element.
-
-## Core classes
-
-Layout and typography: `hz-container`, `hz-content`, `hz-section`, `hz-stack`, `hz-cluster`, `hz-grid`, `hz-eyebrow`, `hz-display`, `hz-title`, `hz-heading`, `hz-lead`.
-
-Actions and forms: `hz-button`, `hz-button--primary`, `hz-button--secondary`, `hz-button--accent`, `hz-text-link`, `hz-field`, `hz-label`, `hz-input`, `hz-select`, `hz-textarea`.
-
-Applications: `hz-app-shell`, `hz-sidebar`, `hz-topbar`, `hz-main`, `hz-page`, `hz-page-header`, `hz-nav`, `hz-nav__item`.
-
-Data and states: `hz-card`, `hz-stat`, `hz-badge`, `hz-alert`, `hz-tabs`, `hz-table`, `hz-empty-state`, `hz-skeleton`.
-
-## Fonts
-
-Horizon references `Space Grotesk`, `Inter`, and `IBM Plex Mono`, then falls back to system fonts. Font binaries are not included. Each application must load approved, licensed font assets through its own performance and privacy policy.
-
-## Product rule
-
-The black/white action system, layout rhythm, typography, navigation behavior, form behavior, state patterns and accessibility treatment stay consistent across products. A product theme changes only the restrained accent and chart sequence. Semantic success, warning, danger, gain and loss colors must never be replaced with the brand accent.
+Do not begin new work with Horizon names. The compatibility layer is not a second design system and must not be customized independently.
