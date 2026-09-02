@@ -3,6 +3,7 @@ import { parse } from "yaml";
 
 const manifest = JSON.parse(await readFile("contracts/communications-production-readiness.v1.json", "utf8"));
 const openapi = parse(await readFile(manifest.canonicalContracts.openapi, "utf8"));
+const middlewareOpenApi = JSON.parse(await readFile("contracts/middleware-runtime-current.openapi.json", "utf8"));
 const asyncapi = parse(await readFile(manifest.canonicalContracts.asyncapi, "utf8"));
 const clientSource = await readFile("packages/communications-sdk/src/client.ts", "utf8");
 const socialClientSource = await readFile("packages/social-sdk/src/client.ts", "utf8");
@@ -54,8 +55,17 @@ for (const moduleName of manifest.requiredUnifiedSdkModules ?? []) {
 }
 
 for (const endpointPath of manifest.requiredUnifiedSdkEndpointPaths ?? []) {
-  if (!unifiedSdkSource.includes(endpointPath) && !clientSource.includes(endpointPath) && !socialClientSource.includes(endpointPath)) {
+  const implementedByCanonicalDomainClient =
+    middlewareOpenApi.paths?.[endpointPath] !== undefined &&
+    unifiedSdkSource.includes("private domainClient(domain: string)");
+  if (!implementedByCanonicalDomainClient && !unifiedSdkSource.includes(endpointPath) && !clientSource.includes(endpointPath) && !socialClientSource.includes(endpointPath)) {
     failures.push(`Unified SDK endpoint surface is missing path: ${endpointPath}`);
+  }
+}
+
+for (const endpointPath of manifest.compatibilityOnlyEndpointPaths ?? []) {
+  if (middlewareOpenApi.paths?.[endpointPath] !== undefined) {
+    failures.push(`Compatibility-only endpoint is now present in canonical Middleware and must be reclassified: ${endpointPath}`);
   }
 }
 

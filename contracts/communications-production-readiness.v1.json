@@ -10,6 +10,9 @@
     "sharedTypes": "packages/contracts"
   },
   "requiredUnifiedSdkModules": [
+    "platform",
+    "operations",
+    "control",
     "auth",
     "marketing",
     "ai",
@@ -21,14 +24,34 @@
     "common"
   ],
   "requiredUnifiedSdkEndpointPaths": [
+    "/health",
+    "/readiness",
+    "/version",
+    "/dependencies",
+    "/capabilities",
+    "/v1/operations",
+    "/v1/marketing/commands",
+    "/v1/ai/commands",
+    "/v1/crm/commands",
+    "/v1/odoo/commands",
+    "/v1/integrations/n8n/commands",
+    "/v1/social/commands",
+    "/v1/telephony/commands",
+    "/v1/communications/messages",
+    "/v1/social/posts",
+    "/v1/webhook-subscriptions"
+  ],
+  "compatibilityOnlyEndpointPaths": [
     "/v1/auth/session",
     "/v1/marketing/campaigns",
     "/v1/ai/generate",
-    "/v1/communications/messages",
-    "/v1/social/posts",
     "/v1/crm/leads",
     "/v1/workflow/runs",
-    "/v1/webhook-subscriptions"
+    "/v1/communications/templates",
+    "/v1/communications/sender-identities",
+    "/v1/communications/domains",
+    "/v1/communications/suppressions",
+    "/v1/communications/preferences"
   ],
   "credentialCertification": {
     "requiredClientRules": [
