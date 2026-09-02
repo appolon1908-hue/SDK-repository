@@ -28,6 +28,23 @@ try {
     throw new Error("Alignment gate did not reject a modified runtime snapshot.");
   }
 
+  const coordinatedAuthority = JSON.parse(
+    await readFile("contracts/middleware-runtime-current.source.json", "utf8"),
+  );
+  coordinatedAuthority.source_sha256 = source["x-codestra-source-authority"].source_sha256;
+  const coordinatedAuthorityPath = join(directory, "coordinated-authority.json");
+  await writeFile(coordinatedAuthorityPath, `${JSON.stringify(coordinatedAuthority, null, 2)}\n`);
+  const coordinatedCheck = run(["scripts/check-middleware-runtime-alignment.mjs"], {
+    MIDDLEWARE_RUNTIME_CONTRACT: tampered,
+    MIDDLEWARE_RUNTIME_AUTHORITY: coordinatedAuthorityPath,
+  });
+  if (
+    coordinatedCheck.status === 0 ||
+    !`${coordinatedCheck.stderr}${coordinatedCheck.stdout}`.includes("protected Middleware blob")
+  ) {
+    throw new Error("Alignment gate did not reject coordinated snapshot and authority tampering.");
+  }
+
   const communicationsPath = "contracts/openapi/codestra-communications.openapi.yaml";
   const communications = parse(await readFile(communicationsPath, "utf8"));
   communications.components.parameters.TenantId.required = false;

@@ -21,6 +21,10 @@ const failures = [];
 
 if (!/^[0-9a-f]{40}$/.test(authority.source_sha)) failures.push("authority source_sha must be a 40-character lowercase Git SHA");
 if (!/^[0-9a-f]{64}$/.test(authority.source_sha256)) failures.push("authority source_sha256 must be a 64-character lowercase SHA-256");
+const protectedDigest = await digestProtectedSource(authority, failures);
+if (protectedDigest && authority.source_sha256 !== protectedDigest) {
+  failures.push("authority digest does not match the protected Middleware blob");
+}
 const embedded = runtime["x-codestra-source-authority"];
 if (embedded?.repository !== authority.repository) failures.push("runtime snapshot repository identity differs from its authority pin");
 if (embedded?.source_sha !== authority.source_sha) failures.push("runtime snapshot source SHA differs from its authority pin");
@@ -118,6 +122,29 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(`Middleware runtime alignment passed for ${requiredSdkOperations.size} SDK operations against ${authority.source_sha}.`);
+
+async function digestProtectedSource(sourceAuthority, output) {
+  const repository = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/u.exec(sourceAuthority.repository ?? "");
+  if (!repository || !/^[0-9a-f]{40}$/u.test(sourceAuthority.source_sha ?? "")) {
+    output.push("protected Middleware source authority is invalid");
+    return undefined;
+  }
+  const sourcePath = String(sourceAuthority.source_path ?? "");
+  if (!sourcePath || sourcePath.startsWith("/") || sourcePath.split("/").includes("..")) {
+    output.push("protected Middleware source path is invalid");
+    return undefined;
+  }
+  const url = `https://raw.githubusercontent.com/${repository[1]}/${repository[2]}/${sourceAuthority.source_sha}/${sourcePath}`;
+  try {
+    const response = await fetch(url, { redirect: "error" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const document = JSON.parse(await response.text());
+    return createHash("sha256").update(`${JSON.stringify(document, null, 2)}\n`).digest("hex");
+  } catch (error) {
+    output.push(`protected Middleware blob could not be verified: ${error instanceof Error ? error.message : String(error)}`);
+    return undefined;
+  }
+}
 
 function operationMap(document) {
   const output = new Map();
