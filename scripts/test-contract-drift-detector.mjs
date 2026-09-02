@@ -65,6 +65,16 @@ const cases = [
     expectedSubstring: "new required parameter",
   },
   {
+    name: "an arbitrary required header cannot evade drift detection with a transport marker",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: cursor",
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: X-Unreviewed-Required\n          in: header\n          required: true\n          x-codestra-sdk-transport-injected: true\n          schema: { type: string }\n        - name: cursor",
+      ),
+    expectedSubstring: "new required parameter",
+  },
+  {
     // Codex review finding on PR #48: OpenAPI permits `parameters` on the
     // Path Item Object (a sibling of get/post/etc.), applying to every
     // operation under that path -- diffOperation only ever saw
@@ -155,6 +165,16 @@ const cases = [
     file: "contracts/openapi/codestra-platform.openapi.yaml",
     corrupt: (text) => text.replace("required: [id, tenantId, status, createdAt, updatedAt]", "required: [id, tenantId, status, createdAt, updatedAt, newlyRequiredField]"),
     expectedSubstring: "new required property",
+  },
+  {
+    name: "a runtime-nullability correction cannot cite an unpinned authority",
+    file: "contracts/openapi/codestra-communications.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        messageId: { type: string, format: uuid }\n        tenantId: { type: string }",
+        "        messageId: { type: string, format: uuid }\n        tenantId:\n          type: [string, 'null']\n          x-codestra-corrects-runtime-nullability: 0000000000000000000000000000000000000000",
+      ),
+    expectedSubstring: "type changed",
   },
 ];
 

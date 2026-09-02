@@ -1,8 +1,8 @@
 import { requireStubSession } from "@codestra/apps-shared/auth";
 import { buildApiCredentialFixture } from "@codestra/apps-shared/fixtures";
 
-export default function CredentialsPage(): JSX.Element {
-  const session = requireStubSession();
+export default async function CredentialsPage(): Promise<JSX.Element> {
+  const session = await requireStubSession();
   const credential = buildApiCredentialFixture(session.tenantId);
 
   return (

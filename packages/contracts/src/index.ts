@@ -64,7 +64,7 @@ export interface CommunicationMessage {
 
 export interface CommunicationMessageList {
   items: CommunicationMessage[];
-  nextCursor?: string;
+  nextCursor?: string | null;
 }
 
 export interface CommunicationMessageEvent {

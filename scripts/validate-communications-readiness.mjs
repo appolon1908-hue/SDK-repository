@@ -3,6 +3,7 @@ import { parse } from "yaml";
 
 const manifest = JSON.parse(await readFile("contracts/communications-production-readiness.v1.json", "utf8"));
 const openapi = parse(await readFile(manifest.canonicalContracts.openapi, "utf8"));
+const middlewareOpenApi = JSON.parse(await readFile("contracts/middleware-runtime-current.openapi.json", "utf8"));
 const asyncapi = parse(await readFile(manifest.canonicalContracts.asyncapi, "utf8"));
 
 // requiredUnifiedSdkEndpointPaths spans more than the Communications contract
@@ -71,12 +72,28 @@ for (const moduleName of manifest.requiredUnifiedSdkModules ?? []) {
 }
 
 for (const endpointPath of manifest.requiredUnifiedSdkEndpointPaths ?? []) {
-  if (!unifiedSdkContractPaths.has(endpointPath)) {
+  const declaredByCanonicalContract =
+    unifiedSdkContractPaths.has(endpointPath) || middlewareOpenApi.paths?.[endpointPath] !== undefined;
+  if (!declaredByCanonicalContract) {
     failures.push(`Unified SDK endpoint surface path is not declared in any canonical OpenAPI document: ${endpointPath}`);
     continue;
   }
-  if (!unifiedSdkSource.includes(endpointPath) && !clientSource.includes(endpointPath) && !socialClientSource.includes(endpointPath)) {
+  const implementedByCanonicalDomainClient =
+    middlewareOpenApi.paths?.[endpointPath] !== undefined &&
+    isCanonicalDomainClientPath(endpointPath) &&
+    unifiedSdkSource.includes("private domainClient(domain: string)");
+  if (!implementedByCanonicalDomainClient && !unifiedSdkSource.includes(endpointPath) && !clientSource.includes(endpointPath) && !socialClientSource.includes(endpointPath)) {
     failures.push(`Unified SDK endpoint surface is missing path: ${endpointPath}`);
+  }
+}
+
+function isCanonicalDomainClientPath(path) {
+  return /^\/v1\/(?:marketing|ai|crm|odoo|social|telephony|integrations\/n8n)\/(?:commands|operations(?:\/\{[^}]+\}(?:\/(?:cancel|reconcile))?)?)$/u.test(path);
+}
+
+for (const endpointPath of manifest.compatibilityOnlyEndpointPaths ?? []) {
+  if (middlewareOpenApi.paths?.[endpointPath] !== undefined) {
+    failures.push(`Compatibility-only endpoint is now present in canonical Middleware and must be reclassified: ${endpointPath}`);
   }
 }
 

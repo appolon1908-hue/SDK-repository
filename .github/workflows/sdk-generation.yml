@@ -6,6 +6,7 @@ on:
       - 'contracts/openapi/**'
       - 'codegen/**'
       - 'scripts/generate-sdks.sh'
+      - 'scripts/prepare-middleware-generator-contract.mjs'
       - 'scripts/verify-generated-sdks.mjs'
       - 'scripts/smoke_test_python_sdk.py'
       - 'scripts/smoke_test_middleware_python_sdk.py'

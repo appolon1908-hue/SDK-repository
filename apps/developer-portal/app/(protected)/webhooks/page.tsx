@@ -4,7 +4,7 @@ import { listKnownEventTypes } from "../../../lib/contracts";
 import { WebhookSubscriptionsManager } from "./WebhookSubscriptionsManager";
 
 export default async function WebhooksPage(): Promise<JSX.Element> {
-  const session = requireStubSession();
+  const session = await requireStubSession();
   const client = getApiClient(session);
   const { items } = await client.webhooks.subscriptions.list();
   const eventTypeOptions = listKnownEventTypes();

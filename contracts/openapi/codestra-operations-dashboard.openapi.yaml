@@ -118,6 +118,7 @@ paths:
       summary: Read one tenant's aggregate operational activity
       parameters:
         - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
@@ -182,6 +183,7 @@ components:
       name: X-Tenant-ID
       in: header
       required: true
+      x-codestra-sdk-transport-injected: true
       schema: { type: string, minLength: 1, maxLength: 128 }
     TenantIdPath:
       name: tenantId
