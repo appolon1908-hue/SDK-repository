@@ -46,6 +46,8 @@ jobs:
         run: pnpm contracts:validate
       - name: Verify canonical Middleware runtime alignment
         run: pnpm contracts:middleware
+      - name: Prove Middleware authority gates fail closed
+        run: pnpm contracts:middleware:negative
       - name: Prove the drift detector actually rejects breaking changes
         run: pnpm contracts:drift:negative
       - name: Reject breaking contract drift
