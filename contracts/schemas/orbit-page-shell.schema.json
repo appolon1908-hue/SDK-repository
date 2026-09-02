@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.codestra.co/schemas/orbit-page-shell.v2.json",
+  "title": "Codestra Orbit Page Shell Declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "page_key",
+    "header_variant",
+    "footer_variant",
+    "social_links_allowed",
+    "content_keys",
+    "asset_ids"
+  ],
+  "properties": {
+    "page_key": { "$ref": "#/$defs/contentKey" },
+    "header_variant": {
+      "type": "string",
+      "enum": ["standard", "compact", "auth"]
+    },
+    "footer_variant": {
+      "type": "string",
+      "enum": ["full", "compact", "auth-compact", "legal-only"]
+    },
+    "social_links_allowed": { "type": "boolean" },
+    "content_keys": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contentKey" },
+      "uniqueItems": true
+    },
+    "asset_ids": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/assetId" },
+      "uniqueItems": true
+    },
+    "seo_content_keys": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contentKey" },
+      "uniqueItems": true,
+      "default": []
+    },
+    "allowed_external_origins": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^@\\s]+$"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "authentication_surface": {
+      "type": "boolean",
+      "default": false
+    },
+    "protected_route": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "authentication_surface": { "const": true } },
+        "required": ["authentication_surface"]
+      },
+      "then": {
+        "properties": {
+          "header_variant": { "const": "auth" },
+          "footer_variant": { "enum": ["auth-compact", "legal-only"] }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "social_links_allowed": { "const": false } },
+        "required": ["social_links_allowed"]
+      },
+      "then": {
+        "properties": {
+          "footer_variant": {
+            "enum": ["full", "compact", "auth-compact", "legal-only"]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "contentKey": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 180,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){2,}$"
+    },
+    "assetId": {
+      "type": "string",
+      "minLength": 12,
+      "maxLength": 132,
+      "pattern": "^ast_[A-Za-z0-9][A-Za-z0-9_-]{7,127}$"
+    }
+  }
+}
