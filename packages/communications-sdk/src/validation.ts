@@ -24,7 +24,6 @@ const OPERATION_STATES = new Set([
   "failed",
   "reconciliation_required",
   "dead_lettered",
-  "cancelled",
   "RECEIVED",
   "QUEUED",
   "SUBMITTED",
