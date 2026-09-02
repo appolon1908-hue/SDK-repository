@@ -1,0 +1,32 @@
+@import "./tokens.css";
+@import "./themes.css";
+@import "./base.css";
+@import "./components.css";
+
+/* Keep decorative brand color vivid while using a stronger accessible accent for UI boundaries in light mode. */
+:where([data-horizon-root]) .hz-button--accent {
+  border-color: var(--hz-accent-ui);
+}
+
+:where([data-horizon-root]) .hz-badge--accent {
+  color: var(--hz-accent-ui);
+}
+
+:where([data-horizon-root]) .hz-badge--accent::before {
+  background: var(--hz-accent);
+}
+
+:where([data-horizon-root]) .hz-tab[aria-selected="true"],
+:where([data-horizon-root]) .hz-tab[aria-current="page"] {
+  border-bottom-color: var(--hz-accent-ui);
+}
+
+:where([data-horizon-root]) .hz-nav__item[aria-current="page"]::before {
+  background: var(--hz-accent-ui);
+}
+
+@media (prefers-color-scheme: light) {
+  :where([data-horizon-root][data-horizon-appearance="system"]) .hz-topbar {
+    background: rgb(247 247 244 / 0.88);
+  }
+}

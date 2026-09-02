@@ -1,12 +1,23 @@
 {
   "name": "@codestra/intake-ui",
   "version": "0.1.0",
-  "description": "Framework-neutral accessible UI controllers and render models for Codestra forms, surveys, popups and callbacks.",
+  "description": "Framework-neutral accessible UI controllers, render models and the Horizon visual contract for Codestra applications.",
   "license": "MIT",
   "type": "module",
-  "sideEffects": false,
-  "files": ["dist", "README.md"],
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "sideEffects": ["./styles/**/*.css"],
+  "files": ["dist", "styles", "README.md", "HORIZON.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./horizon": { "types": "./dist/horizon.d.ts", "default": "./dist/horizon.js" },
+    "./horizon/styles": "./styles/horizon/index.css",
+    "./horizon/tokens.css": "./styles/horizon/tokens.css",
+    "./horizon/themes.css": "./styles/horizon/themes.css",
+    "./horizon/base.css": "./styles/horizon/base.css",
+    "./horizon/components.css": "./styles/horizon/components.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "publishConfig": { "access": "public", "provenance": true }
 }

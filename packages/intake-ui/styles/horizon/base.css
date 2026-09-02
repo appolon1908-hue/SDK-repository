@@ -1,0 +1,111 @@
+:where([data-horizon-root]) {
+  min-height: 100%;
+  margin: 0;
+  background: var(--hz-bg);
+  color: var(--hz-text);
+  font-family: var(--hz-font-body);
+  font-size: var(--hz-text-md);
+  line-height: var(--hz-leading-body);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:where(html[data-horizon-root]) > body {
+  min-height: 100dvh;
+  margin: 0;
+  background: inherit;
+  color: inherit;
+  font: inherit;
+}
+
+:where([data-horizon-root]),
+:where([data-horizon-root]) *,
+:where([data-horizon-root]) *::before,
+:where([data-horizon-root]) *::after {
+  box-sizing: border-box;
+}
+
+:where([data-horizon-root]) :where(h1, h2, h3, h4, p, figure, blockquote, dl, dd) {
+  margin: 0;
+}
+
+:where([data-horizon-root]) :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+}
+
+:where([data-horizon-root]) :where(button, input, select, textarea) {
+  font: inherit;
+}
+
+:where([data-horizon-root]) :where(button, [role="button"]) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where([data-horizon-root]) :where(img, picture, svg, video, canvas) {
+  display: block;
+  max-width: 100%;
+}
+
+:where([data-horizon-root]) :where(a) {
+  color: inherit;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+:where([data-horizon-root]) :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--hz-focus);
+  outline-offset: 3px;
+}
+
+:where([data-horizon-root]) ::selection {
+  background: var(--hz-selection);
+  color: var(--hz-text);
+}
+
+:where([data-horizon-root]) :where(input, textarea)::placeholder {
+  color: var(--hz-text-subtle);
+  opacity: 1;
+}
+
+:where([data-horizon-root]) .hz-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+:where([data-horizon-root]) .hz-skip-link {
+  position: fixed;
+  inset-block-start: var(--hz-space-4);
+  inset-inline-start: var(--hz-space-4);
+  z-index: var(--hz-z-toast);
+  transform: translateY(-200%);
+  padding: var(--hz-space-3) var(--hz-space-4);
+  background: var(--hz-action-bg);
+  color: var(--hz-action-text);
+  border-radius: var(--hz-radius-control);
+  transition: transform var(--hz-duration-fast) var(--hz-ease-standard);
+}
+
+:where([data-horizon-root]) .hz-skip-link:focus {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([data-horizon-root]),
+  :where([data-horizon-root]) *,
+  :where([data-horizon-root]) *::before,
+  :where([data-horizon-root]) *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

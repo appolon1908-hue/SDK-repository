@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-horizon-root data-horizon-theme="codestra" data-horizon-appearance="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Horizon UI — Account dashboard reference</title>
+    <link rel="stylesheet" href="../../packages/intake-ui/styles/horizon/index.css" />
+    <style>
+      body { margin: 0; }
+      .demo-stats { --hz-grid-columns: 4; }
+      .demo-main-grid { --hz-grid-columns: 12; }
+      .demo-main-grid > :first-child { grid-column: span 8; }
+      .demo-main-grid > :last-child { grid-column: span 4; }
+      .demo-service-list { display: grid; gap: var(--hz-space-3); }
+      .demo-service {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--hz-space-4);
+        padding: var(--hz-space-4);
+        border: 1px solid var(--hz-border);
+        border-radius: var(--hz-radius-control);
+      }
+      .demo-balance { text-align: center; }
+      .demo-balance .hz-stat__value { font-size: clamp(2.5rem, 5vw, 4.5rem); }
+      @media (max-width: 75rem) {
+        .demo-stats { --hz-grid-columns: 2; }
+        .demo-main-grid > :first-child,
+        .demo-main-grid > :last-child { grid-column: span 12; }
+      }
+      @media (max-width: 48rem) { .demo-stats { --hz-grid-columns: 1; } }
+    </style>
+  </head>
+  <body>
+    <a class="hz-skip-link" href="#main">Skip to content</a>
+    <div class="hz-app-shell">
+      <aside class="hz-sidebar" aria-label="Primary navigation">
+        <a class="hz-brand" href="#">
+          <span class="hz-brand__mark" aria-hidden="true">C</span>
+          Codestra
+        </a>
+        <nav class="hz-nav">
+          <p class="hz-nav__label">Workspace</p>
+          <a class="hz-nav__item" href="#" aria-current="page">Overview</a>
+          <a class="hz-nav__item" href="#">Services</a>
+          <a class="hz-nav__item" href="#">Activity</a>
+          <a class="hz-nav__item" href="#">Billing</a>
+          <p class="hz-nav__label">Manage</p>
+          <a class="hz-nav__item" href="#">Team</a>
+          <a class="hz-nav__item" href="#">Settings</a>
+          <a class="hz-nav__item" href="#">Support</a>
+        </nav>
+        <div class="hz-card" style="margin-top:auto">
+          <div class="hz-card__body hz-stack" style="--hz-stack-gap:var(--hz-space-3)">
+            <span class="hz-badge hz-badge--success">All systems ready</span>
+            <p class="hz-meta">Last checked moments ago</p>
+          </div>
+        </div>
+      </aside>
+
+      <div class="hz-main">
+        <header class="hz-topbar">
+          <button class="hz-button hz-button--ghost hz-button--sm" type="button">Menu</button>
+          <div class="hz-cluster">
+            <span class="hz-meta">ACCT-002491</span>
+            <button class="hz-button hz-button--secondary hz-button--sm" type="button">Profile</button>
+          </div>
+        </header>
+
+        <main id="main" class="hz-page">
+          <header class="hz-page-header">
+            <div class="hz-stack" style="--hz-stack-gap:var(--hz-space-3)">
+              <p class="hz-eyebrow">Account home</p>
+              <h1 class="hz-title">Operations overview</h1>
+              <p class="hz-lead">Manage services, billing, team access and automation health from one clear workspace.</p>
+            </div>
+            <button class="hz-button hz-button--primary hz-button--lg hz-button--compact-block" type="button">Add service</button>
+          </header>
+
+          <section class="hz-grid demo-stats" aria-label="Account summary">
+            <article class="hz-card"><div class="hz-card__body hz-stat"><span class="hz-stat__label">Active services</span><strong class="hz-stat__value">12</strong><span class="hz-stat__detail">Across 4 workspaces</span></div></article>
+            <article class="hz-card"><div class="hz-card__body hz-stat"><span class="hz-stat__label">Monthly usage</span><strong class="hz-stat__value">68%</strong><span class="hz-stat__detail">Within plan allowance</span></div></article>
+            <article class="hz-card"><div class="hz-card__body hz-stat"><span class="hz-stat__label">Open actions</span><strong class="hz-stat__value">3</strong><span class="hz-stat__detail">No critical blockers</span></div></article>
+            <article class="hz-card"><div class="hz-card__body hz-stat"><span class="hz-stat__label">Platform state</span><strong class="hz-stat__value">Ready</strong><span class="hz-stat__detail">Protected writes remain gated</span></div></article>
+          </section>
+
+          <section class="hz-grid demo-main-grid hz-section--compact">
+            <article class="hz-card">
+              <header class="hz-card__header"><div><p class="hz-eyebrow">Service lines</p><h2 class="hz-heading">Connected products</h2></div><a class="hz-text-link" href="#">Manage</a></header>
+              <div class="hz-card__body demo-service-list">
+                <div class="demo-service"><div><strong>Customer communications</strong><p class="hz-meta">Email, SMS and contact-center routing</p></div><span class="hz-badge hz-badge--success">Healthy</span></div>
+                <div class="demo-service"><div><strong>Marketing automation</strong><p class="hz-meta">Campaign preparation and approval workflow</p></div><span class="hz-badge hz-badge--info">Staging</span></div>
+                <div class="demo-service"><div><strong>Financial operations</strong><p class="hz-meta">Read-only production view</p></div><span class="hz-badge hz-badge--warning">Restricted</span></div>
+              </div>
+            </article>
+
+            <article class="hz-card hz-card--contrast">
+              <div class="hz-card__body hz-stack demo-balance">
+                <p class="hz-eyebrow" style="color:currentColor">Balance due</p>
+                <strong class="hz-stat__value">$0.00</strong>
+                <p style="opacity:.7">No payment is currently required.</p>
+                <button class="hz-button hz-button--primary hz-button--block" type="button" disabled>Make payment</button>
+                <a class="hz-text-link" href="#" style="justify-content:center">Update payment method</a>
+              </div>
+            </article>
+          </section>
+
+          <section class="hz-card">
+            <header class="hz-card__header"><div><p class="hz-eyebrow">Recent activity</p><h2 class="hz-heading">Account events</h2></div><a class="hz-text-link" href="#">View all</a></header>
+            <div class="hz-table-wrap" style="border:0;border-radius:0">
+              <table class="hz-table">
+                <thead><tr><th>Event</th><th>Product</th><th>Status</th><th>Time</th></tr></thead>
+                <tbody>
+                  <tr><td>Configuration validated</td><td>Codestra</td><td><span class="hz-badge hz-badge--success">Passed</span></td><td>09:42</td></tr>
+                  <tr><td>Service plan reviewed</td><td>Telnexa</td><td><span class="hz-badge hz-badge--info">Recorded</span></td><td>08:15</td></tr>
+                  <tr><td>Deployment approval required</td><td>Breero</td><td><span class="hz-badge hz-badge--warning">Waiting</span></td><td>Yesterday</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
