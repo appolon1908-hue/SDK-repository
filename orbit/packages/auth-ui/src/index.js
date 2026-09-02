@@ -14,7 +14,7 @@ function normalizeBasePath(value) {
   return path.replace(/\/$/, '');
 }
 
-export function safeReturnUrl(value, { currentOrigin = globalThis.location?.origin, allowedOrigins = [], fallback = FALLBACK_RETURN } = {}) {
+export function safeRedirectTarget(value, { currentOrigin = globalThis.location?.origin, allowedOrigins = [], fallback = FALLBACK_RETURN } = {}) {
   if (!currentOrigin) return fallback;
   let current;
   try { current = new URL(currentOrigin); } catch { return fallback; }
@@ -106,7 +106,7 @@ export function createSessionClient({
   }
 
   function redirect(path, returnTo) {
-    const normalized = safeReturnUrl(returnTo, { currentOrigin: locationRef?.origin, allowedOrigins: allowedReturnOrigins });
+    const normalized = safeRedirectTarget(returnTo, { currentOrigin: locationRef?.origin, allowedOrigins: allowedReturnOrigins });
     const target = `${base}${path}?return_to=${encodeURIComponent(normalized)}`;
     locationRef?.assign?.(target);
     return target;
@@ -120,14 +120,14 @@ export function createSessionClient({
     async logout({ returnTo = '/signed-out' } = {}) {
       await request('/logout', { method: 'POST', mutationName: 'logout' });
       bridge.publish({ type: 'signed-out', at: new Date().toISOString(), nonce: correlationId() });
-      const target = safeReturnUrl(returnTo, { currentOrigin: locationRef?.origin, allowedOrigins: allowedReturnOrigins, fallback: '/signed-out' });
+      const target = safeRedirectTarget(returnTo, { currentOrigin: locationRef?.origin, allowedOrigins: allowedReturnOrigins, fallback: '/signed-out' });
       locationRef?.assign?.(target);
       return target;
     },
     async logoutAll({ returnTo = '/signed-out' } = {}) {
       await request('/logout-all', { method: 'POST', mutationName: 'logout-all' });
       bridge.publish({ type: 'signed-out-all', at: new Date().toISOString(), nonce: correlationId() });
-      const target = safeReturnUrl(returnTo, { currentOrigin: locationRef?.origin, allowedOrigins: allowedReturnOrigins, fallback: '/signed-out' });
+      const target = safeRedirectTarget(returnTo, { currentOrigin: locationRef?.origin, allowedOrigins: allowedReturnOrigins, fallback: '/signed-out' });
       locationRef?.assign?.(target);
       return target;
     },
