@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { parse, stringify } from "yaml";
 
 const wrongCheckout = run(["scripts/import-middleware-runtime-contract.mjs", "contracts/middleware-runtime-current.openapi.json"]);
 if (wrongCheckout.status === 0 || !`${wrongCheckout.stderr}${wrongCheckout.stdout}`.includes("Source checkout is")) {
@@ -19,6 +20,30 @@ try {
   });
   if (digestCheck.status === 0 || !`${digestCheck.stderr}${digestCheck.stdout}`.includes("content digest")) {
     throw new Error("Alignment gate did not reject a modified runtime snapshot.");
+  }
+
+  const communicationsPath = "contracts/openapi/codestra-communications.openapi.yaml";
+  const communications = parse(await readFile(communicationsPath, "utf8"));
+  communications.components.parameters.TenantId.required = false;
+  const weakenedCommunications = join(directory, "weakened-communications.openapi.yaml");
+  await writeFile(weakenedCommunications, stringify(communications));
+  const sdkContracts = [
+    "contracts/openapi/codestra-middleware-client.openapi.json",
+    "contracts/openapi/codestra-public.openapi.yaml",
+    "contracts/openapi/codestra-enterprise.openapi.yaml",
+    weakenedCommunications,
+    "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
+    "contracts/openapi/codestra-control-plane.openapi.yaml",
+  ];
+  const handwrittenContractCheck = run(
+    ["scripts/check-middleware-runtime-alignment.mjs"],
+    { MIDDLEWARE_SDK_CONTRACTS: sdkContracts.join(",") },
+  );
+  if (
+    handwrittenContractCheck.status === 0 ||
+    !`${handwrittenContractCheck.stderr}${handwrittenContractCheck.stdout}`.includes("HEADER_MISMATCH")
+  ) {
+    throw new Error("Alignment gate did not compare a weakened handwritten contract independently.");
   }
 
   const repository = join(directory, "middleware");
