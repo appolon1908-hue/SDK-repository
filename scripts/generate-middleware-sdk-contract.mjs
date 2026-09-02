@@ -37,7 +37,7 @@ const output = {
     title: "Codestra Middleware SDK Client API",
     version: source.info.version,
     description: "Generated SDK-facing subset of the pinned canonical Middleware runtime contract.",
-    license: { name: "Proprietary" },
+    license: { name: "Proprietary", identifier: "LicenseRef-Proprietary" },
   },
   servers: [{ url: "https://api.codestra.co" }],
   "x-codestra-generated-from": source["x-codestra-source-authority"],

@@ -5,7 +5,8 @@
     "version": "0.1.0",
     "description": "Generated SDK-facing subset of the pinned canonical Middleware runtime contract.",
     "license": {
-      "name": "Proprietary"
+      "name": "Proprietary",
+      "identifier": "LicenseRef-Proprietary"
     }
   },
   "servers": [
