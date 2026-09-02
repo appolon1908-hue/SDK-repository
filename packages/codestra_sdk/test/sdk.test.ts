@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { CodestraSdkConfigurationError, UnknownOutcomeError, createCodestraSdk } from "../src/index.js";
+import {
+  CapabilityDisabledError,
+  CodestraSdkConfigurationError,
+  UnknownOutcomeError,
+  createCodestraSdk,
+} from "../src/index.js";
 
 const tenantId = "tenant-001";
 const correlationId = "correlation-0001";
@@ -124,6 +129,22 @@ describe("codestra_sdk facade", () => {
       operationId: "d0313dba-09f7-4cce-8894-195f72c62126",
     });
     await expect(sdk.operations.get("d0313dba-09f7-4cce-8894-195f72c62126")).rejects.toBeInstanceOf(UnknownOutcomeError);
+  });
+
+  it("classifies a disabled capability before the generic forbidden status", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(403, {
+        error: {
+          code: "CAPABILITY_DISABLED",
+          message: "External delivery is disabled.",
+          request_id: "request-capability-001",
+          retryable: false,
+        },
+      }),
+    );
+    const sdk = testSdk(fetchMock);
+
+    await expect(sdk.platform.capabilities()).rejects.toBeInstanceOf(CapabilityDisabledError);
   });
 
   it("supports stable product-facing calls across current domains", async () => {
