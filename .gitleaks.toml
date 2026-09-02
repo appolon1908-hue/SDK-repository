@@ -1,19 +1,14 @@
 title = "Codestra SDK secret scanning policy"
 
-# These files contain deliberately synthetic tokens used to assert auth-header
-# propagation and failure behavior. They are executable tests or documented
-# placeholders, never runtime configuration. All other repository content and
-# Git history remains subject to the standard Gitleaks rules.
+# Deliberately synthetic values used to assert auth-header and webhook-secret
+# behavior. Match the fixture bytes, never a whole path, so a real credential
+# added beside a fixture remains detectable in both the worktree and history.
 [[allowlists]]
 description = "Synthetic test credentials and explicit SDK placeholder"
-paths = [
-  '''^apps/_shared/test/mock-client\.test\.ts$''',
-  '''^integrations/n8n-nodes/test/codestra-action-node\.test\.ts$''',
-  '''^packages/codestra_sdk/README\.md$''',
-  '''^packages/connector-kit/test/runner\.test\.ts$''',
-  '''^packages/provider-adapters/test/adapters\.test\.ts$''',
-  '''^packages/provider-adapters/test/restricted-gateway-live-http\.test\.ts$''',
-  '''^packages/social-sdk/test/client\.test\.ts$''',
-  '''^packages/social-sdk/test/pact/social-post\.pact\.test\.ts$''',
-  '''^packages/testing/src/index\.ts$''',
+regexes = [
+  '''^secret-token$''',
+  '''^test-token$''',
+  '''^lease-token-0001$''',
+  '''^synthetic-pact-token-not-a-real-credential$''',
+  '''^whsec_MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=$''',
 ]

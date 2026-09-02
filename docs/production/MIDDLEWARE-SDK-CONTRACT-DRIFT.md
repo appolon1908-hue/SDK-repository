@@ -3,7 +3,7 @@
 ## Authority
 
 - Runtime repository: `appolon1908-hue/Middleware-`
-- Protected source SHA: `5d830ab1c3629447a873b45dca19a043adea78e0`
+- Protected source SHA: `454d7d659cbb95e5e21443c5d6bb7794ddfe2880`
 - Source contract: `contracts/platform/middleware-openapi.generated.json`
 - Vendored evidence: `contracts/middleware-runtime-current.openapi.json`
 - OpenAPI: 3.1.0
@@ -60,7 +60,7 @@ older wrappers remain present so this change does not silently break consumers:
 - `/v1/crm/leads*`
 - `/v1/workflow/runs*`
 
-These compatibility routes are absent from Middleware SHA `5d830ab1…`; they
+These compatibility routes are absent from Middleware SHA `454d7d65…`; they
 must not be used as evidence for staging or production certification and need
 a published sunset before removal. The canonical runtime
 families are `/v1/marketing/commands`, `/v1/ai/commands`, `/v1/crm/commands`,
