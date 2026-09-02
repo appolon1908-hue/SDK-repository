@@ -1,0 +1,674 @@
+openapi: 3.1.0
+info:
+  title: Codestra Orbit Brand, Content, Asset, and Shell API
+  version: 0.1.0
+  description: >
+    Contract for retrieving published Codestra Orbit brand shells, page content,
+    assets, and social footers and for performing authorized, versioned,
+    idempotent administration, publication, and rollback. Frontend clients hide
+    missing or unpublished content and never store authoritative social URLs.
+servers:
+  - url: https://api.codestra.co
+security:
+  - browserSession: []
+tags:
+  - name: Orbit Public
+    description: Published brand, page, asset, and footer resources.
+  - name: Orbit Administration
+    description: Authorized draft, publish, and rollback operations.
+paths:
+  /api/v1/brands/{brand}/shell:
+    get:
+      tags: [Orbit Public]
+      operationId: getOrbitBrandShell
+      summary: Read the published brand shell
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+      responses:
+        '200':
+          description: Published brand shell
+          headers:
+            ETag:
+              schema: { type: string }
+            X-Resource-Version:
+              schema: { type: integer, minimum: 0 }
+            X-Correlation-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-brand-shell.schema.json'
+        '404': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/brands/{brand}/footer:
+    get:
+      tags: [Orbit Public]
+      operationId: getOrbitBrandFooter
+      summary: Read the published footer and social links
+      description: >
+        Returns only the approved footer resource. Clients render social entries
+        only when published and when the URL is credential-free HTTPS.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+      responses:
+        '200':
+          description: Published footer resource
+          headers:
+            ETag:
+              schema: { type: string }
+            X-Resource-Version:
+              schema: { type: integer, minimum: 0 }
+            X-Correlation-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-footer.schema.json'
+        '404': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/brands/{brand}/pages/{page_key}:
+    get:
+      tags: [Orbit Public]
+      operationId: getOrbitPageContent
+      summary: Read one published page content resource
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/PageKey'
+      responses:
+        '200':
+          description: Published page content and shell declaration
+          headers:
+            ETag:
+              schema: { type: string }
+            X-Resource-Version:
+              schema: { type: integer, minimum: 0 }
+            X-Correlation-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageContentResource'
+        '404': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/assets/{asset_id}:
+    get:
+      tags: [Orbit Public]
+      operationId: getOrbitAssetMetadata
+      summary: Read published Asset API metadata
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Published asset metadata and delivery URL
+          headers:
+            ETag:
+              schema: { type: string }
+            X-Correlation-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResource'
+        '404': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/brands/{brand}/footer:
+    put:
+      tags: [Orbit Administration]
+      operationId: updateOrbitBrandFooterDraft
+      summary: Replace the current footer draft
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ExpectedResourceVersion'
+        - $ref: '#/components/parameters/SafeReason'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FooterDraftRequest'
+      responses:
+        '200':
+          description: Existing idempotent footer draft result
+          headers:
+            X-Correlation-ID:
+              schema: { type: string }
+            X-Resource-Version:
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-footer.schema.json'
+        '201':
+          description: New versioned footer draft
+          headers:
+            X-Correlation-ID:
+              schema: { type: string }
+            X-Resource-Version:
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-footer.schema.json'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/brands/{brand}/footer/publish:
+    post:
+      tags: [Orbit Administration]
+      operationId: publishOrbitBrandFooter
+      summary: Publish an approved footer version
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ExpectedResourceVersion'
+        - $ref: '#/components/parameters/SafeReason'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+      responses:
+        '200':
+          description: Existing idempotent publication result
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-footer.schema.json'
+        '201':
+          description: Newly published footer resource
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-footer.schema.json'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/brands/{brand}/footer/rollback:
+    post:
+      tags: [Orbit Administration]
+      operationId: rollbackOrbitBrandFooter
+      summary: Restore an eligible previously published footer
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ExpectedResourceVersion'
+        - $ref: '#/components/parameters/SafeReason'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollbackRequest'
+      responses:
+        '200':
+          description: Footer restored to a prior publication
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/orbit-footer.schema.json'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/brands/{brand}/pages/{page_key}:
+    put:
+      tags: [Orbit Administration]
+      operationId: updateOrbitPageDraft
+      summary: Replace one versioned page-content draft
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/PageKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ExpectedResourceVersion'
+        - $ref: '#/components/parameters/SafeReason'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageDraftRequest'
+      responses:
+        '200':
+          description: Existing idempotent page-draft result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageContentResource'
+        '201':
+          description: New page-content draft version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageContentResource'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/brands/{brand}/pages/{page_key}/publish:
+    post:
+      tags: [Orbit Administration]
+      operationId: publishOrbitPage
+      summary: Publish an approved page-content version
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/PageKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ExpectedResourceVersion'
+        - $ref: '#/components/parameters/SafeReason'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+      responses:
+        '200':
+          description: Existing idempotent page-publication result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageContentResource'
+        '201':
+          description: Newly published page-content resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageContentResource'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/admin/brands/{brand}/pages/{page_key}/rollback:
+    post:
+      tags: [Orbit Administration]
+      operationId: rollbackOrbitPage
+      summary: Restore an eligible previously published page version
+      parameters:
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/PageKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ExpectedResourceVersion'
+        - $ref: '#/components/parameters/SafeReason'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollbackRequest'
+      responses:
+        '200':
+          description: Page content restored to a prior publication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageContentResource'
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    browserSession:
+      type: apiKey
+      in: cookie
+      name: codestra_session
+      description: HttpOnly, Secure, SameSite session established by the approved Codestra identity flow.
+  parameters:
+    Brand:
+      name: brand
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Brand'
+    PageKey:
+      name: page_key
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ContentKey'
+    AssetId:
+      name: asset_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/AssetId'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 180
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 180
+    ExpectedResourceVersion:
+      name: X-Expected-Resource-Version
+      in: header
+      required: true
+      schema:
+        type: integer
+        minimum: 0
+    SafeReason:
+      name: X-Safe-Reason
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 500
+  responses:
+    Error:
+      description: Canonical Orbit problem response
+      headers:
+        X-Correlation-ID:
+          schema: { type: string }
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Brand:
+      type: string
+      enum:
+        - codestra
+        - breero
+        - beyvra
+        - moneybee
+        - larim
+        - transportation
+        - telnexa
+        - klyrow
+        - social
+        - restaurant
+        - neutral
+    ContentKey:
+      type: string
+      minLength: 5
+      maxLength: 180
+      pattern: '^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){2,}$'
+    AssetId:
+      type: string
+      minLength: 12
+      maxLength: 132
+      pattern: '^ast_[A-Za-z0-9][A-Za-z0-9_-]{7,127}$'
+    FooterVariant:
+      type: string
+      enum: [full, compact, auth-compact, legal-only]
+    ContentValue:
+      type: object
+      additionalProperties: false
+      required: [content_key, value_type, value]
+      properties:
+        content_key:
+          $ref: '#/components/schemas/ContentKey'
+        value_type:
+          type: string
+          enum: [plain_text, rich_text_document, internal_path, https_url, telephone, email, seo]
+        value:
+          type: [string, object, array, number, boolean, 'null']
+        locale:
+          type: string
+          pattern: '^[a-z]{2}(?:-[A-Z]{2})?$'
+        fallback_locale:
+          type: [string, 'null']
+        updated_at:
+          type: string
+          format: date-time
+    PageContentResource:
+      type: object
+      additionalProperties: false
+      required:
+        - brand
+        - page_key
+        - resource_version
+        - publication_status
+        - shell
+        - content
+        - assets
+      properties:
+        brand:
+          $ref: '#/components/schemas/Brand'
+        page_key:
+          $ref: '#/components/schemas/ContentKey'
+        resource_version:
+          type: integer
+          minimum: 0
+        publication_status:
+          type: string
+          enum: [draft, published, withdrawn]
+        shell:
+          $ref: '../schemas/orbit-page-shell.schema.json'
+        content:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/ContentValue'
+        assets:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/AssetResource'
+        published_at:
+          type: [string, 'null']
+          format: date-time
+        publication_id:
+          type: [string, 'null']
+          pattern: '^pub_[A-Za-z0-9_-]{8,128}$'
+    AssetResource:
+      type: object
+      additionalProperties: false
+      required:
+        - asset_id
+        - publication_status
+        - media_type
+        - delivery_url
+        - integrity
+        - alt_content_key
+      properties:
+        asset_id:
+          $ref: '#/components/schemas/AssetId'
+        publication_status:
+          type: string
+          enum: [draft, published, withdrawn]
+        media_type:
+          type: string
+          pattern: '^[a-z]+/[a-z0-9.+-]+$'
+        delivery_url:
+          type: string
+          format: uri
+          pattern: '^https://[^@\\s]+$'
+        integrity:
+          type: string
+          pattern: '^sha256-[A-Za-z0-9+/]{43}=$'
+        width:
+          type: [integer, 'null']
+          minimum: 1
+        height:
+          type: [integer, 'null']
+          minimum: 1
+        duration_ms:
+          type: [integer, 'null']
+          minimum: 0
+        alt_content_key:
+          $ref: '#/components/schemas/ContentKey'
+        published_at:
+          type: [string, 'null']
+          format: date-time
+    FooterDraftRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - expected_version
+        - default_variant
+        - copyright
+        - legal_links
+        - social_links
+      properties:
+        expected_version:
+          type: integer
+          minimum: 0
+        default_variant:
+          $ref: '#/components/schemas/FooterVariant'
+        copyright:
+          type: object
+          additionalProperties: false
+          required: [content_key, text]
+          properties:
+            content_key:
+              $ref: '#/components/schemas/ContentKey'
+            text:
+              type: string
+              minLength: 1
+              maxLength: 300
+        legal_links:
+          type: array
+          maxItems: 24
+          items:
+            type: object
+            additionalProperties: false
+            required: [content_key, href, label]
+            properties:
+              content_key:
+                $ref: '#/components/schemas/ContentKey'
+              href:
+                type: string
+                minLength: 1
+                maxLength: 2048
+                pattern: '^(?:/|https://)'
+              label:
+                type: string
+                minLength: 1
+                maxLength: 120
+        social_links:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            additionalProperties: false
+            required: [network, url, label, published]
+            properties:
+              network:
+                type: string
+                enum: [linkedin, facebook, instagram, x, youtube, github, tiktok, threads]
+              url:
+                type: string
+                maxLength: 2048
+                pattern: '^(?:|https://[^@\\s]+)$'
+              label:
+                type: string
+                minLength: 1
+                maxLength: 160
+              published:
+                type: boolean
+    PageDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [expected_version, shell, content, asset_ids]
+      properties:
+        expected_version:
+          type: integer
+          minimum: 0
+        shell:
+          $ref: '../schemas/orbit-page-shell.schema.json'
+        content:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/ContentValue'
+        asset_ids:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AssetId'
+    PublishRequest:
+      type: object
+      additionalProperties: false
+      required: [expected_version, reason]
+      properties:
+        expected_version:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+        approval_reference:
+          type: [string, 'null']
+          maxLength: 300
+    RollbackRequest:
+      type: object
+      additionalProperties: false
+      required: [expected_version, publication_id, reason]
+      properties:
+        expected_version:
+          type: integer
+          minimum: 0
+        publication_id:
+          type: string
+          pattern: '^pub_[A-Za-z0-9_-]{8,128}$'
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, correlation_id]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+          minLength: 1
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: [string, 'null']
+        correlation_id:
+          type: string
+          minLength: 1
+        code:
+          type: [string, 'null']
