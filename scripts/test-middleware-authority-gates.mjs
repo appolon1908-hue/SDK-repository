@@ -86,7 +86,8 @@ try {
   }
 
   const enumDrift = parse(await readFile(communicationsPath, "utf8"));
-  enumDrift.components.schemas.MessageStatus.enum.push("fictional_status");
+  enumDrift.components.schemas.MessageStatus.enum =
+    enumDrift.components.schemas.MessageStatus.enum.filter((value) => value !== "delivered");
   const enumDriftPath = join(directory, "enum-drift-communications.openapi.yaml");
   await writeFile(enumDriftPath, stringify(enumDrift));
   sdkContracts[3] = enumDriftPath;

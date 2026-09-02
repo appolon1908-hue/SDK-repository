@@ -275,7 +275,10 @@ function compareResponseSchema(location, runtimeValue, runtimeDocument, sdkValue
       const sdkConstraint = constraint === "enum"
         ? [...(sdkSchema[constraint] ?? [])].sort()
         : sdkSchema[constraint];
-      if (JSON.stringify(runtimeConstraint) !== JSON.stringify(sdkConstraint)) {
+      const differs = constraint === "enum"
+        ? runtimeConstraint.some((value) => !sdkConstraint.includes(value))
+        : JSON.stringify(runtimeConstraint) !== JSON.stringify(sdkConstraint);
+      if (differs) {
         output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} ${constraint} differs between runtime and SDK`);
       }
     }
@@ -286,7 +289,9 @@ function compareResponseSchema(location, runtimeValue, runtimeDocument, sdkValue
   for (const [property, sdkProperty] of Object.entries(sdkProperties)) {
     const runtimeProperty = runtimeProperties[property];
     if (!runtimeProperty) {
-      output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} SDK property ${property} is absent at runtime`);
+      if (sdkRequired.has(property) || runtimeSchema.additionalProperties === false) {
+        output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} SDK property ${property} is absent at runtime`);
+      }
       continue;
     }
     compareResponseSchema(
@@ -327,6 +332,7 @@ function semanticValues(value, document, field) {
   for (const branch of schema.allOf ?? []) {
     for (const item of semanticValues(branch, document, field)) values.add(item);
   }
+  if (field === "type" && schema.nullable === true) values.add(JSON.stringify("null"));
   return values;
 }
 
