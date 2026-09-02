@@ -845,7 +845,7 @@ components:
         - updatedAt
       properties:
         messageId: { type: string, format: uuid }
-        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        tenantId: { type: string }
         channel: { $ref: '#/components/schemas/CommunicationChannel' }
         direction: { $ref: '#/components/schemas/MessageDirection' }
         status: { $ref: '#/components/schemas/MessageStatus' }
@@ -872,7 +872,7 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/CommunicationMessage' }
-        nextCursor: { type: string }
+        nextCursor: { type: [string, 'null'] }
     MessageEvent:
       type: object
       additionalProperties: false
@@ -896,7 +896,7 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/MessageEvent' }
-        nextCursor: { type: string }
+        nextCursor: { type: [string, 'null'] }
     TemplateWrite:
       type: object
       additionalProperties: false
@@ -1097,19 +1097,12 @@ components:
       additionalProperties: false
       required: [status, checkedAt, providers]
       properties:
-        status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
+        status: { type: string }
         checkedAt: { type: string, format: date-time }
         providers:
           type: array
           items:
             type: object
-            additionalProperties: false
-            required: [provider, channel, status]
-            properties:
-              provider: { type: string }
-              channel: { $ref: '#/components/schemas/CommunicationChannel' }
-              status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
-              reason: { type: [string, 'null'] }
     UsageReport:
       type: object
       additionalProperties: false
@@ -1121,46 +1114,21 @@ components:
           type: array
           items:
             type: object
-            additionalProperties: false
-            required: [channel, accepted, delivered, failed, suppressed]
-            properties:
-              channel: { $ref: '#/components/schemas/CommunicationChannel' }
-              accepted: { type: integer, minimum: 0 }
-              delivered: { type: integer, minimum: 0 }
-              failed: { type: integer, minimum: 0 }
-              suppressed: { type: integer, minimum: 0 }
-              costMinorUnits: { type: integer, minimum: 0 }
-              currency: { type: string, minLength: 3, maxLength: 3 }
     ReputationReport:
       type: object
       additionalProperties: false
       required: [status, checkedAt, domains, providers]
       properties:
-        status: { type: string, enum: [good, watch, limited, suspended] }
+        status: { type: string }
         checkedAt: { type: string, format: date-time }
         domains:
           type: array
           items:
             type: object
-            additionalProperties: false
-            required: [domain, status]
-            properties:
-              domain: { type: string }
-              status: { type: string, enum: [good, watch, limited, suspended] }
-              dkim: { $ref: '#/components/schemas/VerificationState' }
-              spf: { $ref: '#/components/schemas/VerificationState' }
-              dmarc: { $ref: '#/components/schemas/VerificationState' }
         providers:
           type: array
           items:
             type: object
-            additionalProperties: false
-            required: [provider, channel, status]
-            properties:
-              provider: { type: string }
-              channel: { $ref: '#/components/schemas/CommunicationChannel' }
-              status: { type: string, enum: [good, watch, limited, suspended] }
-              queueDepth: { type: integer, minimum: 0 }
     ErrorResponse:
       type: object
       additionalProperties: false

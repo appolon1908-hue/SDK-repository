@@ -199,6 +199,14 @@ function compareOperation(key, runtimeOperation, runtimeDocument, sdkOperation, 
           output.push(`RESPONSE_SCHEMA_MISMATCH: ${key} ${status} does not guarantee SDK property ${property}`);
         }
       }
+      compareResponseSchema(
+        `${key} ${status} ${mediaType}`,
+        runtimeSchema,
+        runtimeDocument,
+        sdkSchema,
+        sdkDocument,
+        output,
+      );
     }
   }
 
@@ -216,6 +224,129 @@ function compareOperation(key, runtimeOperation, runtimeDocument, sdkOperation, 
     });
   });
   if (runtimeErrors.length && !sdkHasErrorContract) output.push(`ERROR_SCHEMA_MISMATCH: ${key} has no typed SDK error contract`);
+}
+
+function compareResponseSchema(location, runtimeValue, runtimeDocument, sdkValue, sdkDocument, output, depth = 0) {
+  if (depth > 32) {
+    output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} exceeds the schema comparison depth`);
+    return;
+  }
+  const runtimeSchema = resolve(runtimeValue, runtimeDocument);
+  const sdkSchema = resolve(sdkValue, sdkDocument);
+  if (!runtimeSchema || !sdkSchema) {
+    if (Boolean(runtimeSchema) !== Boolean(sdkSchema)) {
+      output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} has no matching schema`);
+    }
+    return;
+  }
+  // An empty runtime schema makes no field-level assertion. Route/status/media
+  // parity is still enforced, but there is no canonical field contract to
+  // compare until Middleware publishes one.
+  if (Object.keys(runtimeSchema).length === 0) return;
+
+  const runtimeRequired = schemaRequired(runtimeSchema, runtimeDocument);
+  const sdkRequired = schemaRequired(sdkSchema, sdkDocument);
+  for (const property of sdkRequired) {
+    if (!runtimeRequired.has(property)) {
+      output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} does not guarantee SDK property ${property}`);
+    }
+  }
+
+  for (const semantic of ["type", "format"]) {
+    const runtimeSet = semanticValues(runtimeSchema, runtimeDocument, semantic);
+    const sdkSet = semanticValues(sdkSchema, sdkDocument, semantic);
+    if (runtimeSet.size || sdkSet.size) {
+      if (JSON.stringify([...runtimeSet].sort()) !== JSON.stringify([...sdkSet].sort())) {
+        output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} ${semantic} differs between runtime and SDK`);
+      }
+    }
+  }
+  for (const constraint of [
+    "enum", "const", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+    "multipleOf", "minLength", "maxLength", "pattern", "minItems", "maxItems",
+    "uniqueItems", "minProperties", "maxProperties",
+  ]) {
+    if (
+      Object.hasOwn(runtimeSchema, constraint) || Object.hasOwn(sdkSchema, constraint)
+    ) {
+      const runtimeConstraint = constraint === "enum"
+        ? [...(runtimeSchema[constraint] ?? [])].sort()
+        : runtimeSchema[constraint];
+      const sdkConstraint = constraint === "enum"
+        ? [...(sdkSchema[constraint] ?? [])].sort()
+        : sdkSchema[constraint];
+      if (JSON.stringify(runtimeConstraint) !== JSON.stringify(sdkConstraint)) {
+        output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} ${constraint} differs between runtime and SDK`);
+      }
+    }
+  }
+
+  const runtimeProperties = schemaProperties(runtimeSchema, runtimeDocument);
+  const sdkProperties = schemaProperties(sdkSchema, sdkDocument);
+  for (const [property, sdkProperty] of Object.entries(sdkProperties)) {
+    const runtimeProperty = runtimeProperties[property];
+    if (!runtimeProperty) {
+      output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} SDK property ${property} is absent at runtime`);
+      continue;
+    }
+    compareResponseSchema(
+      `${location}.${property}`,
+      runtimeProperty,
+      runtimeDocument,
+      sdkProperty,
+      sdkDocument,
+      output,
+      depth + 1,
+    );
+  }
+  const runtimeItems = schemaItems(runtimeSchema, runtimeDocument);
+  const sdkItems = schemaItems(sdkSchema, sdkDocument);
+  if (sdkItems || runtimeItems) {
+    compareResponseSchema(
+      `${location}[]`,
+      runtimeItems,
+      runtimeDocument,
+      sdkItems,
+      sdkDocument,
+      output,
+      depth + 1,
+    );
+  }
+}
+
+function semanticValues(value, document, field) {
+  const schema = resolve(value, document) ?? {};
+  const values = new Set();
+  const direct = schema[field];
+  for (const item of Array.isArray(direct) ? direct : direct === undefined ? [] : [direct]) {
+    values.add(JSON.stringify(item));
+  }
+  for (const branch of [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])]) {
+    for (const item of semanticValues(branch, document, field)) values.add(item);
+  }
+  for (const branch of schema.allOf ?? []) {
+    for (const item of semanticValues(branch, document, field)) values.add(item);
+  }
+  return values;
+}
+
+function schemaFragments(value, document, seen = new Set()) {
+  const schema = resolve(value, document) ?? {};
+  if (seen.has(schema)) return [];
+  const nextSeen = new Set(seen).add(schema);
+  return [schema, ...(schema.allOf ?? []).flatMap((branch) => schemaFragments(branch, document, nextSeen))];
+}
+
+function schemaProperties(value, document) {
+  return Object.assign({}, ...schemaFragments(value, document).map((schema) => schema.properties ?? {}));
+}
+
+function schemaRequired(value, document) {
+  return new Set(schemaFragments(value, document).flatMap((schema) => schema.required ?? []));
+}
+
+function schemaItems(value, document) {
+  return schemaFragments(value, document).map((schema) => schema.items).find(Boolean);
 }
 
 function parameterMap(parameters, document) {
