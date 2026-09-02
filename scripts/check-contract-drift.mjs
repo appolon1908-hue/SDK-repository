@@ -342,7 +342,9 @@ function compareSchema(path, before, after, output, file) {
   if (!before || !after || typeof before !== "object" || typeof after !== "object") return;
 
   if (before.type !== undefined && after.type !== undefined && !typesEquivalent(before.type, after.type)) {
-    output.push(`[${file}] type changed at ${path}: ${JSON.stringify(before.type)} -> ${JSON.stringify(after.type)}`);
+    if (!isPinnedRuntimeNullabilityCorrection(before, after)) {
+      output.push(`[${file}] type changed at ${path}: ${JSON.stringify(before.type)} -> ${JSON.stringify(after.type)}`);
+    }
   }
   if (before.format !== undefined && after.format !== undefined && before.format !== after.format) {
     output.push(`[${file}] format changed at ${path}: ${before.format} -> ${after.format}`);
@@ -381,6 +383,21 @@ function compareSchema(path, before, after, output, file) {
   compareAlternatives(path, "anyOf", before.anyOf, after.anyOf, output, file);
 
   if (before.items && after.items) compareSchema(`${path}[]`, before.items, after.items, output, file);
+}
+
+function isPinnedRuntimeNullabilityCorrection(before, after) {
+  const authoritySha = after["x-codestra-corrects-runtime-nullability"];
+  if (!/^[0-9a-f]{40}$/u.test(authoritySha ?? "")) return false;
+  const authority = JSON.parse(readFileSyncOrThrow("contracts/middleware-runtime-current.source.json"));
+  if (authority.source_sha !== authoritySha) return false;
+  const beforeTypes = Array.isArray(before.type) ? before.type : [before.type];
+  const afterTypes = Array.isArray(after.type) ? after.type : [after.type];
+  return (
+    !beforeTypes.includes("null") &&
+    afterTypes.includes("null") &&
+    beforeTypes.every((type) => afterTypes.includes(type)) &&
+    afterTypes.every((type) => type === "null" || beforeTypes.includes(type))
+  );
 }
 
 /**

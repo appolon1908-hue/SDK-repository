@@ -196,6 +196,15 @@ components:
         state:
           type: string
           enum:
+            - persisted
+            - queued
+            - dispatching
+            - accepted
+            - readback_pending
+            - completed
+            - failed
+            - reconciliation_required
+            - dead_lettered
             - RECEIVED
             - QUEUED
             - SUBMITTED
