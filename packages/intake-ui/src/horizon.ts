@@ -1,93 +1,81 @@
 /**
- * Horizon UI is the framework-neutral presentation contract for Codestra-owned
- * websites, portals and operator applications. It deliberately contains no API
- * client, authentication logic or mutation path.
+ * @deprecated Horizon was the pre-release name for Codestra Orbit. New code
+ * must import `@codestra/intake-ui/orbit`. This compatibility module preserves
+ * the original helper names while applying the canonical Orbit shell.
  */
 
-export const HORIZON_CONTRACT_VERSION = "1.0.0" as const;
+import {
+  ORBIT_COLORS,
+  ORBIT_CONTRACT_VERSION,
+  applyOrbitShell,
+  removeOrbitShell,
+  type OrbitAttributeTarget,
+  type OrbitBrand,
+} from "./orbit.js";
+
+export const HORIZON_CONTRACT_VERSION = ORBIT_CONTRACT_VERSION;
+
+const compatibilityTheme = (
+  label: string,
+  description: string,
+) => ({
+  label,
+  accent: ORBIT_COLORS.textMain,
+  accentStrong: ORBIT_COLORS.actionPrimaryHover,
+  accentRgb: "255 255 255",
+  description,
+});
 
 export const HORIZON_THEMES = {
-  neutral: {
-    label: "Neutral",
-    accent: "#D9DEE6",
-    accentStrong: "#596575",
-    accentRgb: "217 222 230",
-    description: "Unbranded platform, infrastructure and internal tooling surfaces.",
-  },
-  codestra: {
-    label: "Codestra",
-    accent: "#8EA5FF",
-    accentStrong: "#435CC7",
-    accentRgb: "142 165 255",
-    description: "Codestra corporate, AI, marketing and communications products.",
-  },
-  breero: {
-    label: "Breero",
-    accent: "#FFB36B",
-    accentStrong: "#944300",
-    accentRgb: "255 179 107",
-    description: "Friendly, trustworthy marketplace and service-booking experiences.",
-  },
-  beyvra: {
-    label: "Beyvra",
-    accent: "#7DD3FC",
-    accentStrong: "#00688F",
-    accentRgb: "125 211 252",
-    description: "Trading and financial-market experiences; gains and losses retain semantic colors.",
-  },
-  moneybee: {
-    label: "MoneyBee",
-    accent: "#F8D16A",
-    accentStrong: "#735B00",
-    accentRgb: "248 209 106",
-    description: "Loan, application, servicing and financial-wellness experiences.",
-  },
-  larim: {
-    label: "LARIM-A",
-    accent: "#C4A7FF",
-    accentStrong: "#6848A8",
-    accentRgb: "196 167 255",
-    description: "LARIM-A customer and operator applications.",
-  },
-  transport: {
-    label: "Transportation",
-    accent: "#67E8C2",
-    accentStrong: "#00765A",
-    accentRgb: "103 232 194",
-    description: "Shipper, carrier, freight and operations applications.",
-  },
-  telnexa: {
-    label: "Telnexa",
-    accent: "#70B7FF",
-    accentStrong: "#005FA8",
-    accentRgb: "112 183 255",
-    description: "Telephony, messaging and communications experiences.",
-  },
-  klyrow: {
-    label: "Klyrow",
-    accent: "#F0A6FF",
-    accentStrong: "#8A3C90",
-    accentRgb: "240 166 255",
-    description: "Email, delivery and communications-platform experiences.",
-  },
-  social: {
-    label: "Codestra Social",
-    accent: "#FF9F9F",
-    accentStrong: "#A23E4D",
-    accentRgb: "255 159 159",
-    description: "Social publishing, campaign and collaboration experiences.",
-  },
+  neutral: compatibilityTheme(
+    "Neutral",
+    "Neutral Orbit presentation for infrastructure and internal tools.",
+  ),
+  codestra: compatibilityTheme(
+    "Codestra",
+    "Codestra corporate products using the shared Orbit interaction palette.",
+  ),
+  breero: compatibilityTheme(
+    "Breero",
+    "Breero identity expressed through approved Brand API assets and copy.",
+  ),
+  beyvra: compatibilityTheme(
+    "Beyvra",
+    "Beyvra identity with semantic financial states preserved by the backend.",
+  ),
+  moneybee: compatibilityTheme(
+    "MoneyBee",
+    "MoneyBee identity expressed through approved Brand API assets and copy.",
+  ),
+  larim: compatibilityTheme(
+    "LARIM-A",
+    "LARIM-A identity expressed through approved Brand API assets and copy.",
+  ),
+  transport: compatibilityTheme(
+    "Transportation",
+    "Freight identity expressed through approved Brand API assets and copy.",
+  ),
+  telnexa: compatibilityTheme(
+    "Telnexa",
+    "Telnexa identity expressed through approved Brand API assets and copy.",
+  ),
+  klyrow: compatibilityTheme(
+    "Klyrow",
+    "Klyrow identity expressed through approved Brand API assets and copy.",
+  ),
+  social: compatibilityTheme(
+    "Codestra Social",
+    "Social identity expressed through approved Brand API assets and copy.",
+  ),
 } as const;
 
 export type HorizonThemeName = keyof typeof HORIZON_THEMES;
-
 export const HORIZON_THEME_NAMES = Object.freeze(
   Object.keys(HORIZON_THEMES) as HorizonThemeName[],
 );
 
 export const HORIZON_APPEARANCES = ["dark", "light", "system"] as const;
 export type HorizonAppearance = (typeof HORIZON_APPEARANCES)[number];
-
 export const HORIZON_DEFAULT_THEME: HorizonThemeName = "codestra";
 export const HORIZON_DEFAULT_APPEARANCE: HorizonAppearance = "dark";
 
@@ -96,26 +84,26 @@ export const HORIZON_BREAKPOINTS = Object.freeze({
   tablet: 768,
   desktop: 1024,
   wide: 1280,
-  ultra: 1536,
+  ultra: 1440,
 });
 
 export const HORIZON_LAYOUT = Object.freeze({
   appRailPx: 272,
-  contentMaxPx: 1200,
+  contentMaxPx: 1280,
   canvasMaxPx: 1440,
-  headerDesktopPx: 72,
-  headerCompactPx: 64,
-  controlSmPx: 36,
-  controlMdPx: 44,
+  headerDesktopPx: 76,
+  headerCompactPx: 56,
+  controlSmPx: 44,
+  controlMdPx: 52,
   controlLgPx: 52,
 });
 
 export const HORIZON_MOTION = Object.freeze({
   fastMs: 120,
-  standardMs: 200,
-  deliberateMs: 360,
+  standardMs: 180,
+  deliberateMs: 180,
   standardEasing: "cubic-bezier(0.2, 0, 0, 1)",
-  emphasizedEasing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+  emphasizedEasing: "cubic-bezier(0.2, 0, 0, 1)",
 });
 
 export const HORIZON_DATA_ATTRIBUTES = Object.freeze({
@@ -135,10 +123,7 @@ export interface HorizonThemeAttributes {
   "data-horizon-appearance": HorizonAppearance;
 }
 
-export interface HorizonAttributeTarget {
-  setAttribute(name: string, value: string): void;
-  removeAttribute(name: string): void;
-}
+export type HorizonAttributeTarget = OrbitAttributeTarget;
 
 export function isHorizonTheme(value: unknown): value is HorizonThemeName {
   return (
@@ -147,14 +132,18 @@ export function isHorizonTheme(value: unknown): value is HorizonThemeName {
   );
 }
 
-export function isHorizonAppearance(value: unknown): value is HorizonAppearance {
+export function isHorizonAppearance(
+  value: unknown,
+): value is HorizonAppearance {
   return (
     typeof value === "string" &&
     (HORIZON_APPEARANCES as readonly string[]).includes(value)
   );
 }
 
-export function resolveHorizonTheme(value?: string | null): HorizonThemeName {
+export function resolveHorizonTheme(
+  value?: string | null,
+): HorizonThemeName {
   return isHorizonTheme(value) ? value : HORIZON_DEFAULT_THEME;
 }
 
@@ -174,10 +163,11 @@ export function getHorizonThemeAttributes(
   };
 }
 
-/**
- * Applies the Horizon contract to an HTML element or any compatible adapter.
- * The returned values are the normalized attributes that were applied.
- */
+function orbitBrandFor(theme: HorizonThemeName): OrbitBrand {
+  if (theme === "transport") return "transportation";
+  return theme;
+}
+
 export function applyHorizonTheme(
   target: HorizonAttributeTarget,
   options: HorizonThemeOptions = {},
@@ -189,12 +179,20 @@ export function applyHorizonTheme(
     HORIZON_DATA_ATTRIBUTES.appearance,
     attributes["data-horizon-appearance"],
   );
+  applyOrbitShell(target, {
+    brand: orbitBrandFor(attributes["data-horizon-theme"]),
+    headerVariant: "standard",
+    footerVariant: "full",
+    socialAllowed: true,
+  });
   return attributes;
 }
 
-/** Removes only Horizon-owned root attributes; it does not touch application data. */
 export function removeHorizonTheme(target: HorizonAttributeTarget): void {
   target.removeAttribute(HORIZON_DATA_ATTRIBUTES.root);
   target.removeAttribute(HORIZON_DATA_ATTRIBUTES.theme);
   target.removeAttribute(HORIZON_DATA_ATTRIBUTES.appearance);
+  removeOrbitShell(target);
 }
+
+export * from "./orbit.js";
