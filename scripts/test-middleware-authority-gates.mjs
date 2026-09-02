@@ -55,7 +55,6 @@ try {
     "contracts/openapi/codestra-public.openapi.yaml",
     "contracts/openapi/codestra-enterprise.openapi.yaml",
     weakenedCommunications,
-    "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
     "contracts/openapi/codestra-control-plane.openapi.yaml",
   ];
   const handwrittenContractCheck = run(

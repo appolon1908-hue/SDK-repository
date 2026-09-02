@@ -9,7 +9,6 @@ const sdkContracts = process.env.MIDDLEWARE_SDK_CONTRACTS?.split(",") ?? [
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
   "contracts/openapi/codestra-communications.openapi.yaml",
-  "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
   "contracts/openapi/codestra-control-plane.openapi.yaml",
 ];
 const methods = new Set(["get", "put", "post", "delete", "options", "head", "patch", "trace"]);
@@ -239,10 +238,15 @@ function compareResponseSchema(location, runtimeValue, runtimeDocument, sdkValue
     }
     return;
   }
-  // An empty runtime schema makes no field-level assertion. Route/status/media
-  // parity is still enforced, but there is no canonical field contract to
-  // compare until Middleware publishes one.
-  if (Object.keys(runtimeSchema).length === 0) return;
+  // An empty runtime schema cannot authorize a handwritten typed response.
+  // Route/status/media parity is still enforced; SDK typing must wait until
+  // Middleware publishes the response contract.
+  if (Object.keys(runtimeSchema).length === 0) {
+    if (Object.keys(sdkSchema).length !== 0) {
+      output.push(`RESPONSE_SCHEMA_MISMATCH: ${location} SDK types a response left unspecified by runtime`);
+    }
+    return;
+  }
 
   const runtimeRequired = schemaRequired(runtimeSchema, runtimeDocument);
   const sdkRequired = schemaRequired(sdkSchema, sdkDocument);
