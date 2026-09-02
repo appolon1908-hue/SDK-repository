@@ -1,15 +1,17 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const [sourcePath] = process.argv.slice(2);
 if (!sourcePath) {
-  console.error("Usage: node scripts/import-middleware-runtime-contract.mjs <openapi-json>");
+  console.error("Usage: node scripts/import-middleware-runtime-contract.mjs <path-inside-middleware-checkout>");
   process.exit(2);
 }
 
-const authority = JSON.parse(await readFile("contracts/middleware-runtime-current.source.json", "utf8"));
+const authorityPath = process.env.MIDDLEWARE_RUNTIME_AUTHORITY ?? "contracts/middleware-runtime-current.source.json";
+const outputPath = process.env.MIDDLEWARE_RUNTIME_CONTRACT ?? "contracts/middleware-runtime-current.openapi.json";
+const authority = JSON.parse(await readFile(authorityPath, "utf8"));
 const sourceRepository = git(["-C", dirname(sourcePath), "rev-parse", "--show-toplevel"]);
 const sourceRevision = git(["-C", sourceRepository, "rev-parse", "HEAD"]);
 const sourceRemote = git(["-C", sourceRepository, "remote", "get-url", "origin"])
@@ -21,7 +23,11 @@ if (sourceRevision !== authority.source_sha) {
 if (sourceRemote !== authority.repository) {
   throw new Error(`Source checkout repository is ${sourceRemote}; expected ${authority.repository}.`);
 }
-const raw = await readFile(sourcePath, "utf8");
+const configuredSource = resolve(sourceRepository, authority.source_path);
+if (!configuredSource.startsWith(`${resolve(sourceRepository)}/`)) {
+  throw new Error("Configured Middleware source path escapes the source repository.");
+}
+const raw = git(["-C", sourceRepository, "show", `${authority.source_sha}:${authority.source_path}`]);
 const document = JSON.parse(raw);
 
 if (document.openapi !== "3.1.0") throw new Error("Canonical Middleware contract must use OpenAPI 3.1.0.");
@@ -44,7 +50,7 @@ document["x-codestra-source-authority"] = {
   source_sha256: createHash("sha256").update(canonicalBytes).digest("hex"),
 };
 
-await writeFile("contracts/middleware-runtime-current.openapi.json", `${JSON.stringify(document, null, 2)}\n`);
+await writeFile(outputPath, `${JSON.stringify(document, null, 2)}\n`);
 console.log(`Imported ${operationCount} Middleware operations from ${authority.source_sha}.`);
 
 function git(args) {
