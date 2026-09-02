@@ -2,4 +2,4 @@
 "@codestra/intake-ui": minor
 ---
 
-Introduce the Horizon visual contract, product themes, responsive application and marketing primitives, accessibility defaults, reference dashboard, and repository adoption plan through the existing framework-neutral UI package.
+Introduce Codestra Orbit V2 as the canonical black, white, and charcoal corporate shell; add exact color and geometry tokens, authentication and API-driven social-footer primitives, dynamic content and Asset API contracts, OpenAPI and JSON schemas, repository adoption validation, and a temporary Horizon compatibility alias.
