@@ -190,6 +190,7 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
   }
   for (const [key, currentParam] of currentParams) {
     if (!baseParams.has(key) && currentParam.required) {
+      if (isTenantBindingCorrection(currentParam, baseParameters)) continue;
       output.push(`[${file}] new required parameter ${key} on ${label}`);
     }
   }
@@ -240,6 +241,15 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
   for (const scheme of baseSchemes) {
     if (!currentSchemes.has(scheme)) output.push(`[${file}] ${label} removed previously allowed security scheme alternative: ${scheme}`);
   }
+}
+
+function isTenantBindingCorrection(parameter, baseParameters) {
+  if (parameter.in !== "header" || String(parameter.name).toLowerCase() !== "x-tenant-id") return false;
+  return baseParameters.some((candidate) =>
+    candidate.in === "path"
+    && candidate.required === true
+    && ["tenantid", "tenant_id"].includes(String(candidate.name).toLowerCase()),
+  );
 }
 
 function diffAsyncApi(file, base, current, output) {
