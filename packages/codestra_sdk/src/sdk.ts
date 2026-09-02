@@ -622,11 +622,11 @@ async function parseHttpError(response: Response, fallbackRequestId: string): Pr
 function errorType(code: string, status: number): typeof CodestraSdkHttpError {
   if (status === 401 || ["AUTHENTICATION_REQUIRED", "TOKEN_INVALID", "TOKEN_EXPIRED", "AUDIENCE_INVALID"].includes(code)) return AuthenticationError;
   if (code === "TENANT_ACCESS_DENIED") return TenantAccessError;
+  if (code === "CAPABILITY_DISABLED") return CapabilityDisabledError;
   if (status === 403 || code === "SCOPE_DENIED") return AuthorizationError;
   if (code === "IDEMPOTENCY_CONFLICT") return IdempotencyConflictError;
   if (status === 429 || code === "RATE_LIMITED") return RateLimitError;
   if (["UNKNOWN_OUTCOME", "UNKNOWN_PROVIDER_OUTCOME"].includes(code)) return UnknownOutcomeError;
-  if (code === "CAPABILITY_DISABLED") return CapabilityDisabledError;
   return CodestraSdkHttpError;
 }
 
