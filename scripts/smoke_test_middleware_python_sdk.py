@@ -51,7 +51,7 @@ def main() -> None:
         "correlation_id": correlation_id,
         "idempotency_key": idempotency_key,
         "capability": "ODOO_WRITE",
-        "state": "completed",
+        "state": "COMPLETED",
         "provider_operation_id": "odoo:123",
         "last_error": None,
         "created_at": "2026-08-29T00:00:00Z",
@@ -162,9 +162,9 @@ def main() -> None:
             fail(f"command body did not serialize correctly: {body!r}")
         if body.get("tenant_id") != tenant_id or body.get("capability") != "ODOO_WRITE":
             fail(f"command authority fields did not serialize correctly: {body!r}")
-        if str(submitted.command_id) != str(command_id) or state_value(submitted.state) != "completed":
+        if str(submitted.command_id) != str(command_id) or state_value(submitted.state) != "COMPLETED":
             fail(f"submitted operation did not deserialize correctly: {submitted!r}")
-        if str(fetched.command_id) != str(command_id) or state_value(fetched.state) != "completed":
+        if str(fetched.command_id) != str(command_id) or state_value(fetched.state) != "COMPLETED":
             fail(f"operation read-back did not deserialize correctly: {fetched!r}")
 
         print(
