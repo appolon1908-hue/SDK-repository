@@ -51,7 +51,7 @@ console.log(`Generated ${Object.keys(paths).length} approved Middleware SDK path
 
 function isApprovedClientPath(path) {
   if (["/health", "/readiness", "/version", "/dependencies", "/capabilities"].includes(path)) return true;
-  if (/^\/v1\/operations(?:\/\{[^}]+\}\/(?:cancel|reconcile))?$/u.test(path)) return true;
+  if (/^\/v1\/operations(?:\/\{[^}]+\}(?:\/(?:cancel|reconcile))?)?$/u.test(path)) return true;
   if ([
     "/v1/communications/messages",
     "/v1/communications/messages/{messageId}",

@@ -88,15 +88,17 @@ const requiredSdkOperations = new Set([
   "POST /v1/integrations/n8n/operations/{operation_id}/reconcile",
 ].map((entry) => entry.replace(/ (\/.*)$/u, (_, path) => ` ${normalizePath(path)}`)));
 
+const generatedClientOperations = operationMap(generatedClientDocument ?? {});
 for (const key of requiredSdkOperations) {
   if (!sdkOperations.has(key)) failures.push(`SDK_ROUTE_MISSING: ${key}`);
   if (!runtimeOperations.has(key)) failures.push(`RUNTIME_ROUTE_MISSING: ${key}`);
+  if (!generatedClientOperations.has(key)) failures.push(`SDK_GENERATED_ROUTE_MISSING: ${key}`);
 }
 
 if (JSON.stringify(generatedClientDocument?.["x-codestra-generated-from"]) !== JSON.stringify(embedded)) {
   failures.push("SDK generated client contract authority does not match the pinned runtime snapshot");
 }
-for (const key of operationMap(generatedClientDocument ?? {}).keys()) {
+for (const key of generatedClientOperations.keys()) {
   if (!requiredSdkOperations.has(key)) failures.push(`SDK_PRIVATE_ROUTE_EXPOSED: ${key}`);
 }
 
