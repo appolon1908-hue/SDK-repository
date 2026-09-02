@@ -107,6 +107,17 @@ describe("codestra_sdk facade", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("accepts contract-valid UUID versions beyond the legacy v1-v5 range", async () => {
+    const operationId = "01890f47-7a5b-7cc1-9d21-8cb3e8f2c001";
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(200, { operation_id: operationId, state: "QUEUED" }),
+    );
+    const sdk = testSdk(fetchMock);
+
+    await sdk.operations.get(operationId);
+    expect(pathname(fetchMock, 0)).toBe(`/v1/operations/${operationId}`);
+  });
+
   it("preserves unknown outcomes as a typed read-back-required error", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
       jsonResponse(409, {
