@@ -149,6 +149,16 @@ const cases = [
       ),
     expectedSubstring: "removed previously allowed security scheme alternative",
   },
+  {
+    name: "a runtime-nullability correction cannot cite an unpinned authority",
+    file: "contracts/openapi/codestra-communications.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        messageId: { type: string, format: uuid }\n        tenantId: { type: string }",
+        "        messageId: { type: string, format: uuid }\n        tenantId:\n          type: [string, 'null']\n          x-codestra-corrects-runtime-nullability: 0000000000000000000000000000000000000000",
+      ),
+    expectedSubstring: "type changed",
+  },
 ];
 
 const failures = [];

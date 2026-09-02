@@ -872,7 +872,9 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/CommunicationMessage' }
-        nextCursor: { type: [string, 'null'] }
+        nextCursor:
+          type: [string, 'null']
+          x-codestra-corrects-runtime-nullability: 4357fa8030b5f7879766436049a92c6eeb135617
     MessageEvent:
       type: object
       additionalProperties: false
@@ -896,7 +898,9 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/MessageEvent' }
-        nextCursor: { type: [string, 'null'] }
+        nextCursor:
+          type: [string, 'null']
+          x-codestra-corrects-runtime-nullability: 4357fa8030b5f7879766436049a92c6eeb135617
     TemplateWrite:
       type: object
       additionalProperties: false
@@ -1097,12 +1101,18 @@ components:
       additionalProperties: false
       required: [status, checkedAt, providers]
       properties:
-        status: { type: string }
+        status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
         checkedAt: { type: string, format: date-time }
         providers:
           type: array
           items:
             type: object
+            additionalProperties: false
+            properties:
+              provider: { type: string }
+              channel: { $ref: '#/components/schemas/CommunicationChannel' }
+              status: { type: string, enum: [healthy, degraded, unavailable, disabled] }
+              reason: { type: [string, 'null'] }
     UsageReport:
       type: object
       additionalProperties: false
@@ -1114,21 +1124,43 @@ components:
           type: array
           items:
             type: object
+            additionalProperties: false
+            properties:
+              channel: { $ref: '#/components/schemas/CommunicationChannel' }
+              accepted: { type: integer, minimum: 0 }
+              delivered: { type: integer, minimum: 0 }
+              failed: { type: integer, minimum: 0 }
+              suppressed: { type: integer, minimum: 0 }
+              costMinorUnits: { type: integer, minimum: 0 }
+              currency: { type: string, minLength: 3, maxLength: 3 }
     ReputationReport:
       type: object
       additionalProperties: false
       required: [status, checkedAt, domains, providers]
       properties:
-        status: { type: string }
+        status: { type: string, enum: [good, watch, limited, suspended] }
         checkedAt: { type: string, format: date-time }
         domains:
           type: array
           items:
             type: object
+            additionalProperties: false
+            properties:
+              domain: { type: string }
+              status: { type: string, enum: [good, watch, limited, suspended] }
+              dkim: { $ref: '#/components/schemas/VerificationState' }
+              spf: { $ref: '#/components/schemas/VerificationState' }
+              dmarc: { $ref: '#/components/schemas/VerificationState' }
         providers:
           type: array
           items:
             type: object
+            additionalProperties: false
+            properties:
+              provider: { type: string }
+              channel: { $ref: '#/components/schemas/CommunicationChannel' }
+              status: { type: string, enum: [good, watch, limited, suspended] }
+              queueDepth: { type: integer, minimum: 0 }
     ErrorResponse:
       type: object
       additionalProperties: false
