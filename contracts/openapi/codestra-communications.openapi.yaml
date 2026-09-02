@@ -127,6 +127,11 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateMessageRequest' }
       responses:
+        '200':
+          description: Message accepted by the canonical Middleware runtime
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
         '202':
           description: Message accepted for governed asynchronous processing
           content:
@@ -167,6 +172,11 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/MessageId'
       responses:
+        '200':
+          description: Cancellation accepted by the canonical Middleware runtime
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
         '202':
           description: Cancellation accepted
           content:

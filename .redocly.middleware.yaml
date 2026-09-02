@@ -1,0 +1,10 @@
+extends:
+  - recommended
+
+# The generated Middleware contract deliberately leaves its deployment server
+# out and marks public liveness operations with an empty security array. This
+# evidence file must remain byte-equivalent to its source commit, so those two
+# deployment-policy rules are disabled only for this separate lint invocation.
+rules:
+  no-empty-servers: off
+  security-defined: off

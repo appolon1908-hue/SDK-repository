@@ -7,6 +7,12 @@ import { parse } from "yaml";
 const definitions = [
   {
     kind: "openapi",
+    path: "contracts/middleware-runtime-current.openapi.json",
+    expectedVersion: "3.1.0",
+    externalEvidence: true,
+  },
+  {
+    kind: "openapi",
     path: "contracts/openapi/codestra-public.openapi.yaml",
     expectedVersion: "3.1.0",
   },
@@ -84,7 +90,7 @@ const operationIds = new Map();
 for (const definition of definitions.filter((entry) => entry.kind === "openapi")) {
   const document = documents.get(definition.path);
   if (!document) continue;
-  validateOpenApi(definition.path, document, operationIds, failures);
+  validateOpenApi(definition.path, document, definition.externalEvidence ? new Map() : operationIds, failures, definition.externalEvidence === true);
 }
 
 const asyncApi = documents.get("contracts/asyncapi/codestra-events.asyncapi.yaml");
@@ -111,7 +117,9 @@ try {
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "codestra-contracts-"));
 try {
   for (const definition of definitions) {
-    const lint = runRedocly(["lint", definition.path, "--format=stylish"]);
+    const lintArgs = ["lint", definition.path, "--format=stylish"];
+    if (definition.externalEvidence) lintArgs.push("--config", ".redocly.middleware.yaml");
+    const lint = runRedocly(lintArgs);
     if (lint.status !== 0) {
       failures.push(`${definition.path}: Redocly semantic lint failed\n${formatProcess(lint)}`);
       continue;
@@ -150,20 +158,20 @@ if (failures.length > 0) {
 
 console.log("OpenAPI, AsyncAPI, JSON Schema, reference, and governance validation passed.");
 
-function validateOpenApi(path, document, ids, output) {
+function validateOpenApi(path, document, ids, output, externalEvidence = false) {
   if (!isObject(document.info) || typeof document.info.title !== "string" || typeof document.info.version !== "string") {
     output.push(`${path}: info.title and info.version are required`);
   }
-  if (!Array.isArray(document.servers) || document.servers.length === 0) {
+  if (!externalEvidence && (!Array.isArray(document.servers) || document.servers.length === 0)) {
     output.push(`${path}: at least one server is required`);
-  } else {
+  } else if (Array.isArray(document.servers)) {
     for (const server of document.servers) {
       if (!isObject(server) || typeof server.url !== "string" || !server.url.startsWith("https://")) {
         output.push(`${path}: every server URL must be absolute HTTPS`);
       }
     }
   }
-  if (!Array.isArray(document.security) || document.security.length === 0) {
+  if (!externalEvidence && (!Array.isArray(document.security) || document.security.length === 0)) {
     output.push(`${path}: root security requirements are required`);
   }
   if (!isObject(document.paths)) {

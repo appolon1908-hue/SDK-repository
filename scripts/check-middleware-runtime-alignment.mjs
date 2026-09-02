@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { parse } from "yaml";
 
-const runtimePath = "contracts/middleware-runtime-current.openapi.json";
-const authorityPath = "contracts/middleware-runtime-current.source.json";
+const runtimePath = process.env.MIDDLEWARE_RUNTIME_CONTRACT ?? "contracts/middleware-runtime-current.openapi.json";
+const authorityPath = process.env.MIDDLEWARE_RUNTIME_AUTHORITY ?? "contracts/middleware-runtime-current.source.json";
 const sdkContracts = [
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
@@ -31,15 +31,17 @@ const canonicalDigest = createHash("sha256").update(canonicalBytes).digest("hex"
 if (embedded?.source_sha256 !== canonicalDigest) failures.push("runtime snapshot content digest does not match the pinned source digest");
 
 const runtimeOperations = operationMap(runtime);
-const sdkOperations = new Map(
-  [...operationMap(runtime)].map(([key, operation]) => [key, { ...operation, file: runtimePath }]),
-);
+const declaredSdkOperations = new Map();
 for (const file of sdkContracts) {
   const document = parse(await readFile(file, "utf8"));
   for (const [key, operation] of operationMap(document)) {
-    if (!sdkOperations.has(key)) sdkOperations.set(key, { ...operation, file });
+    if (!declaredSdkOperations.has(key)) declaredSdkOperations.set(key, { ...operation, file, document });
   }
 }
+const sdkOperations = new Map([
+  ...[...operationMap(runtime)].map(([key, operation]) => [key, { ...operation, file: runtimePath, document: runtime }]),
+  ...declaredSdkOperations,
+]);
 
 // Contracts in this list are asserted to describe the canonical Middleware
 // runtime. Provider gateway contracts are deliberately excluded: they are
@@ -71,6 +73,7 @@ const requiredSdkOperations = new Set([
   "GET /v1/operations-dashboard/queues",
   "GET /v1/operations-dashboard/release-gates",
   "GET /v1/operations-dashboard/canaries",
+  "GET /v1/operations-dashboard/tenants/{tenant_id}",
   ...["marketing", "ai", "crm", "odoo", "social", "telephony"].flatMap((domain) => [
     `POST /v1/${domain}/commands`,
     `GET /v1/${domain}/operations`,
@@ -88,6 +91,12 @@ const requiredSdkOperations = new Set([
 for (const key of requiredSdkOperations) {
   if (!sdkOperations.has(key)) failures.push(`SDK_ROUTE_MISSING: ${key}`);
   if (!runtimeOperations.has(key)) failures.push(`RUNTIME_ROUTE_MISSING: ${key}`);
+}
+
+for (const [key, sdk] of declaredSdkOperations) {
+  const runtimeOperation = runtimeOperations.get(key);
+  if (!runtimeOperation) continue;
+  compareOperation(key, runtimeOperation, runtime, sdk, sdk.document, failures);
 }
 
 if (failures.length) {
@@ -108,4 +117,65 @@ function operationMap(document) {
 
 function normalizePath(path) {
   return path.replace(/\{[^}]+\}/gu, "{}");
+}
+
+function compareOperation(key, runtimeOperation, runtimeDocument, sdkOperation, sdkDocument, output) {
+  const runtimeParameters = parameterMap(runtimeOperation.parameters ?? [], runtimeDocument);
+  const sdkParameters = parameterMap(sdkOperation.parameters ?? [], sdkDocument);
+  for (const [parameterKey, parameter] of runtimeParameters) {
+    if (parameter.required && !sdkParameters.get(parameterKey)?.required) {
+      output.push(`HEADER_MISMATCH: ${key} is missing required runtime parameter ${parameterKey}`);
+    }
+  }
+
+  const runtimeBody = resolve(runtimeOperation.requestBody, runtimeDocument);
+  const sdkBody = resolve(sdkOperation.requestBody, sdkDocument);
+  if (runtimeBody?.required && !sdkBody?.required) output.push(`REQUEST_SCHEMA_MISMATCH: ${key} request body must be required`);
+  const runtimeSchema = resolve(runtimeBody?.content?.["application/json"]?.schema, runtimeDocument);
+  const sdkSchema = resolve(sdkBody?.content?.["application/json"]?.schema, sdkDocument);
+  for (const property of runtimeSchema?.required ?? []) {
+    if (!(sdkSchema?.required ?? []).includes(property)) output.push(`REQUEST_SCHEMA_MISMATCH: ${key} omits required property ${property}`);
+  }
+
+  const runtimeSuccess = Object.keys(runtimeOperation.responses ?? {}).filter((status) => /^2/u.test(status));
+  const sdkSuccess = new Set(Object.keys(sdkOperation.responses ?? {}).filter((status) => /^2/u.test(status)));
+  if (!runtimeSuccess.some((status) => sdkSuccess.has(status))) {
+    output.push(`RESPONSE_SCHEMA_MISMATCH: ${key} runtime success ${runtimeSuccess.join("/")} is absent from SDK responses`);
+  }
+
+  const runtimeAuth = authKinds(runtimeOperation.security, runtimeDocument);
+  const sdkAuth = authKinds(sdkOperation.security, sdkDocument);
+  if (runtimeAuth.has("bearer") && !sdkAuth.has("bearer")) output.push(`AUTH_MISMATCH: ${key} does not declare bearer/OIDC authentication`);
+
+  const runtimeErrors = Object.keys(runtimeOperation.responses ?? {}).filter((status) => /^[45]/u.test(status));
+  const sdkHasErrorContract = Object.values(sdkOperation.responses ?? {}).some((response) => {
+    const resolved = resolve(response, sdkDocument);
+    return Object.values(resolved?.content ?? {}).some((media) => JSON.stringify(media).includes("Error"));
+  });
+  if (runtimeErrors.length && !sdkHasErrorContract) output.push(`ERROR_SCHEMA_MISMATCH: ${key} has no typed SDK error contract`);
+}
+
+function parameterMap(parameters, document) {
+  return new Map(parameters.map((entry) => {
+    const parameter = resolve(entry, document);
+    const location = String(parameter?.in).toLowerCase();
+    const name = location === "path" ? "{}" : String(parameter?.name).toLowerCase();
+    return [`${location}:${name}`, parameter];
+  }));
+}
+
+function resolve(value, document) {
+  if (!value?.$ref?.startsWith("#/")) return value;
+  return value.$ref.slice(2).split("/").reduce((current, segment) => current?.[segment.replace(/~1/gu, "/").replace(/~0/gu, "~")], document);
+}
+
+function authKinds(security, document) {
+  const kinds = new Set();
+  for (const requirement of security ?? document.security ?? []) {
+    for (const name of Object.keys(requirement)) {
+      const scheme = document.components?.securitySchemes?.[name];
+      if (scheme?.type === "openIdConnect" || (scheme?.type === "http" && scheme?.scheme === "bearer")) kinds.add("bearer");
+    }
+  }
+  return kinds;
 }

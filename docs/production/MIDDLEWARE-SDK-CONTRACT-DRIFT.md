@@ -21,7 +21,7 @@ SDK routes claimed to target Middleware. Update it only with
 |---|---:|---|
 | SDK_ROUTE_STALE | 19 | Preserved as pre-existing compatibility contracts, but excluded from the canonical Middleware route set because deleting them without a published deprecation window would be a breaking SDK change. They are not staging-certifiable against the pinned Middleware runtime. |
 | VERSION_MISMATCH | 0 | Both authorities use OpenAPI 3.1.0. |
-| HTTP_METHOD_MISMATCH | 0 | The 61 normalized SDK/runtime operations checked by CI use the same methods. |
+| HTTP_METHOD_MISMATCH | 0 | The 62 normalized SDK/runtime operations checked by CI use the same methods. |
 | RUNTIME_ROUTE_MISSING | 0 | Every operation asserted by the Middleware alignment allowlist exists at the pinned runtime SHA. |
 | SDK_ROUTE_MISSING | 0 | Every operation in the current alignment allowlist exists in an SDK OpenAPI document. |
 
@@ -68,7 +68,7 @@ and `/v1/integrations/n8n/commands`, with operation read-back routes.
 
 ## Gate status
 
-`OPENAPI_ALIGNMENT` is PASS for the 61 explicitly checked canonical runtime
+`OPENAPI_ALIGNMENT` is PASS for the 62 explicitly checked canonical runtime
 operations. Whole-SDK production readiness remains blocked until staging
 validates the exact runtime contract and compatibility consumers complete the
 published migration.
