@@ -1,0 +1,43 @@
+name: Codestra Orbit authority
+
+on:
+  pull_request:
+    paths:
+      - "orbit/**"
+      - "scripts/validate-orbit-system.mjs"
+      - "package.json"
+      - ".github/workflows/orbit-system.yml"
+  push:
+    branches: [main, development, staging, production]
+    paths:
+      - "orbit/**"
+      - "scripts/validate-orbit-system.mjs"
+      - "package.json"
+      - ".github/workflows/orbit-system.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Configure Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Validate Orbit authority
+        run: node scripts/validate-orbit-system.mjs
+      - name: Verify package manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for package in orbit/packages/*; do
+            (cd "$package" && npm pack --dry-run --json >/dev/null)
+          done
