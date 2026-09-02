@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "codestra-moneybee-connectors"
+version = "0.1.0"
+description = "Fail-closed server-side connector contracts for MoneyBee and Codestra Middleware"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+dependencies = ["httpx>=0.28,<1", "pydantic>=2.11,<3"]
+
+[project.optional-dependencies]
+test = ["pytest>=9.0.3,<10", "pytest-asyncio>=1.0,<2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/codestra_moneybee_connectors"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
