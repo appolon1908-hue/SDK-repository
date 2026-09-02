@@ -67,10 +67,14 @@ interface InternalRequestOptions extends CodestraRequestOptions {
 
 export interface CanonicalDomainClient {
   submit: (input: CanonicalCommandInput, options: CodestraMutationOptions) => Promise<JsonObject>;
-  list: (options?: OperationListOptions) => Promise<JsonObject>;
+  list: (options?: CodestraRequestOptions) => Promise<JsonObject>;
   get: (operationId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
   cancel: (operationId: UUID, input: OperationMutationInput, options: CodestraMutationOptions) => Promise<JsonObject>;
   reconcile: (operationId: UUID, input: OperationMutationInput, options: CodestraMutationOptions) => Promise<JsonObject>;
+}
+
+export interface CanonicalFilteredDomainClient extends Omit<CanonicalDomainClient, "list"> {
+  list: (options?: OperationListOptions) => Promise<JsonObject>;
 }
 
 export class CodestraSdkError extends Error {
@@ -137,7 +141,7 @@ export class CodestraSdk {
     ai: CanonicalDomainClient;
     crm: CanonicalDomainClient;
     odoo: CanonicalDomainClient;
-    n8n: CanonicalDomainClient;
+    n8n: CanonicalFilteredDomainClient;
     social: CanonicalDomainClient;
     telephony: CanonicalDomainClient;
   };
@@ -295,7 +299,7 @@ export class CodestraSdk {
       ai: this.domainClient("ai"),
       crm: this.domainClient("crm"),
       odoo: this.domainClient("odoo"),
-      n8n: this.domainClient("integrations/n8n"),
+      n8n: this.filteredDomainClient("integrations/n8n"),
       social: this.domainClient("social"),
       telephony: this.domainClient("telephony"),
     };
@@ -439,10 +443,18 @@ export class CodestraSdk {
     const root = `/v1/${domain}`;
     return {
       submit: (input, requestOptions) => this.submitCanonicalCommand(`${root}/commands`, input, requestOptions),
-      list: (requestOptions) => this.request({ method: "GET", path: withQuery(`${root}/operations`, requestOptions), ...copyRequestOptions(requestOptions) }),
+      list: (requestOptions) => this.request({ method: "GET", path: `${root}/operations`, ...copyRequestOptions(requestOptions) }),
       get: (operationId, requestOptions) => this.operationRead(`${root}/operations`, operationId, requestOptions),
       cancel: (operationId, input, requestOptions) => this.operationMutation(`${root}/operations`, operationId, "cancel", input, requestOptions),
       reconcile: (operationId, input, requestOptions) => this.operationMutation(`${root}/operations`, operationId, "reconcile", input, requestOptions),
+    };
+  }
+
+  private filteredDomainClient(domain: string): CanonicalFilteredDomainClient {
+    const client = this.domainClient(domain);
+    return {
+      ...client,
+      list: (requestOptions) => this.request({ method: "GET", path: withQuery(`/v1/${domain}/operations`, requestOptions), ...copyRequestOptions(requestOptions) }),
     };
   }
 

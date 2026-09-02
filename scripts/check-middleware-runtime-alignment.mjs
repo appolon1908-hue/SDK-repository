@@ -157,7 +157,8 @@ function compareOperation(key, runtimeOperation, runtimeDocument, sdkOperation, 
   if (runtimeAuth.has("bearer") && !sdkAuth.has("bearer")) output.push(`AUTH_MISMATCH: ${key} does not declare bearer/OIDC authentication`);
 
   const runtimeErrors = Object.keys(runtimeOperation.responses ?? {}).filter((status) => /^[45]/u.test(status));
-  const sdkHasErrorContract = Object.values(sdkOperation.responses ?? {}).some((response) => {
+  const sdkHasErrorContract = runtimeErrors.some((status) => {
+    const response = sdkOperation.responses?.[status] ?? sdkOperation.responses?.default;
     const resolved = resolve(response, sdkDocument);
     return Object.values(resolved?.content ?? {}).some((media) => {
       const schema = resolve(media?.schema, sdkDocument);
