@@ -1,0 +1,260 @@
+<!doctype html>
+<html
+  lang="en"
+  data-orbit-root
+  data-orbit-brand="codestra"
+  data-orbit-header="auth"
+  data-orbit-footer="auth-compact"
+  data-orbit-social-allowed="true"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Codestra Orbit — Authentication reference</title>
+    <link rel="stylesheet" href="../../packages/intake-ui/styles/orbit/index.css" />
+    <style>
+      .demo-brand {
+        display: inline-flex;
+        min-height: var(--cx-control-compact);
+        align-items: center;
+        gap: var(--cx-space-3);
+        color: var(--cx-text-main);
+        font-size: var(--cx-font-size-sm);
+        font-weight: 600;
+        letter-spacing: var(--cx-letter-label);
+        text-decoration: none;
+      }
+
+      .demo-brand__mark {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-content: center;
+        border: 1px solid var(--cx-border-strong);
+        border-radius: var(--cx-radius-default);
+        color: var(--cx-text-main);
+        font-size: var(--cx-font-size-xs);
+      }
+
+      .demo-header-link {
+        display: inline-flex;
+        min-height: var(--cx-control-compact);
+        align-items: center;
+        color: var(--cx-text-supporting);
+        font-size: var(--cx-font-size-sm);
+        text-decoration: none;
+      }
+
+      .demo-password-row {
+        position: relative;
+      }
+
+      .demo-password-row .cx-input {
+        padding-right: 88px;
+      }
+
+      .demo-password-toggle {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        min-height: var(--cx-control-compact);
+        border: 0;
+        border-radius: var(--cx-radius-default);
+        padding-inline: var(--cx-space-3);
+        background: transparent;
+        color: var(--cx-text-muted);
+      }
+
+      .demo-password-toggle:hover {
+        background: var(--cx-surface-secondary);
+        color: var(--cx-text-main);
+      }
+
+      .demo-footer-note {
+        margin: 0;
+        color: var(--cx-text-muted);
+        font-size: var(--cx-font-size-xs);
+      }
+
+      .demo-social-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cx-space-2);
+      }
+
+      .demo-social-preview .cx-social__link[aria-disabled="true"] {
+        cursor: not-allowed;
+        opacity: 0.46;
+      }
+
+      .demo-social-glyph {
+        display: grid;
+        width: var(--cx-social-icon-size);
+        height: var(--cx-social-icon-size);
+        place-content: center;
+        color: currentColor;
+        font-family: var(--cx-font-mono);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      @media (max-width: 479px) {
+        .demo-header-link {
+          font-size: var(--cx-font-size-xs);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="cx-skip-link" href="#main">Skip to authentication</a>
+
+    <div class="cx-auth-shell">
+      <header class="cx-header">
+        <div class="cx-header__inner">
+          <a class="demo-brand" href="/" aria-label="Codestra home">
+            <span class="demo-brand__mark" aria-hidden="true">C</span>
+            <span data-content-key="codestra.global.brand.name">CODESTRA</span>
+          </a>
+          <a
+            class="demo-header-link"
+            href="/support"
+            data-content-key="codestra.account.login.support"
+          >Support</a>
+        </div>
+      </header>
+
+      <main id="main" class="cx-auth-main">
+        <section class="cx-auth-panel" aria-labelledby="login-title">
+          <header class="cx-auth-panel__header">
+            <p class="cx-eyebrow" data-content-key="codestra.account.login.eyebrow">
+              Secure account access
+            </p>
+            <h1
+              id="login-title"
+              class="cx-auth-panel__title"
+              data-content-key="codestra.account.login.title"
+            >Sign in to Codestra</h1>
+            <p
+              class="cx-auth-panel__description"
+              data-content-key="codestra.account.login.description"
+            >Use your Codestra account to continue to the requested application.</p>
+          </header>
+
+          <form class="cx-auth-form" action="/api/v1/auth/oidc/login" method="post">
+            <div class="cx-field">
+              <label
+                class="cx-label"
+                for="email"
+                data-content-key="codestra.account.login.email.label"
+              >Email address</label>
+              <input
+                class="cx-input"
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                inputmode="email"
+                required
+              />
+            </div>
+
+            <div class="cx-field">
+              <label
+                class="cx-label"
+                for="password"
+                data-content-key="codestra.account.login.password.label"
+              >Password</label>
+              <div class="demo-password-row">
+                <input
+                  class="cx-input"
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                />
+                <button
+                  class="demo-password-toggle"
+                  type="button"
+                  aria-controls="password"
+                  aria-pressed="false"
+                  data-content-key="codestra.account.login.password.toggle"
+                >Show</button>
+              </div>
+            </div>
+
+            <p class="cx-auth-status" role="status" aria-live="polite"></p>
+
+            <div class="cx-auth-form__actions">
+              <button
+                class="cx-button cx-button--primary"
+                type="submit"
+                data-content-key="codestra.account.login.submit"
+              >Continue</button>
+              <a
+                class="cx-auth-form__secondary"
+                href="/account/recovery"
+                data-content-key="codestra.account.login.recovery"
+              >Forgot your password?</a>
+            </div>
+          </form>
+
+          <p class="cx-auth-notice" data-content-key="codestra.account.login.notice">
+            Authentication, session, role, MFA, redirect, and protected-route logic
+            remain owned by Codestra identity services. This reference contains no
+            external client, callback, state, nonce, PKCE, or account values.
+          </p>
+        </section>
+      </main>
+
+      <footer class="cx-footer" data-footer-resource="footer_codestra_global">
+        <div class="cx-footer__inner">
+          <div class="cx-footer__identity">
+            <span data-content-key="codestra.global.footer.identity.copyright">
+              © 2026 CODESTRA.CO
+            </span>
+          </div>
+
+          <nav class="cx-footer__links" aria-label="Legal">
+            <a href="/privacy" data-content-key="codestra.global.footer.policy.privacy">Privacy</a>
+            <a href="/terms" data-content-key="codestra.global.footer.policy.terms">Terms</a>
+            <a href="/security" data-content-key="codestra.global.footer.policy.security">Security</a>
+            <a
+              href="/accessibility"
+              data-content-key="codestra.global.footer.policy.accessibility"
+            >Accessibility</a>
+          </nav>
+
+          <div>
+            <p class="demo-footer-note">
+              Social entries remain hidden in production until published by the
+              Orbit footer API. Disabled targets below demonstrate supported sizing.
+            </p>
+            <nav class="demo-social-preview" aria-label="Supported social networks">
+              <span class="cx-social__link" aria-disabled="true" aria-label="LinkedIn unavailable"><span class="demo-social-glyph" aria-hidden="true">in</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="Facebook unavailable"><span class="demo-social-glyph" aria-hidden="true">f</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="Instagram unavailable"><span class="demo-social-glyph" aria-hidden="true">ig</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="X unavailable"><span class="demo-social-glyph" aria-hidden="true">x</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="YouTube unavailable"><span class="demo-social-glyph" aria-hidden="true">yt</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="GitHub unavailable"><span class="demo-social-glyph" aria-hidden="true">gh</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="TikTok unavailable"><span class="demo-social-glyph" aria-hidden="true">tt</span></span>
+              <span class="cx-social__link" aria-disabled="true" aria-label="Threads unavailable"><span class="demo-social-glyph" aria-hidden="true">th</span></span>
+            </nav>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module">
+      const password = document.querySelector("#password");
+      const toggle = document.querySelector(".demo-password-toggle");
+      toggle?.addEventListener("click", () => {
+        const show = password?.getAttribute("type") === "password";
+        password?.setAttribute("type", show ? "text" : "password");
+        toggle.textContent = show ? "Hide" : "Show";
+        toggle.setAttribute("aria-pressed", String(show));
+      });
+    </script>
+  </body>
+</html>
