@@ -1,0 +1,24 @@
+@import "./tokens.css";
+
+/*
+ * Orbit brands share one corporate interaction palette. Product identity is
+ * expressed through approved logos, copy and imagery from the Brand/Asset APIs,
+ * never by changing the primary action away from white-on-black.
+ */
+[data-orbit-brand] {
+  --cx-brand-mark: var(--cx-text-main);
+  --cx-brand-action-bg: var(--cx-action-primary-bg);
+  --cx-brand-action-text: var(--cx-action-primary-text);
+}
+
+[data-orbit-brand="codestra"] { --cx-brand-product-name: "Codestra"; }
+[data-orbit-brand="breero"] { --cx-brand-product-name: "Breero"; }
+[data-orbit-brand="beyvra"] { --cx-brand-product-name: "Beyvra"; }
+[data-orbit-brand="moneybee"] { --cx-brand-product-name: "MoneyBee"; }
+[data-orbit-brand="larim"] { --cx-brand-product-name: "LARIM-A"; }
+[data-orbit-brand="transportation"] { --cx-brand-product-name: "Transportation"; }
+[data-orbit-brand="telnexa"] { --cx-brand-product-name: "Telnexa"; }
+[data-orbit-brand="klyrow"] { --cx-brand-product-name: "Klyrow"; }
+[data-orbit-brand="social"] { --cx-brand-product-name: "Codestra Social"; }
+[data-orbit-brand="restaurant"] { --cx-brand-product-name: "Restaurant"; }
+[data-orbit-brand="neutral"] { --cx-brand-product-name: "Codestra"; }
