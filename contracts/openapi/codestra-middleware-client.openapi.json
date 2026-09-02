@@ -15,9 +15,9 @@
   ],
   "x-codestra-generated-from": {
     "repository": "https://github.com/appolon1908-hue/Middleware-",
-    "source_sha": "454d7d659cbb95e5e21443c5d6bb7794ddfe2880",
+    "source_sha": "4357fa8030b5f7879766436049a92c6eeb135617",
     "source_path": "contracts/platform/middleware-openapi.generated.json",
-    "source_sha256": "4ab9ed08af6e874cb952d2af389da1eb15d1a32e74f6e28720b227c69fcab157"
+    "source_sha256": "e22bd67b69557f4a780035d56bb77ffa4af5c8c06ea18fe5b9e6bf31ee0117f4"
   },
   "paths": {
     "/capabilities": {
@@ -74,16 +74,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -171,16 +161,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -282,16 +262,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -371,16 +341,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -469,14 +429,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -517,16 +509,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -634,16 +616,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -711,14 +683,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -759,16 +763,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -867,14 +861,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -915,16 +941,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -1023,14 +1039,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -1071,16 +1119,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -1133,7 +1171,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationMessagePage"
+                }
               }
             },
             "description": "Successful Response"
@@ -1180,16 +1220,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -1274,20 +1304,64 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationMessage"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "400": {
-            "description": "Invalid canonical request",
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "$ref": "#/components/schemas/CommunicationMessage"
                 }
               }
-            }
+            },
+            "description": "Accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -1328,16 +1402,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -1397,20 +1461,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationMessage"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -1451,16 +1549,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -1540,20 +1628,64 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationMessage"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "400": {
-            "description": "Invalid canonical request",
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "$ref": "#/components/schemas/CommunicationMessage"
                 }
               }
-            }
+            },
+            "description": "Accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -1594,16 +1726,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -1663,20 +1785,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationEventPage"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -1717,16 +1873,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -1776,7 +1922,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderHealthReport"
+                }
               }
             },
             "description": "Successful Response"
@@ -1823,16 +1971,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -1889,7 +2027,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderReputationReport"
+                }
               }
             },
             "description": "Successful Response"
@@ -1936,16 +2076,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -1988,6 +2118,40 @@
         "operationId": "get_communication_usage_v1_communications_usage_get",
         "parameters": [
           {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
             "in": "header",
             "name": "X-Tenant-ID",
             "required": true,
@@ -2002,20 +2166,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationUsageReport"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -2049,16 +2247,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2151,14 +2339,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -2199,16 +2419,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -2316,16 +2526,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -2393,14 +2593,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -2441,16 +2673,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -2549,14 +2771,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -2597,16 +2851,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -2705,14 +2949,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -2753,16 +3029,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -2853,14 +3119,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -2901,16 +3199,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -3039,14 +3327,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -3087,16 +3407,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -3167,14 +3477,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -3215,16 +3557,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -3323,14 +3655,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -3371,16 +3735,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -3479,14 +3833,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -3527,16 +3913,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -3625,14 +4001,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -3673,16 +4081,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -3790,16 +4188,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -3867,14 +4255,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -3915,16 +4335,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -4023,14 +4433,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -4071,16 +4513,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -4179,14 +4611,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -4227,16 +4691,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -4325,14 +4779,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -4373,16 +4859,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -4490,16 +4966,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -4567,14 +5033,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -4615,16 +5113,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -4723,14 +5211,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -4771,16 +5291,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -4879,14 +5389,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -4927,16 +5469,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -5063,20 +5595,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OperationListResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -5117,16 +5683,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -5226,16 +5782,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -5350,16 +5896,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -5458,16 +5994,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -5582,16 +6108,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -5690,16 +6206,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -5814,16 +6320,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -5922,16 +6418,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -6046,16 +6532,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -6122,14 +6598,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -6170,16 +6678,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -6275,16 +6773,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -6346,20 +6834,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -6400,16 +6922,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -6502,20 +7014,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -6556,16 +7102,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -6658,20 +7194,54 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -6712,16 +7282,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -6810,14 +7370,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -6858,16 +7450,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -6975,16 +7557,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -7052,14 +7624,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -7100,16 +7704,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -7208,14 +7802,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -7256,16 +7882,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -7364,14 +7980,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -7412,16 +8060,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -7510,14 +8148,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -7558,16 +8228,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -7675,16 +8335,6 @@
               }
             }
           },
-          "422": {
-            "description": "Request cannot be processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
           "429": {
             "description": "Rate limited",
             "content": {
@@ -7752,14 +8402,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -7800,16 +8482,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -7908,14 +8580,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -7956,16 +8660,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -8064,14 +8758,46 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid canonical request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "correlation_id": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlation_id",
+                        "retryable",
+                        "details"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "type": "object"
                 }
               }
-            }
+            },
+            "description": "Invalid canonical request"
           },
           "401": {
             "description": "Authentication failed",
@@ -8112,16 +8838,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           },
           "429": {
             "description": "Rate limited",
@@ -8215,16 +8931,6 @@
           },
           "409": {
             "description": "Version, state, or idempotency conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodestraSdkError"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Request cannot be processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -8333,6 +9039,261 @@
           "payload"
         ],
         "title": "CommandEnvelope",
+        "type": "object"
+      },
+      "CommunicationEventPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MessageEvent"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CommunicationEventPage",
+        "type": "object"
+      },
+      "CommunicationMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptedat"
+          },
+          "channel": {
+            "enum": [
+              "email",
+              "sms",
+              "voice"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "correlationId": {
+            "title": "Correlationid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "outbound",
+              "inbound"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "dispatchedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatchedat"
+          },
+          "failureCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failurecode"
+          },
+          "failureMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failuremessage"
+          },
+          "idempotencyKey": {
+            "title": "Idempotencykey",
+            "type": "string"
+          },
+          "messageId": {
+            "format": "uuid",
+            "title": "Messageid",
+            "type": "string"
+          },
+          "metadata": {
+            "title": "Metadata",
+            "type": "object"
+          },
+          "operationId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operationid"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "providerReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Providerreference"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "queued",
+              "dispatched",
+              "delivered",
+              "failed",
+              "cancelled",
+              "suppressed",
+              "expired",
+              "indeterminate"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageId",
+          "tenantId",
+          "channel",
+          "direction",
+          "status",
+          "correlationId",
+          "idempotencyKey",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "CommunicationMessage",
+        "type": "object"
+      },
+      "CommunicationMessagePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationMessage"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CommunicationMessagePage",
+        "type": "object"
+      },
+      "CommunicationUsageReport": {
+        "properties": {
+          "from": {
+            "format": "date-time",
+            "title": "From",
+            "type": "string"
+          },
+          "to": {
+            "format": "date-time",
+            "title": "To",
+            "type": "string"
+          },
+          "totals": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Totals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "totals"
+        ],
+        "title": "CommunicationUsageReport",
         "type": "object"
       },
       "ControlMutation": {
@@ -8550,6 +9511,322 @@
         "title": "MessageContent",
         "type": "object"
       },
+      "MessageEvent": {
+        "properties": {
+          "eventId": {
+            "format": "uuid",
+            "title": "Eventid",
+            "type": "string"
+          },
+          "messageId": {
+            "format": "uuid",
+            "title": "Messageid",
+            "type": "string"
+          },
+          "metadata": {
+            "title": "Metadata",
+            "type": "object"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "providerReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Providerreference"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "queued",
+              "dispatched",
+              "delivered",
+              "failed",
+              "cancelled",
+              "suppressed",
+              "expired",
+              "indeterminate"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "messageId",
+          "type",
+          "status",
+          "occurredAt"
+        ],
+        "title": "MessageEvent",
+        "type": "object"
+      },
+      "OperationAttemptListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OperationAttemptResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "OperationAttemptListResponse",
+        "type": "object"
+      },
+      "OperationAttemptResponse": {
+        "properties": {
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "integer"
+          },
+          "attempt_number": {
+            "title": "Attempt Number",
+            "type": "integer"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "provider_operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Operation Id"
+          },
+          "safe_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Error Code"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "RECEIVED",
+              "QUEUED",
+              "SUBMITTED",
+              "ACCEPTED",
+              "UNKNOWN",
+              "COMPLETED",
+              "FAILED",
+              "RECONCILIATION_REQUIRED",
+              "DEAD_LETTERED",
+              "CANCELLED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "operation_id",
+          "attempt_number",
+          "state",
+          "started_at"
+        ],
+        "title": "OperationAttemptResponse",
+        "type": "object"
+      },
+      "OperationEventListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OperationEventResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "OperationEventListResponse",
+        "type": "object"
+      },
+      "OperationEventResponse": {
+        "properties": {
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "new_state": {
+            "enum": [
+              "RECEIVED",
+              "QUEUED",
+              "SUBMITTED",
+              "ACCEPTED",
+              "UNKNOWN",
+              "COMPLETED",
+              "FAILED",
+              "RECONCILIATION_REQUIRED",
+              "DEAD_LETTERED",
+              "CANCELLED"
+            ],
+            "title": "New State",
+            "type": "string"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "previous_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "RECEIVED",
+                  "QUEUED",
+                  "SUBMITTED",
+                  "ACCEPTED",
+                  "UNKNOWN",
+                  "COMPLETED",
+                  "FAILED",
+                  "RECONCILIATION_REQUIRED",
+                  "DEAD_LETTERED",
+                  "CANCELLED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous State"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "safe_metadata": {
+            "title": "Safe Metadata",
+            "type": "object"
+          }
+        },
+        "required": [
+          "event_id",
+          "operation_id",
+          "previous_state",
+          "new_state",
+          "actor_id",
+          "reason",
+          "safe_metadata",
+          "created_at"
+        ],
+        "title": "OperationEventResponse",
+        "type": "object"
+      },
+      "OperationListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OperationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "OperationListResponse",
+        "type": "object"
+      },
       "OperationMutationRequest": {
         "additionalProperties": false,
         "properties": {
@@ -8571,6 +9848,190 @@
           "reason"
         ],
         "title": "OperationMutationRequest",
+        "type": "object"
+      },
+      "OperationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancellation Reason"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "capability": {
+            "title": "Capability",
+            "type": "string"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "title": "Command Type",
+            "type": "string"
+          },
+          "command_version": {
+            "title": "Command Version",
+            "type": "string"
+          },
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duplicate": {
+            "title": "Duplicate",
+            "type": "boolean"
+          },
+          "idempotency_key": {
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "provider_operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Operation Id"
+          },
+          "readback_evidence": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readback Evidence"
+          },
+          "readback_evidence_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readback Evidence Sha256"
+          },
+          "reconciliation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Reason"
+          },
+          "reconciliation_requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Requested At"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "resource_version": {
+            "default": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "RECEIVED",
+              "QUEUED",
+              "SUBMITTED",
+              "ACCEPTED",
+              "UNKNOWN",
+              "COMPLETED",
+              "FAILED",
+              "RECONCILIATION_REQUIRED",
+              "DEAD_LETTERED",
+              "CANCELLED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "tenant_id",
+          "command_type",
+          "command_version",
+          "target",
+          "requested_by",
+          "correlation_id",
+          "idempotency_key",
+          "capability",
+          "state",
+          "created_at",
+          "updated_at",
+          "duplicate"
+        ],
+        "title": "OperationResponse",
         "type": "object"
       },
       "PolicyDecision": {
@@ -8617,6 +10078,68 @@
           "proposed_action"
         ],
         "title": "PolicyDecisionRequest",
+        "type": "object"
+      },
+      "ProviderHealthReport": {
+        "properties": {
+          "checkedAt": {
+            "format": "date-time",
+            "title": "Checkedat",
+            "type": "string"
+          },
+          "providers": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checkedAt",
+          "providers"
+        ],
+        "title": "ProviderHealthReport",
+        "type": "object"
+      },
+      "ProviderReputationReport": {
+        "properties": {
+          "checkedAt": {
+            "format": "date-time",
+            "title": "Checkedat",
+            "type": "string"
+          },
+          "domains": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checkedAt",
+          "domains",
+          "providers"
+        ],
+        "title": "ProviderReputationReport",
         "type": "object"
       },
       "ReconciliationResolution": {
