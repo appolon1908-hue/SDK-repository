@@ -26,6 +26,7 @@ if (!baseSha) {
 }
 
 const OPENAPI_FILES = [
+  "contracts/openapi/codestra-middleware-client.openapi.json",
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
   "contracts/openapi/codestra-restricted-gateway.openapi.yaml",

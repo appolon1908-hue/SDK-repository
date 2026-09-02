@@ -4,7 +4,7 @@ import { getStubSession } from "@codestra/apps-shared/auth";
 import { validateCreateSubscriptionInput } from "../../(protected)/webhooks/validation";
 
 export async function GET(): Promise<NextResponse> {
-  const session = getStubSession();
+  const session = await getStubSession();
   if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   const client = getApiClient(session);
   const result = await client.webhooks.subscriptions.list();
@@ -12,7 +12,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const session = getStubSession();
+  const session = await getStubSession();
   if (!session) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
   const body: unknown = await request.json();

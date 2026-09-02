@@ -4,8 +4,8 @@ import { AppShell, type NavItem } from "@codestra/apps-shared/ui/AppShell";
 
 const NAV_ITEMS: readonly NavItem[] = [{ href: "/tenants", label: "Tenants" }];
 
-export default function ProtectedLayout({ children }: { children: ReactNode }): JSX.Element {
-  const session = requireStubSession();
+export default async function ProtectedLayout({ children }: { children: ReactNode }): Promise<JSX.Element> {
+  const session = await requireStubSession();
   return (
     <AppShell appName="Admin Console" navItems={NAV_ITEMS} session={session}>
       {children}

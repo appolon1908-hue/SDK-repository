@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   description: "API reference, event catalogue, webhook-subscription management, and API credentials.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }): JSX.Element {
-  const session = getStubSession();
+export default async function RootLayout({ children }: { children: ReactNode }): Promise<JSX.Element> {
+  const session = await getStubSession();
   return (
     <html lang="en">
       <body>

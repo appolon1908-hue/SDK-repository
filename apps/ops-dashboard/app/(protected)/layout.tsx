@@ -8,8 +8,8 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/tenants", label: "Tenant activity" },
 ];
 
-export default function ProtectedLayout({ children }: { children: ReactNode }): JSX.Element {
-  const session = requireStubSession();
+export default async function ProtectedLayout({ children }: { children: ReactNode }): Promise<JSX.Element> {
+  const session = await requireStubSession();
   return (
     <AppShell appName="Ops Dashboard" navItems={NAV_ITEMS} session={session}>
       {children}
