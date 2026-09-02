@@ -1,32 +1,85 @@
-name: Horizon contract
+name: Codestra Orbit design authority
 
 on:
   pull_request:
     paths:
+      - ".changeset/**"
+      - ".github/actions/orbit-validate/**"
       - ".github/actions/horizon-validate/**"
       - ".github/workflows/horizon-contract.yml"
+      - "contracts/openapi/codestra-orbit.openapi.yaml"
+      - "contracts/schemas/orbit-*.schema.json"
+      - "docs/ORBIT-**"
       - "docs/HORIZON-**"
+      - "examples/orbit-ui/**"
+      - "examples/horizon-ui/**"
+      - "packages/intake-ui/**"
+      - "scripts/validate-orbit-authority.mjs"
   push:
     branches:
       - main
       - feature/horizon-unified-experience-v1
     paths:
+      - ".changeset/**"
+      - ".github/actions/orbit-validate/**"
       - ".github/actions/horizon-validate/**"
       - ".github/workflows/horizon-contract.yml"
+      - "contracts/openapi/codestra-orbit.openapi.yaml"
+      - "contracts/schemas/orbit-*.schema.json"
+      - "docs/ORBIT-**"
       - "docs/HORIZON-**"
+      - "examples/orbit-ui/**"
+      - "examples/horizon-ui/**"
+      - "packages/intake-ui/**"
+      - "scripts/validate-orbit-authority.mjs"
 
 permissions:
   contents: read
 
+concurrency:
+  group: orbit-authority-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REDOCLY_TELEMETRY: off
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
+
 jobs:
-  self-test:
+  validate:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Checkout exact revision
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          node-version: "22"
-      - name: Prove the validator fails closed
-        run: node .github/actions/horizon-validate/validate.mjs --self-test
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.15.0
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate Orbit central authority
+        run: node scripts/validate-orbit-authority.mjs
+      - name: Prove reusable Orbit validator fails closed
+        run: node .github/actions/orbit-validate/validate.mjs --self-test
+      - name: Validate Orbit OpenAPI semantics
+        run: pnpm exec redocly lint contracts/openapi/codestra-orbit.openapi.yaml --format=stylish
+      - name: Prove Orbit OpenAPI references bundle
+        run: pnpm exec redocly bundle contracts/openapi/codestra-orbit.openapi.yaml --output /tmp/codestra-orbit.openapi.json
+      - name: Validate JSON schemas
+        run: node scripts/validate-json-schemas.mjs contracts/schemas
+      - name: Build Orbit package
+        run: pnpm --filter @codestra/intake-ui build
+      - name: Type-check Orbit package
+        run: pnpm --filter @codestra/intake-ui typecheck
+      - name: Test Orbit and Horizon compatibility
+        run: pnpm exec vitest run --config vitest.config.mjs packages/intake-ui/test/orbit.test.ts packages/intake-ui/test/horizon.test.ts
