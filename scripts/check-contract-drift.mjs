@@ -97,7 +97,8 @@ function bundle(sourcePath, outputPath) {
     env: { ...process.env, REDOCLY_TELEMETRY: "off", REDOCLY_SUPPRESS_UPDATE_NOTICE: "true" },
   });
   if (result.status !== 0) {
-    if (/does not exist/i.test(result.stdout ?? "") || /ENOENT/.test(result.stderr ?? "")) return undefined;
+    const diagnostic = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (/does not exist|ENOENT/iu.test(diagnostic)) return undefined;
     throw new Error(`redocly bundle failed for ${sourcePath}:\n${[result.stdout, result.stderr].filter(Boolean).join("\n")}`);
   }
   return JSON.parse(readFileSyncOrThrow(outputPath));
