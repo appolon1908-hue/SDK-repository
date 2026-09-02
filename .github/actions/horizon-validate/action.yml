@@ -1,27 +1,27 @@
-name: Horizon portfolio contract
-description: Validate registered suites, root-shell inheritance, real authentication evidence, canonical domains, and token-only new colors.
+name: Deprecated Horizon compatibility validator
+description: Compatibility wrapper for the canonical Codestra Orbit adoption validator.
 inputs:
   manifest:
-    description: Repository-relative Horizon suite manifest
+    description: Repository-relative Orbit suite manifest
     required: false
-    default: horizon/suite.json
+    default: orbit/suite.json
   base-ref:
-    description: Pull-request base branch used to reject newly added raw colors
+    description: Pull-request base branch used to inspect newly added source
     required: false
     default: ""
 runs:
   using: composite
   steps:
-    - name: Validate Horizon adoption
+    - name: Validate through Codestra Orbit
       shell: bash
       env:
-        HORIZON_MANIFEST: ${{ inputs.manifest }}
-        HORIZON_BASE_REF: ${{ inputs.base-ref }}
+        ORBIT_MANIFEST: ${{ inputs.manifest }}
+        ORBIT_BASE_REF: ${{ inputs.base-ref }}
       run: |
         set -euo pipefail
-        args=(--root "$GITHUB_WORKSPACE" --manifest "$HORIZON_MANIFEST")
-        if [[ -n "$HORIZON_BASE_REF" ]]; then
-          git -C "$GITHUB_WORKSPACE" fetch origin "$HORIZON_BASE_REF" --depth=1
-          args+=(--base-ref "origin/$HORIZON_BASE_REF")
+        args=(--root "$GITHUB_WORKSPACE" --manifest "$ORBIT_MANIFEST")
+        if [[ -n "$ORBIT_BASE_REF" ]]; then
+          git -C "$GITHUB_WORKSPACE" fetch origin "$ORBIT_BASE_REF" --depth=1
+          args+=(--base-ref "origin/$ORBIT_BASE_REF")
         fi
-        node "$GITHUB_ACTION_PATH/validate.mjs" "${args[@]}"
+        node "$GITHUB_ACTION_PATH/../orbit-validate/validate.mjs" "${args[@]}"
