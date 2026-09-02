@@ -52,18 +52,6 @@
       "canonical": true
     },
     {
-      "host": "crm.codestra.agency",
-      "purpose": "odoo",
-      "status": "production-platform-confirmed",
-      "canonical": true
-    },
-    {
-      "host": "n8n.codestra.agency",
-      "purpose": "automation-operator",
-      "status": "production-platform-confirmed",
-      "canonical": true
-    },
-    {
       "host": "api.codestra.agency",
       "purpose": "middleware-legacy-boundary",
       "status": "legacy-migration-required",

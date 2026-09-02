@@ -1,3 +1,13 @@
-export const orbitTokens = Object.freeze({"$schema":"https://json-schema.org/draft/2020-12/schema","name":"Codestra Orbit","version":"2.0.0","description":"Machine-enforced visual tokens for all Codestra first-party public, authentication, account, and operator shells.","color":{"canvas":"#000000","surface":"#101010","surfaceElevated":"#171717","textPrimary":"#FFFFFF","textSecondary":"#D8D8D8","textMuted":"#9A9A9A","border":"#353535","borderStrong":"#5A5A5A","actionPrimaryBackground":"#FFFFFF","actionPrimaryText":"#000000","focus":"#FFFFFF","status":{"danger":"#FF6469","success":"#78D796","warning":"#F1C86A","info":"#9CB9E8"}},"typography":{"fontFamily":"Inter, Arial, Helvetica Neue, Helvetica, ui-sans-serif, system-ui, sans-serif","labelTransform":"uppercase","labelTrackingEm":0.12,"brandTrackingEm":0.29,"bodyLineHeight":1.55,"headingLineHeight":1.08},"space":{"0":0,"1":4,"2":8,"3":12,"4":16,"5":20,"6":24,"8":32,"10":40,"12":48,"16":64,"18":72,"20":80,"24":96},"size":{"control":52,"touchTargetMinimum":44,"headerDesktop":76,"headerTablet":64,"headerMobile":56,"authColumnMaximum":480,"contentMaximum":1440},"radius":{"none":0,"control":2,"standardMaximum":6},"border":{"hairline":1,"focus":2},"shadow":{"standard":"none"},"motion":{"fastMs":120,"standardMs":180,"slowMs":260,"easing":"cubic-bezier(0.22, 1, 0.36, 1)","reducedMotion":"required"},"breakpoint":{"minimum":320,"small":360,"phone":390,"tablet":768,"desktop":1024,"wide":1280,"content":1440,"cinema":1920},"policy":{"gradients":"prohibited-in-shared-shell","glow":"prohibited","glassmorphism":"prohibited","neon":"prohibited","largeRoundedCards":"prohibited","heavyShadow":"prohibited","statusColors":"status-only-not-branding"}});
+import tokenSource from '../tokens/design-tokens.json' with { type: 'json' };
+
+// The JSON export and JavaScript entry point intentionally share one source.
+// Copy before freezing so consumers cannot mutate Node's JSON-module cache.
+export const orbitTokens = deepFreeze(structuredClone(tokenSource));
 export const orbitVersion = orbitTokens.version;
 export default orbitTokens;
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}

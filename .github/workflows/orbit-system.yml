@@ -28,12 +28,20 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Configure pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.15.0
       - name: Configure Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
       - name: Validate Orbit authority
-        run: node scripts/validate-orbit-system.mjs
+        run: pnpm orbit:validate
       - name: Verify package manifests
         shell: bash
         run: |

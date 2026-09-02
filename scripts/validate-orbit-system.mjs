@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const orbit = path.join(root, 'orbit');
@@ -157,13 +160,26 @@ for (const entry of entries) {
   }
 }
 
-for (const file of [
+const schemaFiles = [
   'adoption-manifest.schema.json',
   'route-manifest.schema.json',
   'footer-social.schema.json',
   'page-template-manifest.schema.json',
-]) {
-  readJson(`orbit/contracts/${file}`);
+];
+const ajv = new Ajv2020({ allErrors: true, strict: false });
+addFormats(ajv);
+for (const file of schemaFiles) {
+  try { ajv.compile(readJson(`orbit/contracts/${file}`)); }
+  catch (error) { errors.push(`Orbit JSON Schema ${file} failed semantic compilation: ${error.message}`); }
+}
+for (const file of ['auth-session.openapi.yaml', 'brand-content.openapi.yaml']) {
+  const relativePath = `orbit/contracts/${file}`;
+  const result = spawnSync('pnpm', ['exec', 'redocly', 'lint', '--config', 'orbit/redocly.yaml', relativePath], {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, REDOCLY_TELEMETRY: 'off', REDOCLY_SUPPRESS_UPDATE_NOTICE: 'true' },
+  });
+  assert(result.status === 0, `Orbit OpenAPI ${file} failed semantic validation: ${(result.stderr || result.stdout).trim()}`);
 }
 
 const footerSchema = readJson('orbit/contracts/footer-social.schema.json');
@@ -231,6 +247,55 @@ assert(!/accessToken\s*[:=].*localStorage|localStorage.*accessToken/i.test(authS
 for (const prohibited of ['ReturnUrl', 'code_challenge', 'client_id=', 'redirect_uri=', 'starlink']) {
   assert(!authSource.toLowerCase().includes(prohibited.toLowerCase()), `auth source contains prohibited external reference ${prohibited}`);
 }
+
+const tokenModule = await import(new URL('../orbit/packages/design-tokens/src/index.js', import.meta.url));
+assert(JSON.stringify(tokenModule.orbitTokens) === JSON.stringify(token), 'JavaScript token export differs from canonical token JSON');
+
+const registryModule = await import(new URL('../orbit/packages/brand-registry/src/index.js', import.meta.url));
+assert(JSON.stringify(registryModule.CODESTRA_DOMAIN_RECORDS) === JSON.stringify(registry.domains), 'JavaScript domain export differs from canonical registry JSON');
+assert(registryModule.isRegisteredCodestraHost('codestra.co') === true, 'verified registered host must be accepted');
+for (const status of ['repository-declared', 'source-present-verification-required', 'owner-declared-verification-required']) {
+  const candidate = registry.domains.find((record) => record.status === status);
+  if (candidate) assert(registryModule.isRegisteredCodestraHost(candidate.host) === false, `unverified ${status} host must be rejected`);
+}
+assert(!read('orbit/packages/brand-registry/registry/brand-registry.json').includes('crm.codestra.agency'), 'public registry contains production Odoo hostname');
+assert(!read('orbit/packages/brand-registry/registry/brand-registry.json').includes('n8n.codestra.agency'), 'public registry contains production n8n hostname');
+
+const authModule = await import(new URL('../orbit/packages/auth-ui/src/index.js', import.meta.url));
+assert(
+  authModule.safeRedirectTarget('http://remote.example/path', {
+    currentOrigin: 'https://codestra.co',
+    allowedOrigins: ['http://remote.example'],
+  }) === '/app',
+  'remote plaintext return origin must fail closed',
+);
+assert(
+  authModule.safeRedirectTarget('https://approved.example/path', {
+    currentOrigin: 'https://codestra.co',
+    allowedOrigins: ['https://approved.example'],
+  }) === 'https://approved.example/path',
+  'approved HTTPS return origin must remain available',
+);
+
+const authCalls = [];
+let releaseRefresh;
+const refreshPending = new Promise((resolve) => { releaseRefresh = resolve; });
+const authClient = authModule.createSessionClient({
+  locationRef: { origin: 'https://codestra.co', assign() {} },
+  fetchImpl: async (url) => {
+    authCalls.push(url);
+    if (url.endsWith('/refresh')) await refreshPending;
+    return new Response(null, { status: 204 });
+  },
+});
+const refresh = authClient.refresh();
+const logout = authClient.logout();
+await new Promise((resolve) => setImmediate(resolve));
+assert(authCalls.length === 1 && authCalls[0].endsWith('/refresh'), 'distinct auth mutations must serialize');
+releaseRefresh();
+await Promise.all([refresh, logout]);
+assert(authCalls.length === 2 && authCalls[1].endsWith('/logout'), 'logout must execute after an in-flight refresh');
+authClient.close();
 
 const releasePath = path.join(orbit, 'release/orbit-v2.0.0.json');
 const release = JSON.parse(fs.readFileSync(releasePath, 'utf8'));

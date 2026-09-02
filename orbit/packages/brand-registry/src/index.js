@@ -1,9 +1,19 @@
+import registrySource from '../registry/brand-registry.json' with { type: 'json' };
 
 export const ORBIT_VERSION = '2.0.0';
-export const CODESTRA_FOOTER_ATTRIBUTION = 'Powered by Codestra.co';
-export const CODESTRA_IDENTITY = Object.freeze({"origin":"https://auth.codestra.co","issuer":"https://auth.codestra.co/realms/codestra","browserFlow":"authorization-code-pkce","tokenStorage":"server-session-cookie-only"});
-export const CODESTRA_DOMAIN_RECORDS = Object.freeze([{"host":"codestra.co","purpose":"corporate-site","status":"registered","canonical":true},{"host":"www.codestra.co","purpose":"corporate-site-alias","status":"registered","canonical":false},{"host":"auth.codestra.co","purpose":"identity","status":"registered","canonical":true},{"host":"api.codestra.co","purpose":"public-api-edge","status":"source-authoritative","canonical":true},{"host":"social.codestra.co","purpose":"social-suite","status":"repository-declared","canonical":true},{"host":"automation.codestra.co","purpose":"automation-suite","status":"source-present-verification-required","canonical":true},{"host":"crm.codestra.agency","purpose":"odoo","status":"production-platform-confirmed","canonical":true},{"host":"n8n.codestra.agency","purpose":"automation-operator","status":"production-platform-confirmed","canonical":true},{"host":"api.codestra.agency","purpose":"middleware-legacy-boundary","status":"legacy-migration-required","canonical":false},{"host":"breero.com","purpose":"breero-public","status":"owner-declared","canonical":true},{"host":"partners.breero.com","purpose":"breero-partner-portal","status":"owner-declared-verification-required","canonical":true},{"host":"ops.breero.com","purpose":"breero-operations","status":"owner-declared-verification-required","canonical":true},{"host":"admin.breero.com","purpose":"breero-administration","status":"owner-declared-verification-required","canonical":true},{"host":"klyrow.com","purpose":"klyrow-public","status":"owner-declared","canonical":true}]);
-export const CODESTRA_SOCIAL_HOSTS = Object.freeze({"linkedin":["linkedin.com","www.linkedin.com"],"facebook":["facebook.com","www.facebook.com"],"instagram":["instagram.com","www.instagram.com"],"x":["x.com","www.x.com","twitter.com","www.twitter.com"],"youtube":["youtube.com","www.youtube.com","youtu.be"],"github":["github.com","www.github.com"],"tiktok":["tiktok.com","www.tiktok.com"],"threads":["threads.net","www.threads.net"]});
+export const CODESTRA_FOOTER_ATTRIBUTION = registrySource.footerAttribution;
+export const CODESTRA_IDENTITY = deepFreeze(structuredClone(registrySource.identity));
+export const CODESTRA_DOMAIN_RECORDS = deepFreeze(structuredClone(registrySource.domains));
+export const CODESTRA_SOCIAL_HOSTS = Object.freeze({
+  linkedin: ['linkedin.com', 'www.linkedin.com'],
+  facebook: ['facebook.com', 'www.facebook.com'],
+  instagram: ['instagram.com', 'www.instagram.com'],
+  x: ['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'],
+  youtube: ['youtube.com', 'www.youtube.com', 'youtu.be'],
+  github: ['github.com', 'www.github.com'],
+  tiktok: ['tiktok.com', 'www.tiktok.com'],
+  threads: ['threads.net', 'www.threads.net'],
+});
 
 const LOCALHOST = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -20,7 +30,7 @@ export function normalizeHttpsOrigin(value, { allowLocalhost = false } = {}) {
 export function isRegisteredCodestraHost(hostname) {
   if (typeof hostname !== 'string') return false;
   const host = hostname.trim().toLowerCase();
-  return CODESTRA_DOMAIN_RECORDS.some((record) => record.host === host && record.status !== 'legacy-migration-required');
+  return CODESTRA_DOMAIN_RECORDS.some((record) => record.host === host && record.status === 'registered');
 }
 
 export function resolveDomainRecord(hostname) {
@@ -62,4 +72,10 @@ export function validateReturnUrl(value, { currentOrigin, allowedOrigins = [] } 
   if (!normalizedAllowed.has(url.origin) || url.username || url.password) return null;
   if (url.origin === origin) return `${url.pathname}${url.search}${url.hash}`;
   return url.toString();
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
 }

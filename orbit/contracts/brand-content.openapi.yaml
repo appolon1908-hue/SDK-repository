@@ -9,6 +9,7 @@ info:
 servers:
   - url: /api/v1
     description: Same-origin browser API boundary
+security: []
 paths:
   /brands/{brand}:
     get:

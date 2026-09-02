@@ -8,6 +8,7 @@ servers:
     variables:
       applicationHost:
         default: codestra.co
+security: []
 paths:
   /auth/login:
     get:
