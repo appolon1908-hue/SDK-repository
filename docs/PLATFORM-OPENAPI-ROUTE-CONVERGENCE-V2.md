@@ -8,6 +8,17 @@ This branch replaces manifest/string-based SDK readiness with exact accepted Ope
 /v1/auth/session
   Owner: same-origin BFF package.
   Action: publish a real BFF OpenAPI contract or remove the unsupported readiness claim.
+  Status: DONE (removed the claim). No same-origin BFF package exists anywhere in
+  this repo or its owned repos, and this repo's own "Authority boundary" section
+  (root README) places OIDC/session infrastructure outside its ownership entirely --
+  publishing a real contract here would mean either building that infrastructure
+  from scratch (out of scope) or documenting someone else's undeployed plan.
+  Removed auth.session.get() from the unified SDK facade (packages/codestra_sdk)
+  and "auth" from requiredUnifiedSdkModules in the readiness manifest. The route
+  stays in codestra-platform.openapi.yaml, marked deprecated: true, and in the
+  readiness manifest's compatibilityOnlyEndpointPaths, for the same published
+  sunset window as /v1/crm/leads below (same gate limitation: no exemption yet
+  for removing an already-deprecated operation).
 
 /v1/marketing/campaigns
   Owner: appolon1908-hue/Codestra-Marketing-.

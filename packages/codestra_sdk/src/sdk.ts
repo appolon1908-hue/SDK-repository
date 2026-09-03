@@ -144,12 +144,6 @@ export class CodestraSdk {
     social: CanonicalDomainClient;
     telephony: CanonicalDomainClient;
   };
-  readonly auth: {
-    session: {
-      get: (options?: CodestraRequestOptions) => Promise<JsonObject>;
-    };
-  };
-
   readonly marketing: {
     campaigns: {
       list: (options?: MarketingCampaignListOptions) => Promise<JsonObject>;
@@ -294,12 +288,6 @@ export class CodestraSdk {
       n8n: this.filteredDomainClient("integrations/n8n"),
       social: this.domainClient("social"),
       telephony: this.domainClient("telephony"),
-    };
-
-    this.auth = {
-      session: {
-        get: (requestOptions) => this.request({ method: "GET", path: "/v1/auth/session", ...copyRequestOptions(requestOptions) }),
-      },
     };
 
     this.marketing = {

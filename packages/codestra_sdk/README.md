@@ -47,7 +47,6 @@ codestra_sdk
   platform
   operations
   control
-  auth
   marketing
   ai
   communication
