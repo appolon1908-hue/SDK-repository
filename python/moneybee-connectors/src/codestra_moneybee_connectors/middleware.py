@@ -22,8 +22,8 @@ from .errors import (
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 OperationState = Literal[
-    "persisted", "queued", "dispatching", "accepted", "readback_pending",
-    "completed", "failed", "reconciliation_required", "dead_lettered",
+    "RECEIVED", "QUEUED", "SUBMITTED", "ACCEPTED", "UNKNOWN",
+    "COMPLETED", "FAILED", "RECONCILIATION_REQUIRED", "DEAD_LETTERED", "CANCELLED",
 ]
 
 

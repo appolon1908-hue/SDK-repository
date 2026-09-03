@@ -17,13 +17,18 @@ class InMemoryReplayStore:
     """Test-only replay store. Production callers must inject durable storage."""
 
     def __init__(self) -> None:
-        self._claims: set[tuple[str, str, str, str]] = set()
+        self._claims: dict[tuple[str, str, str], str] = {}
 
     async def claim(self, tenant_id: str, provider: str, event_id: str, payload_hash: str) -> bool:
-        key = (tenant_id, provider, event_id, payload_hash)
+        # Identity is tenant + provider + event ID -- an event ID is only ever
+        # supposed to name one payload. Keying on payload_hash too let a
+        # second, differently-hashed body under the *same* event ID slip
+        # through as an unrelated new claim instead of being rejected,
+        # whether that's a payload-conflict bug upstream or a forged retry.
+        key = (tenant_id, provider, event_id)
         if key in self._claims:
             return False
-        self._claims.add(key)
+        self._claims[key] = payload_hash
         return True
 
 

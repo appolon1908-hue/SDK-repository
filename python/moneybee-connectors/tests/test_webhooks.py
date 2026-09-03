@@ -29,6 +29,29 @@ async def test_verifies_raw_body_and_blocks_replay() -> None:
 
 
 @pytest.mark.asyncio
+async def test_blocks_replay_even_when_the_second_body_differs() -> None:
+    # Codex review finding: keying the replay claim on (tenant, provider,
+    # event_id, payload_hash) let a second, differently-hashed but validly
+    # signed body under the *same* event ID through as an unrelated new
+    # claim. Event ID identity must dominate -- a payload change under the
+    # same event ID is a conflict to reject, not a new event to accept.
+    verifier = WebhookVerifier(InMemoryReplayStore())
+    first_body = b'{"event":"completed"}'
+    await verifier.verify_hmac_sha256(
+        tenant_id="tenant-1", provider="docusign", event_id="event-1",
+        timestamp="1000", signature=signature("secret", "1000", first_body),
+        secret="secret", raw_body=first_body, now=1000,
+    )
+    second_body = b'{"event":"completed","amount":999}'
+    with pytest.raises(IdempotencyConflictError):
+        await verifier.verify_hmac_sha256(
+            tenant_id="tenant-1", provider="docusign", event_id="event-1",
+            timestamp="1000", signature=signature("secret", "1000", second_body),
+            secret="secret", raw_body=second_body, now=1000,
+        )
+
+
+@pytest.mark.asyncio
 async def test_rejects_modified_body_and_stale_timestamp() -> None:
     verifier = WebhookVerifier(InMemoryReplayStore(), tolerance_seconds=30)
     with pytest.raises(AuthenticationError):
