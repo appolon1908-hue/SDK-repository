@@ -8,10 +8,15 @@ version = "0.1.0"
 description = "Fail-closed server-side connector contracts for MoneyBee and Codestra Middleware"
 requires-python = ">=3.13"
 license = { text = "MIT" }
-dependencies = ["httpx>=0.28,<1", "pydantic>=2.11,<3"]
+dependencies = ["httpx==0.28.1", "pydantic==2.12.5"]
 
 [project.optional-dependencies]
-test = ["pytest>=9.0.3,<10", "pytest-asyncio>=1.0,<2"]
+test = [
+  "cyclonedx-bom==7.3.1",
+  "pip-audit==2.10.1",
+  "pytest==9.0.3",
+  "pytest-asyncio==1.3.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/codestra_moneybee_connectors"]
