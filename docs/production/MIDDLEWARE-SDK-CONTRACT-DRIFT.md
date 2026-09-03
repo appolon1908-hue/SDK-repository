@@ -57,8 +57,19 @@ older wrappers remain present so this change does not silently break consumers:
 - `/v1/auth/session`
 - `/v1/marketing/campaigns*`
 - `/v1/ai/generate`
-- `/v1/crm/leads*`
+- `/v1/crm/leads*` (`deprecated: true`; see below)
 - `/v1/workflow/runs*`
+
+`/v1/crm/leads*` was a direct CRM read edge that
+`docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md` flags as a prohibited
+pattern. The unified SDK no longer exposes it: lead submission goes through
+`packages/intake-bff` to `POST /v1/intake/leads`, and CRM record mutation
+goes through `codestra.control.crm`. The route itself stays in
+`codestra-platform.openapi.yaml`, marked `deprecated: true`, for the
+published sunset window this section requires before final contract
+removal (the breaking-change gate in `scripts/check-contract-drift.mjs`
+rejects an outright path deletion unconditionally, with no exemption for
+already-deprecated operations).
 
 These compatibility routes are absent from Middleware SHA `9cd3fd3e…`; they
 must not be used as evidence for staging or production certification and need

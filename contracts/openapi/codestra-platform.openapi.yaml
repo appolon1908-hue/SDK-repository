@@ -8,7 +8,14 @@ info:
     (packages/codestra_sdk). These operations were implemented in the SDK
     facade before any canonical contract existed for them; this document is
     that contract, grounded in the request/response shapes the facade and
-    its generated clients already send and expect.
+    its generated clients already send and expect. The CRM lead operations
+    are `deprecated: true`: codestra_sdk no longer exposes this direct CRM
+    read edge (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md), and they are
+    kept here only for the published sunset window
+    (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before final removal.
+    Lead submission goes through packages/intake-bff to POST
+    /v1/intake/leads; CRM record mutation goes through the canonical
+    Middleware command plane (codestra.control.crm).
 servers:
   - url: https://api.codestra.co
 security:
@@ -147,7 +154,17 @@ paths:
   /v1/crm/leads:
     get:
       operationId: listCrmLeads
+      deprecated: true
       summary: List tenant CRM leads
+      description: >
+        Deprecated compatibility route. This is a prohibited direct CRM read
+        edge on the unified Codestra SDK; codestra_sdk no longer exposes it
+        (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md). Lead submission
+        goes through packages/intake-bff to POST /v1/intake/leads; CRM
+        record mutation goes through the canonical Middleware command plane
+        (codestra.control.crm). Kept here, deprecated, only for the
+        published sunset window (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md)
+        before final removal from this contract.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -176,7 +193,11 @@ paths:
   /v1/crm/leads/{leadId}:
     get:
       operationId: getCrmLead
+      deprecated: true
       summary: Read one tenant CRM lead
+      description: >
+        Deprecated compatibility route; see /v1/crm/leads for the removal
+        rationale and sunset policy.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'

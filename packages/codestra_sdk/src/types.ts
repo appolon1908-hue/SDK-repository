@@ -65,11 +65,3 @@ export interface MarketingCampaignListOptions {
   signal?: AbortSignal;
   correlationId?: string;
 }
-
-export interface CrmLeadListOptions {
-  cursor?: string;
-  limit?: number;
-  status?: string;
-  signal?: AbortSignal;
-  correlationId?: string;
-}

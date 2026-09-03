@@ -20,6 +20,17 @@ This branch replaces manifest/string-based SDK readiness with exact accepted Ope
 /v1/crm/leads
   Prohibited direct CRM edge.
   Action: remove and use POST /v1/intake/leads.
+  Status: PARTIALLY DONE. Removed from the unified SDK facade (packages/codestra_sdk)
+  and from requiredUnifiedSdkModules in the readiness manifest. Lead submission goes
+  through packages/intake-bff to POST /v1/intake/leads; CRM record mutation goes
+  through codestra.control.crm. The route itself stays in
+  codestra-platform.openapi.yaml, marked deprecated: true, and in the readiness
+  manifest's compatibilityOnlyEndpointPaths, for the published sunset window
+  docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md requires: the breaking-change
+  gate (scripts/check-contract-drift.mjs) unconditionally rejects deleting a
+  contract path, with no exemption for an already-deprecated operation, so final
+  removal from the contract needs that gate extended first or a deliberately
+  accepted breaking-change exception -- a separate, follow-up decision.
 
 /v1/workflow/runs
   Superseded orchestration vocabulary.

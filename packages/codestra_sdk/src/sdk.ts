@@ -26,7 +26,6 @@ import type {
 import type {
   CanonicalCommandEnvelope,
   CanonicalCommandInput,
-  CrmLeadListOptions,
   GenerateAiInput,
   MarketingCampaignListOptions,
   OperationListOptions,
@@ -175,13 +174,6 @@ export class CodestraSdk {
       list: (input?: ListSocialPostsInput, options?: CodestraRequestOptions) => Promise<SocialPostList>;
       get: (postId: UUID, options?: CodestraRequestOptions) => Promise<SocialPost>;
       cancel: (postId: UUID, options: CodestraMutationOptions) => Promise<SocialPost>;
-    };
-  };
-
-  readonly crm: {
-    leads: {
-      list: (options?: CrmLeadListOptions) => Promise<JsonObject>;
-      get: (leadId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
     };
   };
 
@@ -346,14 +338,6 @@ export class CodestraSdk {
         list: (input, requestOptions) => socialClient.social.posts.list(input, requestOptions),
         get: (postId, requestOptions) => socialClient.social.posts.get(postId, requestOptions),
         cancel: (postId, requestOptions) => socialClient.social.posts.cancel(postId, requestOptions),
-      },
-    };
-
-    this.crm = {
-      leads: {
-        list: (requestOptions) => this.request({ method: "GET", path: withQuery("/v1/crm/leads", requestOptions), ...copyRequestOptions(requestOptions) }),
-        get: (leadId, requestOptions) =>
-          this.request({ method: "GET", path: `/v1/crm/leads/${encodeURIComponent(requirePathSegment(leadId, "leadId"))}`, ...copyRequestOptions(requestOptions) }),
       },
     };
 

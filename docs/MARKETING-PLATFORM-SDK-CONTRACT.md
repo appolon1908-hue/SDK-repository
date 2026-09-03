@@ -30,7 +30,6 @@ social.posts.create()
 social.posts.schedule()
 ai.generate()
 ai.classify()
-crm.leads.get()
 workflows.trigger()
 
 ## Compatibility Policy
