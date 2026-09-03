@@ -29,12 +29,11 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: python/moneybee-connectors/pyproject.toml
+          cache-dependency-path: python/moneybee-connectors/requirements.lock
       - name: Install connector and audit tooling
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e "python/moneybee-connectors[test]"
-          python -m pip install pip-audit==2.10.1 cyclonedx-bom==7.3.1
+          python -m pip install --require-hashes -r python/moneybee-connectors/requirements.lock
+          python -m pip install --no-deps -e python/moneybee-connectors
           python -m pip check
       - name: Test and build connector
         run: |
