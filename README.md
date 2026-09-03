@@ -78,6 +78,10 @@ The facade is the programming contract product developers see. Backend implement
 
 Password reset, SMTP, OIDC clients, provider credentials, DNS, Kong, and deployed Middleware settings are intentionally outside this SDK repository. Use [docs/PRODUCTION_CONFIGURATION_CHECKLIST.md](docs/PRODUCTION_CONFIGURATION_CHECKLIST.md) to verify those owners and gates before any production activation.
 
+## Container images
+
+Every deployable service (`services/middleware`, the three `apps/*` dashboards, `services/camel-protocol-gateway`) has a production Dockerfile, and the root [`docker-compose.yml`](docker-compose.yml) unifies them into one local/staging stack (`docker compose up`). CI publishes images to GHCR on every push to `main`/`production`. See [docs/production/DOCKER-DEPLOYMENT.md](docs/production/DOCKER-DEPLOYMENT.md) for the full picture, including why `camel-protocol-gateway` is a deliberate exception.
+
 ## Communications API v1
 
 Communications API v1 is tracked as a canonical SDK surface in [contracts/openapi/codestra-communications.openapi.yaml](contracts/openapi/codestra-communications.openapi.yaml), [contracts/asyncapi/codestra-events.asyncapi.yaml](contracts/asyncapi/codestra-events.asyncapi.yaml), and [packages/communications-sdk](packages/communications-sdk). The production-readiness gate is documented in [docs/COMMUNICATIONS_PRODUCTION_READINESS.md](docs/COMMUNICATIONS_PRODUCTION_READINESS.md) and enforced by:
