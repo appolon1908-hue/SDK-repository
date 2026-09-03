@@ -1,0 +1,9 @@
+asyncapi: 3.0.0
+info:
+  title: Invalid AsyncAPI fixture
+  version: 0.0.0
+operations:
+  broken:
+    action: receive
+    channel:
+      $ref: '#/channels/doesNotExist'

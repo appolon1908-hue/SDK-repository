@@ -1,0 +1,208 @@
+// Codestra Middleware durable store.
+//
+// Middleware is the sole cross-system write authority (see
+// docs/CONTRACT_BOUNDARY_MATRIX.md). Every mutating request is scoped to the
+// tenant extracted from a verified JWT and is deduplicated through
+// `idempotent_commands`, whose state machine mirrors
+// `@codestra/connector-kit`'s `ConnectorIdempotencyStore` contract exactly
+// (see `src/idempotency/prisma-store.ts`).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SocialPostStatus {
+  accepted
+  scheduled
+  publishing
+  published
+  partially_published
+  failed
+  cancelled
+}
+
+enum WebhookSubscriptionStatus {
+  pending_verification
+  active
+  disabled
+  verification_failed
+}
+
+enum WebhookVerificationStatus {
+  pending
+  verified
+  failed
+}
+
+enum WebhookDeliveryStatus {
+  queued
+  attempting
+  delivered
+  failed
+  dead_lettered
+  rejected
+}
+
+/// Mirrors `ConnectorIdempotencyRecordState` from @codestra/connector-kit,
+/// split into `succeeded`/`failed` so the ledger records which terminal
+/// outcome was cached (both map back to connector-kit's single "completed"
+/// state through the store's snapshot translation).
+enum IdempotencyState {
+  pending
+  dispatched
+  succeeded
+  failed
+  indeterminate
+}
+
+model Tenant {
+  id        String   @id @db.Uuid
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  socialPosts          SocialPost[]
+  webhookSubscriptions WebhookSubscription[]
+  idempotentCommands   IdempotentCommand[]
+  outboxEvents         OutboxEvent[]
+
+  @@map("tenants")
+}
+
+model SocialPost {
+  id          String           @id @default(uuid()) @db.Uuid
+  tenantId    String           @db.Uuid
+  workspaceId String           @db.Uuid
+  status      SocialPostStatus @default(accepted)
+  content     Json
+  channels    Json             @default("[]")
+  publishAt   DateTime?        @map("publish_at")
+  metadata    Json?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, workspaceId])
+  @@map("social_posts")
+}
+
+model WebhookSubscription {
+  id     String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+
+  endpointUrl String   @map("endpoint_url")
+  eventTypes  String[] @map("event_types")
+  description String?
+
+  status WebhookSubscriptionStatus @default(pending_verification)
+
+  // Signing secrets. Shown in plaintext exactly once, in the create/rotate
+  // API response only; every read/list/enable/disable/test response omits
+  // this column. See services/middleware/README.md for the production
+  // encryption-at-rest gap this repository does not close.
+  currentSecret          String    @map("current_secret")
+  currentSecretCreatedAt DateTime  @map("current_secret_created_at")
+  previousSecret         String?   @map("previous_secret")
+  previousSecretExpiresAt DateTime? @map("previous_secret_expires_at")
+
+  verificationStatus      WebhookVerificationStatus @default(pending) @map("verification_status")
+  verificationChallengeId String?                   @map("verification_challenge_id")
+  verifiedAt               DateTime?                @map("verified_at")
+  lastAttemptAt             DateTime?               @map("last_attempt_at")
+  verificationFailureCode   String?                 @map("verification_failure_code")
+
+  disabledAt DateTime? @map("disabled_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId])
+  @@map("webhook_subscriptions")
+}
+
+model WebhookDelivery {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  subscriptionId String                @db.Uuid
+  eventType      String                @map("event_type")
+  status         WebhookDeliveryStatus @default(queued)
+  attempt        Int                   @default(0)
+  requestBodySha256 String?            @map("request_body_sha256")
+  responseStatus Int?                  @map("response_status")
+  failureCode    String?               @map("failure_code")
+  failureMessage String?               @map("failure_message")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  subscription WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, subscriptionId])
+  @@map("webhook_deliveries")
+}
+
+/// Durable, atomic backing store for `ConnectorIdempotencyStore`. One row
+/// per idempotency scope (`tenantId:namespace:operation:idempotencyKey`),
+/// shared by both the public/enterprise API mutation guard and the
+/// connector-command execution guard.
+model IdempotentCommand {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+
+  /// `${tenantId}:${namespace}:${operation}:${idempotencyKey}` — globally
+  /// unique, and always prefixed with tenantId so ownership never depends
+  /// on a separate lookup.
+  scope String @unique
+
+  requestHash String @map("request_hash")
+  commandId   String @map("command_id")
+
+  state IdempotencyState @default(pending)
+
+  /// Present only while state is `pending` or `dispatched`; cleared on
+  /// completion. Compared on every transition so a lost/expired lease
+  /// cannot mutate a record another holder is coordinating.
+  leaseToken     String?  @map("lease_token")
+  leaseExpiresAt DateTime @map("lease_expires_at")
+
+  resultJson  Json? @map("result_json")
+  outcomeJson Json? @map("outcome_json")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("idempotent_commands")
+}
+
+/// Canonical events, written transactionally alongside the state change
+/// they describe (the "outbox" pattern). A separate publisher process reads
+/// unpublished rows and emits them to the event bus described in
+/// contracts/asyncapi/codestra-events.asyncapi.yaml; that publisher is a
+/// documented stub in this change (see services/middleware/README.md).
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  eventType   String    @map("event_type")
+  subject     String?
+  payload     Json
+  occurredAt  DateTime  @map("occurred_at")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt])
+  @@index([tenantId, createdAt])
+  @@map("outbox_events")
+}

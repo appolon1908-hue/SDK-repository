@@ -1,0 +1,31 @@
+{
+  "name": "@codestra/svix-delivery",
+  "version": "0.1.0",
+  "description": "Optional, disabled-by-default Svix handoff adapter for canonical Codestra webhooks.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codestra/contracts": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "restricted",
+    "provenance": true
+  }
+}

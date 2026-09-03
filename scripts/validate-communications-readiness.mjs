@@ -1,0 +1,163 @@
+import { readFile } from "node:fs/promises";
+import { parse } from "yaml";
+
+const manifest = JSON.parse(await readFile("contracts/communications-production-readiness.v1.json", "utf8"));
+const openapi = parse(await readFile(manifest.canonicalContracts.openapi, "utf8"));
+const middlewareOpenApi = JSON.parse(await readFile("contracts/middleware-runtime-current.openapi.json", "utf8"));
+const asyncapi = parse(await readFile(manifest.canonicalContracts.asyncapi, "utf8"));
+
+// requiredUnifiedSdkEndpointPaths spans more than the Communications contract
+// alone (social/webhook paths live in the public contract, auth/marketing/ai/
+// crm/workflow in the platform contract) -- every OpenAPI document the
+// unified SDK's endpoint surface can draw from is loaded here so that check
+// validates against real, canonical paths instead of SDK source text.
+const unifiedSdkContractPaths = new Set(
+  (
+    await Promise.all(
+      [
+        manifest.canonicalContracts.openapi,
+        "contracts/openapi/codestra-public.openapi.yaml",
+        "contracts/openapi/codestra-platform.openapi.yaml",
+      ].map(async (path) => Object.keys(parse(await readFile(path, "utf8")).paths ?? {})),
+    )
+  ).flat(),
+);
+const clientSource = await readFile("packages/communications-sdk/src/client.ts", "utf8");
+const socialClientSource = await readFile("packages/social-sdk/src/client.ts", "utf8");
+const typeSource = await readFile("packages/communications-sdk/src/types.ts", "utf8");
+const unifiedSdkSource = await readFile("packages/codestra_sdk/src/sdk.ts", "utf8");
+const unifiedSdkPackage = JSON.parse(await readFile("packages/codestra_sdk/package.json", "utf8"));
+const failures = [];
+
+for (const path of manifest.requiredOpenApiPaths) {
+  if (!openapi.paths?.[path]) failures.push(`OpenAPI is missing required Communications path: ${path}`);
+}
+
+const channelAddresses = new Set(
+  Object.values(asyncapi.channels ?? {})
+    .map((channel) => channel?.address)
+    .filter((address) => typeof address === "string"),
+);
+for (const address of manifest.requiredAsyncApiChannels) {
+  if (!channelAddresses.has(address)) failures.push(`AsyncAPI is missing required channel address: ${address}`);
+}
+
+for (const facade of manifest.requiredSdkFacades) {
+  if (!clientSource.includes(`readonly ${facade}:`) || !clientSource.includes(`this.${facade} =`)) {
+    failures.push(`Communications SDK client is missing facade: ${facade}`);
+  }
+}
+
+for (const header of manifest.requiredCommandPlane.requiredHeaders) {
+  const lowerSource = clientSource.toLowerCase();
+  const lowerHeader = header.toLowerCase();
+  if (
+    !clientSource.includes(`"${header}"`) &&
+    !clientSource.includes(`${header}:`) &&
+    !lowerSource.includes(`"${lowerHeader}"`) &&
+    !lowerSource.includes(`${lowerHeader}:`)
+  ) {
+    failures.push(`Communications SDK command plane does not set required header: ${header}`);
+  }
+}
+
+if (unifiedSdkPackage.name !== "codestra_sdk") {
+  failures.push(`Unified SDK package name must remain codestra_sdk, got: ${String(unifiedSdkPackage.name)}`);
+}
+
+for (const moduleName of manifest.requiredUnifiedSdkModules ?? []) {
+  if (!unifiedSdkSource.includes(`readonly ${moduleName}:`) || !unifiedSdkSource.includes(`this.${moduleName} =`)) {
+    failures.push(`Unified codestra_sdk facade is missing module: ${moduleName}`);
+  }
+}
+
+for (const endpointPath of manifest.requiredUnifiedSdkEndpointPaths ?? []) {
+  const declaredByCanonicalContract =
+    unifiedSdkContractPaths.has(endpointPath) || middlewareOpenApi.paths?.[endpointPath] !== undefined;
+  if (!declaredByCanonicalContract) {
+    failures.push(`Unified SDK endpoint surface path is not declared in any canonical OpenAPI document: ${endpointPath}`);
+    continue;
+  }
+  const implementedByCanonicalDomainClient =
+    middlewareOpenApi.paths?.[endpointPath] !== undefined &&
+    isCanonicalDomainClientPath(endpointPath) &&
+    unifiedSdkSource.includes("private domainClient(domain: string)");
+  if (!implementedByCanonicalDomainClient && !unifiedSdkSource.includes(endpointPath) && !clientSource.includes(endpointPath) && !socialClientSource.includes(endpointPath)) {
+    failures.push(`Unified SDK endpoint surface is missing path: ${endpointPath}`);
+  }
+}
+
+function isCanonicalDomainClientPath(path) {
+  return /^\/v1\/(?:marketing|ai|crm|odoo|social|telephony|integrations\/n8n)\/(?:commands|operations(?:\/\{[^}]+\}(?:\/(?:cancel|reconcile))?)?)$/u.test(path);
+}
+
+for (const endpointPath of manifest.compatibilityOnlyEndpointPaths ?? []) {
+  if (middlewareOpenApi.paths?.[endpointPath] !== undefined) {
+    failures.push(`Compatibility-only endpoint is now present in canonical Middleware and must be reclassified: ${endpointPath}`);
+  }
+}
+
+const credentialRules = manifest.credentialCertification ?? {};
+for (const forbidden of credentialRules.forbiddenSourcePatterns ?? []) {
+  for (const [path, source] of [
+    ["packages/communications-sdk/src/client.ts", clientSource],
+    ["packages/social-sdk/src/client.ts", socialClientSource],
+    ["packages/codestra_sdk/src/sdk.ts", unifiedSdkSource],
+  ]) {
+    if (source.includes(forbidden)) {
+      failures.push(`${path}: contains forbidden credential material pattern: ${forbidden}`);
+    }
+  }
+}
+
+for (const [label, source] of [
+  ["Communications SDK", clientSource],
+  ["Social SDK", socialClientSource],
+  ["Unified codestra_sdk", unifiedSdkSource],
+]) {
+  if (!source.includes("baseUrl must use HTTPS except for loopback development.")) {
+    failures.push(`${label} does not enforce HTTPS-only non-loopback base URLs.`);
+  }
+  if (!source.includes("baseUrl must not contain credentials, query parameters, or fragments.")) {
+    failures.push(`${label} does not reject credential-bearing base URLs.`);
+  }
+  if (!source.toLowerCase().includes("authorization") || !source.includes("Bearer ${token}")) {
+    failures.push(`${label} does not inject bearer authentication through headers.`);
+  }
+  if (!source.includes('credentials: "omit"')) {
+    failures.push(`${label} does not omit ambient browser credentials.`);
+  }
+  if (!source.toLowerCase().includes("idempotency-key")) {
+    failures.push(`${label} does not enforce idempotency header handling.`);
+  }
+}
+
+for (const exportedType of [
+  "CommunicationMessage",
+  "CommunicationTemplate",
+  "CommunicationSenderIdentity",
+  "CommunicationDomain",
+  "CommunicationSuppression",
+  "CommunicationPreference",
+  "CommunicationProviderHealth",
+  "CommunicationUsageReport",
+  "CommunicationReputationReport",
+  "CreateCommunicationMessageInput",
+]) {
+  if (!typeSource.includes(exportedType)) failures.push(`Communications SDK types do not expose ${exportedType}`);
+}
+
+if (!clientSource.includes("/v1/commands") || !clientSource.includes("/v1/operations/")) {
+  failures.push("Communications SDK must preserve privileged Middleware command submit/read-back routes.");
+}
+
+if (manifest.status !== "CONTRACT_READY_STAGING_PROOF_REQUIRED") {
+  failures.push(`Unexpected production readiness status: ${manifest.status}`);
+}
+
+if (failures.length > 0) {
+  console.error(failures.map((failure) => `- ${failure}`).join("\n"));
+  process.exit(1);
+}
+
+console.log("Communications production-readiness manifest validation passed.");

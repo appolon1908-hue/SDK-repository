@@ -1,0 +1,57 @@
+name: codestra-middleware
+
+x-security: &security
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  postgres:
+    <<: *security
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: codestra_middleware
+      POSTGRES_USER: codestra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codestra}
+    ports:
+      - "5433:5432"
+    volumes:
+      - middleware-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codestra -d codestra_middleware"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  middleware:
+    <<: *security
+    build:
+      context: ../..
+      dockerfile: services/middleware/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://codestra:${POSTGRES_PASSWORD:-codestra}@postgres:5432/codestra_middleware
+      PORT: "3000"
+      HOST: "0.0.0.0"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  middleware-postgres:

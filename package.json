@@ -1,0 +1,47 @@
+{
+  "name": "codestra-sdk-repository",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Contract-first SDK and connector monorepo for the Codestra platform.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run build && pnpm test:coverage",
+    "test:unit": "vitest run --config vitest.config.mjs",
+    "test:coverage": "vitest run --config vitest.config.mjs --coverage",
+    "typecheck": "turbo run typecheck",
+    "contracts:validate": "node scripts/validate-contracts.mjs",
+    "contracts:middleware": "node scripts/check-middleware-runtime-alignment.mjs",
+    "contracts:middleware:generate": "node scripts/generate-middleware-sdk-contract.mjs",
+    "contracts:middleware:negative": "node scripts/test-middleware-authority-gates.mjs",
+    "communications:ready": "node scripts/validate-communications-readiness.mjs",
+    "contracts:validate:negative": "node scripts/test-contract-validator.mjs",
+    "ci": "pnpm contracts:validate && pnpm contracts:middleware && pnpm contracts:middleware:negative && pnpm communications:ready && pnpm contracts:validate:negative && pnpm build && pnpm typecheck && pnpm test:coverage",
+    "contracts:drift": "node scripts/check-contract-drift.mjs",
+    "contracts:drift:negative": "node scripts/test-contract-drift-detector.mjs",
+    "workflows:validate": "node scripts/validate-workflow-policy.mjs",
+    "pacts:validate": "node scripts/validate-pacts.mjs",
+    "security:audit": "pnpm audit --prod --audit-level high"
+  },
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "8.0.2",
+      "postcss": "8.5.26"
+    }
+  },
+  "devDependencies": {
+    "@changesets/cli": "2.31.1",
+    "@redocly/cli": "2.47.0",
+    "@vitest/coverage-v8": "3.2.7",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "turbo": "2.10.12",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7",
+    "yaml": "2.9.0"
+  }
+}

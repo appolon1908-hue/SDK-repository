@@ -1,0 +1,52 @@
+{
+  "name": "@codestra/provider-adapters",
+  "version": "0.1.0",
+  "description": "Disabled-by-default server adapters for Codestra product-local restricted gateways.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./postiz": {
+      "types": "./dist/postiz.d.ts",
+      "default": "./dist/postiz.js"
+    },
+    "./odoo": {
+      "types": "./dist/odoo.d.ts",
+      "default": "./dist/odoo.js"
+    },
+    "./klyrow": {
+      "types": "./dist/klyrow.d.ts",
+      "default": "./dist/klyrow.js"
+    },
+    "./telnexa": {
+      "types": "./dist/telnexa.d.ts",
+      "default": "./dist/telnexa.js"
+    },
+    "./vicidial": {
+      "types": "./dist/vicidial.d.ts",
+      "default": "./dist/vicidial.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codestra/connector-kit": "workspace:^",
+    "@codestra/contracts": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "restricted",
+    "provenance": true
+  }
+}

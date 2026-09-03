@@ -1,0 +1,434 @@
+/* Plain, functional, information-dense styling shared by all three apps. */
+
+:root {
+  color-scheme: light;
+  --cds-bg: #f6f7f9;
+  --cds-surface: #ffffff;
+  --cds-border: #d7dbe0;
+  --cds-text: #1a1d21;
+  --cds-text-muted: #565d66;
+  --cds-accent: #1f4fd8;
+  --cds-positive: #0a7a3d;
+  --cds-positive-bg: #e5f6ec;
+  --cds-attention: #8a5a00;
+  --cds-attention-bg: #fdf1da;
+  --cds-negative: #b3261e;
+  --cds-negative-bg: #fbe6e4;
+  --cds-info: #1f4fd8;
+  --cds-info-bg: #e7edfd;
+  --cds-neutral: #4a4f57;
+  --cds-neutral-bg: #eceef1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cds-bg);
+  color: var(--cds-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--cds-accent);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--cds-neutral-bg);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+}
+
+.cds-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.cds-skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+}
+.cds-skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+  background: var(--cds-surface);
+  padding: 0.5rem 1rem;
+  z-index: 10;
+}
+
+.cds-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--cds-surface);
+  border-bottom: 1px solid var(--cds-border);
+}
+
+.cds-header-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+.cds-logo {
+  color: var(--cds-accent);
+}
+.cds-app-name {
+  color: var(--cds-text-muted);
+  font-weight: 500;
+}
+
+.cds-nav {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+.cds-nav-link {
+  text-decoration: none;
+  color: var(--cds-text);
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+}
+.cds-nav-link:hover {
+  border-bottom-color: var(--cds-accent);
+}
+
+.cds-session {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+.cds-session-label {
+  color: var(--cds-text-muted);
+  font-size: 0.85rem;
+}
+
+.cds-mock-banner {
+  background: var(--cds-attention-bg);
+  color: var(--cds-attention);
+  padding: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--cds-border);
+}
+
+.cds-main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.25rem;
+}
+h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+.cds-page-subtitle {
+  color: var(--cds-text-muted);
+  margin: 0 0 1.5rem;
+}
+
+.cds-section {
+  background: var(--cds-surface);
+  border: 1px solid var(--cds-border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.cds-button-primary,
+.cds-button-ghost,
+.cds-button-danger {
+  font: inherit;
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+.cds-button-primary {
+  background: var(--cds-accent);
+  color: #fff;
+  border: 1px solid var(--cds-accent);
+}
+.cds-button-ghost {
+  background: transparent;
+  color: var(--cds-text);
+  border: 1px solid var(--cds-border);
+}
+.cds-button-danger {
+  background: var(--cds-negative-bg);
+  color: var(--cds-negative);
+  border: 1px solid var(--cds-negative);
+}
+
+.cds-table-wrap {
+  overflow-x: auto;
+}
+.cds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.cds-table th,
+.cds-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--cds-border);
+  white-space: nowrap;
+}
+.cds-table th {
+  color: var(--cds-text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cds-empty {
+  color: var(--cds-text-muted);
+  padding: 1rem 0;
+}
+
+.cds-pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.cds-pill-positive {
+  background: var(--cds-positive-bg);
+  color: var(--cds-positive);
+}
+.cds-pill-attention {
+  background: var(--cds-attention-bg);
+  color: var(--cds-attention);
+}
+.cds-pill-negative {
+  background: var(--cds-negative-bg);
+  color: var(--cds-negative);
+}
+.cds-pill-info {
+  background: var(--cds-info-bg);
+  color: var(--cds-info);
+}
+.cds-pill-neutral {
+  background: var(--cds-neutral-bg);
+  color: var(--cds-neutral);
+}
+
+.cds-stat-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.cds-stat-tile {
+  background: var(--cds-surface);
+  border: 1px solid var(--cds-border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.cds-stat-label {
+  font-size: 0.75rem;
+  color: var(--cds-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.cds-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.cds-stat-hint {
+  font-size: 0.75rem;
+  color: var(--cds-text-muted);
+}
+
+.cds-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cds-bg);
+}
+.cds-login-card {
+  background: var(--cds-surface);
+  border: 1px solid var(--cds-border);
+  border-radius: 8px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+}
+.cds-login-notice {
+  font-size: 0.85rem;
+  color: var(--cds-text-muted);
+  background: var(--cds-attention-bg);
+  padding: 0.75rem;
+  border-radius: 4px;
+}
+.cds-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+.cds-login-form label {
+  font-size: 0.8rem;
+  color: var(--cds-text-muted);
+  margin-top: 0.5rem;
+}
+.cds-login-form input {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--cds-border);
+  border-radius: 4px;
+}
+.cds-login-form button {
+  margin-top: 1rem;
+}
+
+.cds-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 480px;
+}
+.cds-form label {
+  font-size: 0.8rem;
+  color: var(--cds-text-muted);
+}
+.cds-form input,
+.cds-form textarea,
+.cds-form select {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--cds-border);
+  border-radius: 4px;
+}
+.cds-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.cds-form-error {
+  color: var(--cds-negative);
+  font-size: 0.85rem;
+}
+.cds-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.cds-checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--cds-text);
+}
+
+.cds-external-config {
+  background: var(--cds-surface);
+  border: 1px dashed var(--cds-border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.cds-external-config-owner {
+  color: var(--cds-text-muted);
+  font-size: 0.8rem;
+  margin: 0 0 0.75rem;
+}
+.cds-external-config dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+}
+.cds-external-config-row {
+  display: contents;
+}
+.cds-external-config dt {
+  color: var(--cds-text-muted);
+}
+.cds-external-config dd {
+  margin: 0;
+}
+
+.cds-secret-reveal {
+  background: var(--cds-info-bg);
+  border: 1px solid var(--cds-info);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+.cds-secret-value {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+  margin-top: 0.35rem;
+}
+
+.cds-op-card {
+  border: 1px solid var(--cds-border);
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.cds-op-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--cds-neutral-bg);
+}
+.cds-op-method {
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  color: #fff;
+}
+.cds-op-method-get { background: #0a7a3d; }
+.cds-op-method-post { background: #1f4fd8; }
+.cds-op-method-delete { background: #b3261e; }
+.cds-op-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+.cds-op-body {
+  padding: 0.75rem 1rem;
+}
+.cds-op-summary {
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+.cds-op-params {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin: 0.5rem 0;
+}
+.cds-op-params th,
+.cds-op-params td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--cds-border);
+}

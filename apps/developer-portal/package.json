@@ -1,0 +1,36 @@
+{
+  "name": "@codestra/developer-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Customer-facing developer portal: live API reference, event catalogue, webhook-subscription management, and API credentials.",
+  "license": "MIT",
+  "scripts": {
+    "generate:api-reference": "node scripts/generate-api-reference.mjs",
+    "dev": "pnpm run generate:api-reference && next dev -p 3002",
+    "build": "pnpm run generate:api-reference && next build",
+    "start": "next start -p 3002",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codestra/apps-shared": "workspace:*",
+    "@codestra/contracts": "workspace:^",
+    "@codestra/social-sdk": "workspace:^",
+    "next": "^15.5.21",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.6",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

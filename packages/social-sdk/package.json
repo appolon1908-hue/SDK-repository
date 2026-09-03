@@ -1,0 +1,36 @@
+{
+  "name": "@codestra/social-sdk",
+  "version": "0.1.0",
+  "description": "Tenant-aware Codestra social publishing SDK for browser and server applications.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --exclude test/pact/**",
+    "test:pact": "vitest run --config vitest.pact.config.mjs"
+  },
+  "dependencies": {
+    "@codestra/contracts": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "@codestra/testing": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
