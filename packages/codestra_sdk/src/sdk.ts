@@ -27,7 +27,6 @@ import type {
   CanonicalCommandEnvelope,
   CanonicalCommandInput,
   GenerateAiInput,
-  MarketingCampaignListOptions,
   OperationListOptions,
   OperationMutationInput,
   TriggerWorkflowInput,
@@ -152,7 +151,7 @@ export class CodestraSdk {
 
   readonly marketing: {
     campaigns: {
-      list: (options?: MarketingCampaignListOptions) => Promise<JsonObject>;
+      list: (options?: CodestraRequestOptions) => Promise<JsonObject>;
       get: (campaignId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
     };
   };
@@ -304,7 +303,7 @@ export class CodestraSdk {
 
     this.marketing = {
       campaigns: {
-        list: (requestOptions) => this.request({ method: "GET", path: withQuery("/v1/marketing/campaigns", requestOptions), ...copyRequestOptions(requestOptions) }),
+        list: (requestOptions) => this.request({ method: "GET", path: "/v1/marketing/campaigns", ...copyRequestOptions(requestOptions) }),
         get: (campaignId, requestOptions) =>
           this.request({ method: "GET", path: `/v1/marketing/campaigns/${encodeURIComponent(requirePathSegment(campaignId, "campaignId"))}`, ...copyRequestOptions(requestOptions) }),
       },

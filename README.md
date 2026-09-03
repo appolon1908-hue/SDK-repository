@@ -64,7 +64,7 @@ codestra_sdk
 
 ```ts
 codestra.marketing.campaigns.list();
-codestra.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey });
+codestra.ai.generate({ task: "summarize", input: "Summarize this lead." }, { idempotencyKey });
 codestra.communication.messages.send(message, { idempotencyKey });
 codestra.social.posts.schedule(post, { idempotencyKey });
 ```
