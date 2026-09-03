@@ -5,6 +5,23 @@ const manifest = JSON.parse(await readFile("contracts/communications-production-
 const openapi = parse(await readFile(manifest.canonicalContracts.openapi, "utf8"));
 const middlewareOpenApi = JSON.parse(await readFile("contracts/middleware-runtime-current.openapi.json", "utf8"));
 const asyncapi = parse(await readFile(manifest.canonicalContracts.asyncapi, "utf8"));
+
+// requiredUnifiedSdkEndpointPaths spans more than the Communications contract
+// alone (social/webhook paths live in the public contract, auth/marketing/ai/
+// crm/workflow in the platform contract) -- every OpenAPI document the
+// unified SDK's endpoint surface can draw from is loaded here so that check
+// validates against real, canonical paths instead of SDK source text.
+const unifiedSdkContractPaths = new Set(
+  (
+    await Promise.all(
+      [
+        manifest.canonicalContracts.openapi,
+        "contracts/openapi/codestra-public.openapi.yaml",
+        "contracts/openapi/codestra-platform.openapi.yaml",
+      ].map(async (path) => Object.keys(parse(await readFile(path, "utf8")).paths ?? {})),
+    )
+  ).flat(),
+);
 const clientSource = await readFile("packages/communications-sdk/src/client.ts", "utf8");
 const socialClientSource = await readFile("packages/social-sdk/src/client.ts", "utf8");
 const typeSource = await readFile("packages/communications-sdk/src/types.ts", "utf8");
@@ -55,6 +72,12 @@ for (const moduleName of manifest.requiredUnifiedSdkModules ?? []) {
 }
 
 for (const endpointPath of manifest.requiredUnifiedSdkEndpointPaths ?? []) {
+  const declaredByCanonicalContract =
+    unifiedSdkContractPaths.has(endpointPath) || middlewareOpenApi.paths?.[endpointPath] !== undefined;
+  if (!declaredByCanonicalContract) {
+    failures.push(`Unified SDK endpoint surface path is not declared in any canonical OpenAPI document: ${endpointPath}`);
+    continue;
+  }
   const implementedByCanonicalDomainClient =
     middlewareOpenApi.paths?.[endpointPath] !== undefined &&
     isCanonicalDomainClientPath(endpointPath) &&

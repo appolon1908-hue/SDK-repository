@@ -1,0 +1,416 @@
+openapi: 3.1.0
+info:
+  title: Codestra Platform API
+  version: 0.1.0
+  description: >
+    Auth session introspection, marketing, AI generation, CRM lead, and
+    workflow orchestration surfaces consumed by the unified Codestra SDK
+    (packages/codestra_sdk). These operations were implemented in the SDK
+    facade before any canonical contract existed for them; this document is
+    that contract, grounded in the request/response shapes the facade and
+    its generated clients already send and expect.
+servers:
+  - url: https://api.codestra.co
+security:
+  - oidc: []
+paths:
+  /v1/auth/session:
+    get:
+      operationId: getAuthSession
+      summary: Read the caller's current authenticated session
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Current session for the authenticated caller
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/marketing/campaigns:
+    get:
+      operationId: listMarketingCampaigns
+      summary: List tenant marketing campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 1000 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/MarketingCampaignStatus' }
+      responses:
+        '200':
+          description: Current tenant marketing campaigns
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCampaignList' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createMarketingCampaign
+      summary: Create a marketing campaign
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingCampaignRequest' }
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCampaign' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/marketing/campaigns/{campaignId}:
+    get:
+      operationId: getMarketingCampaign
+      summary: Read one tenant marketing campaign
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: campaignId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current campaign state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCampaign' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/marketing/capabilities:
+    get:
+      operationId: getMarketingCapabilities
+      summary: Read marketing capabilities enabled for the calling tenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Enabled marketing channels and limits for the tenant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCapabilities' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/ai/generate:
+    post:
+      operationId: generateAiContent
+      summary: Generate content from a prompt
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GenerateAiRequest' }
+      responses:
+        '200':
+          description: Generated content
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiGenerationResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/crm/leads:
+    get:
+      operationId: listCrmLeads
+      summary: List tenant CRM leads
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 1000 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/CrmLeadStatus' }
+      responses:
+        '200':
+          description: Current tenant CRM leads
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrmLeadList' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/crm/leads/{leadId}:
+    get:
+      operationId: getCrmLead
+      summary: Read one tenant CRM lead
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: leadId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current lead state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrmLead' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/workflow/runs:
+    post:
+      operationId: triggerWorkflowRun
+      summary: Trigger a named workflow run
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TriggerWorkflowRunRequest' }
+      responses:
+        '202':
+          description: Workflow run accepted for asynchronous execution
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowRun' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/workflow/runs/{runId}:
+    get:
+      operationId: getWorkflowRun
+      summary: Read one workflow run
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: runId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current workflow run state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowRun' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.codestra.co/realms/codestra/.well-known/openid-configuration
+  parameters:
+    TenantId:
+      name: X-Codestra-Tenant-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema: { type: string, minLength: 8, maxLength: 128 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+  responses:
+    Error:
+      description: Structured Codestra error
+      content:
+        application/json:
+          schema: { $ref: './codestra-public.openapi.yaml#/components/schemas/ErrorResponse' }
+  schemas:
+    Session:
+      type: object
+      additionalProperties: false
+      required: [subject, tenantId, issuedAt, expiresAt]
+      properties:
+        subject:
+          type: object
+          additionalProperties: false
+          required: [type, id]
+          properties:
+            type: { type: string, enum: [user, service] }
+            id: { type: string, minLength: 1, maxLength: 200 }
+        tenantId: { type: string, format: uuid }
+        scopes:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 200 }
+        issuedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    MarketingCampaignStatus:
+      type: string
+      enum: [draft, scheduled, active, paused, completed, cancelled]
+    MarketingChannel:
+      type: string
+      enum: [email, sms, social, push]
+    Budget:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: { type: number, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    CreateMarketingCampaignRequest:
+      type: object
+      additionalProperties: false
+      required: [name, channel]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        channel: { $ref: '#/components/schemas/MarketingChannel' }
+        audience: { type: object }
+        budget: { $ref: '#/components/schemas/Budget' }
+        scheduledAt: { type: string, format: date-time }
+        metadata: { type: object }
+    MarketingCampaign:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, name, channel, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        channel: { $ref: '#/components/schemas/MarketingChannel' }
+        status: { $ref: '#/components/schemas/MarketingCampaignStatus' }
+        audience: { type: object }
+        budget: { $ref: '#/components/schemas/Budget' }
+        scheduledAt: { type: string, format: date-time }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    MarketingCampaignList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MarketingCampaign' }
+        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
+    MarketingCapabilities:
+      type: object
+      additionalProperties: false
+      required: [channels]
+      properties:
+        channels:
+          type: array
+          items: { $ref: '#/components/schemas/MarketingChannel' }
+        maxActiveCampaigns: { type: integer, minimum: 0 }
+    GenerateAiRequest:
+      type: object
+      additionalProperties: false
+      required: [prompt]
+      properties:
+        prompt: { type: string, minLength: 1, maxLength: 20000 }
+        model: { type: string, minLength: 1, maxLength: 200 }
+        metadata: { type: object }
+    AiGenerationResult:
+      type: object
+      additionalProperties: false
+      required: [id, output, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        output: { type: string }
+        model: { type: string, minLength: 1, maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+    CrmLeadStatus:
+      type: string
+      enum: [new, contacted, qualified, disqualified, converted]
+    CrmLead:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/CrmLeadStatus' }
+        name: { type: string, maxLength: 200 }
+        email: { type: string, format: email, maxLength: 254 }
+        phone: { type: string, maxLength: 40 }
+        source: { type: string, maxLength: 120 }
+        message: { type: string, maxLength: 4000 }
+        attributes: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CrmLeadList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CrmLead' }
+        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
+    TriggerWorkflowRunRequest:
+      type: object
+      additionalProperties: false
+      required: [workflow]
+      properties:
+        workflow: { type: string, minLength: 1, maxLength: 200 }
+        payload: { type: object }
+    WorkflowRunStatus:
+      type: string
+      enum: [queued, running, succeeded, failed, cancelled]
+    WorkflowRun:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workflow, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        workflow: { type: string, minLength: 1, maxLength: 200 }
+        status: { $ref: '#/components/schemas/WorkflowRunStatus' }
+        payload: { type: object }
+        result: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
