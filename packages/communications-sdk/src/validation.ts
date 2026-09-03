@@ -24,6 +24,16 @@ const OPERATION_STATES = new Set([
   "failed",
   "reconciliation_required",
   "dead_lettered",
+  "RECEIVED",
+  "QUEUED",
+  "SUBMITTED",
+  "ACCEPTED",
+  "UNKNOWN",
+  "COMPLETED",
+  "FAILED",
+  "RECONCILIATION_REQUIRED",
+  "DEAD_LETTERED",
+  "CANCELLED",
 ]);
 
 export function validateSendEmailInput(input: SendEmailInput): SendEmailInput {

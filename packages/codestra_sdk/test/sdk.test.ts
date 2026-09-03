@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { CodestraSdkConfigurationError, createCodestraSdk } from "../src/index.js";
+import {
+  CapabilityDisabledError,
+  CodestraSdkConfigurationError,
+  UnknownOutcomeError,
+  createCodestraSdk,
+} from "../src/index.js";
 
 const tenantId = "tenant-001";
 const correlationId = "correlation-0001";
@@ -10,6 +15,9 @@ describe("codestra_sdk facade", () => {
     const sdk = testSdk(vi.fn<typeof fetch>());
 
     expect(sdk).toHaveProperty("auth");
+    expect(sdk).toHaveProperty("platform");
+    expect(sdk).toHaveProperty("operations");
+    expect(sdk).toHaveProperty("control");
     expect(sdk).toHaveProperty("marketing");
     expect(sdk).toHaveProperty("ai");
     expect(sdk).toHaveProperty("communication");
@@ -19,6 +27,172 @@ describe("codestra_sdk facade", () => {
     expect(sdk).toHaveProperty("operationsDashboard");
     expect(sdk).toHaveProperty("events");
     expect(sdk).toHaveProperty("common");
+  });
+
+  it("uses canonical Middleware command and operation routes", async () => {
+    const operationId = "d0313dba-09f7-4cce-8894-195f72c62126";
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(200, { operation_id: operationId, state: "QUEUED" }));
+    const sdk = testSdk(fetchMock);
+
+    await sdk.control.marketing.submit(
+      {
+        commandType: "marketing.campaign.create.v1",
+        target: "marketing",
+        capability: "MARKETING_WRITE",
+        payload: { name: "Safe draft" },
+      },
+      { idempotencyKey },
+    );
+    await sdk.control.ai.get(operationId);
+    await sdk.control.crm.reconcile(
+      operationId,
+      { expected_version: 2, reason: "provider readback complete" },
+      { idempotencyKey },
+    );
+    await sdk.control.n8n.list({ state: "RECONCILIATION_REQUIRED", limit: 25 });
+    await sdk.control.marketing.list({ correlationId: "domain-list-correlation" });
+
+    expect(pathname(fetchMock, 0)).toBe("/v1/marketing/commands");
+    expect(pathname(fetchMock, 1)).toBe(`/v1/ai/operations/${operationId}`);
+    expect(pathname(fetchMock, 2)).toBe(`/v1/crm/operations/${operationId}/reconcile`);
+    expect(new URL(String(fetchMock.mock.calls[3]?.[0])).pathname).toBe("/v1/integrations/n8n/operations");
+    expect(Object.fromEntries(new URL(String(fetchMock.mock.calls[3]?.[0])).searchParams)).toEqual({
+      limit: "25",
+      state: "RECONCILIATION_REQUIRED",
+    });
+    expect(new URL(String(fetchMock.mock.calls[4]?.[0])).search).toBe("");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      command_id: operationId,
+      command_type: "marketing.campaign.create.v1",
+      command_version: "1.0",
+      target: "marketing",
+      tenant_id: tenantId,
+      requested_by: "moneybee-backend",
+      correlation_id: correlationId,
+      idempotency_key: idempotencyKey,
+      capability: "MARKETING_WRITE",
+      payload: { name: "Safe draft" },
+    });
+    expect(headersFor(fetchMock, 0).get("idempotency-key")).toBe(idempotencyKey);
+  });
+
+  it("exposes canonical platform and global operation reads", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(200, {}));
+    const sdk = testSdk(fetchMock);
+    await sdk.platform.health();
+    await sdk.platform.readiness();
+    await sdk.platform.version();
+    await sdk.platform.dependencies();
+    await sdk.platform.capabilities();
+    await sdk.operations.list({ limit: 10, state: "UNKNOWN" });
+    expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
+      "/health",
+      "/readiness",
+      "/version",
+      "/dependencies",
+      "/capabilities",
+      "/v1/operations",
+    ]);
+  });
+
+  it("rejects malformed canonical commands before network activity", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const sdk = testSdk(fetchMock);
+    expect(() =>
+      sdk.control.odoo.submit(
+        { commandType: "invalid", target: "odoo-19", capability: "ODOO_WRITE", payload: {} },
+        { idempotencyKey },
+      ),
+    ).toThrow(CodestraSdkConfigurationError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts contract-valid UUID versions beyond the legacy v1-v5 range", async () => {
+    const operationId = "01890f47-7a5b-7cc1-9d21-8cb3e8f2c001";
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(200, { operation_id: operationId, state: "QUEUED" }),
+    );
+    const sdk = testSdk(fetchMock);
+
+    await sdk.operations.get(operationId);
+    expect(pathname(fetchMock, 0)).toBe(`/v1/operations/${operationId}`);
+  });
+
+  it("enforces the canonical 8-to-180 character idempotency-key bounds", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(202, { operation_id: "d0313dba-09f7-4cce-8894-195f72c62126", state: "QUEUED" }),
+    );
+    const sdk = testSdk(fetchMock);
+    const command = {
+      commandType: "marketing.campaign.create.v1",
+      target: "marketing",
+      capability: "MARKETING_WRITE",
+      payload: { name: "Safe draft" },
+    };
+
+    await sdk.control.marketing.submit(command, { idempotencyKey: "12345678" });
+    await sdk.control.marketing.submit(command, { idempotencyKey: "x".repeat(180) });
+    expect(() => sdk.control.marketing.submit(command, { idempotencyKey: "1234567" })).toThrow(
+      "idempotencyKey must contain between 8 and 180 characters.",
+    );
+    expect(() => sdk.control.marketing.submit(command, { idempotencyKey: "x".repeat(181) })).toThrow(
+      "idempotencyKey must contain between 8 and 180 characters.",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves legacy idempotency-key bounds on legacy calls", () => {
+    const sdk = testSdk(vi.fn<typeof fetch>());
+
+    expect(() => sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey: "12345678" })).toThrow(
+      "idempotencyKey must contain between 16 and 128 characters.",
+    );
+    expect(() =>
+      sdk.workflow.runs.trigger(
+        { workflowId: "workflow-1", input: {} },
+        { idempotencyKey: "x".repeat(129) },
+      ),
+    ).toThrow("idempotencyKey must contain between 16 and 128 characters.");
+  });
+
+  it("preserves unknown outcomes as a typed read-back-required error", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(409, {
+        error: {
+          code: "UNKNOWN_PROVIDER_OUTCOME",
+          message: "Read back provider state before retrying.",
+          request_id: "request-001",
+          correlation_id: correlationId,
+          operation_id: "d0313dba-09f7-4cce-8894-195f72c62126",
+          retryable: false,
+        },
+      }),
+    );
+    const sdk = testSdk(fetchMock);
+    await expect(sdk.operations.get("d0313dba-09f7-4cce-8894-195f72c62126")).rejects.toMatchObject({
+      name: "UnknownOutcomeError",
+      code: "UNKNOWN_PROVIDER_OUTCOME",
+      retryable: false,
+      correlationId,
+      operationId: "d0313dba-09f7-4cce-8894-195f72c62126",
+    });
+    await expect(sdk.operations.get("d0313dba-09f7-4cce-8894-195f72c62126")).rejects.toBeInstanceOf(UnknownOutcomeError);
+  });
+
+  it("classifies a disabled capability before the generic forbidden status", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      jsonResponse(403, {
+        error: {
+          code: "CAPABILITY_DISABLED",
+          message: "External delivery is disabled.",
+          request_id: "request-capability-001",
+          retryable: false,
+        },
+      }),
+    );
+    const sdk = testSdk(fetchMock);
+
+    await expect(sdk.platform.capabilities()).rejects.toBeInstanceOf(CapabilityDisabledError);
   });
 
   it("supports stable product-facing calls across current domains", async () => {

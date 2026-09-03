@@ -1,0 +1,14 @@
+title = "Codestra SDK secret scanning policy"
+
+# Deliberately synthetic values used to assert auth-header and webhook-secret
+# behavior. Match the fixture bytes, never a whole path, so a real credential
+# added beside a fixture remains detectable in both the worktree and history.
+[[allowlists]]
+description = "Synthetic test credentials and explicit SDK placeholder"
+regexes = [
+  '''^secret-token$''',
+  '''^test-token$''',
+  '''^lease-token-0001$''',
+  '''^synthetic-pact-token-not-a-real-credential$''',
+  '''^whsec_MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=$''',
+]

@@ -15,6 +15,21 @@ env:
   REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact revision with history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan repository and history for secrets
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
   moneybee-python-connectors:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -73,6 +88,8 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install exact dependencies
         run: pnpm install --frozen-lockfile
+      - name: Reject production dependency vulnerabilities rated High or Critical
+        run: pnpm security:audit
       - name: Validate canonical contracts semantically
         run: pnpm contracts:validate
       - name: Prove invalid contracts fail closed
