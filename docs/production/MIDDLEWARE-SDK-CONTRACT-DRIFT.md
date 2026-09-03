@@ -54,7 +54,7 @@ exposes canonical platform, global-operation, and domain command/status
 clients for Marketing, AI, CRM, Odoo, n8n, Social, and Telephony. The following
 older wrappers remain present so this change does not silently break consumers:
 
-- `/v1/auth/session`
+- `/v1/auth/session` (`deprecated: true`; see below)
 - `/v1/marketing/campaigns*`
 - `/v1/ai/generate`
 - `/v1/crm/leads*` (`deprecated: true`; see below)
@@ -70,6 +70,13 @@ published sunset window this section requires before final contract
 removal (the breaking-change gate in `scripts/check-contract-drift.mjs`
 rejects an outright path deletion unconditionally, with no exemption for
 already-deprecated operations).
+
+`/v1/auth/session` never had a real backend at all: it was invented
+alongside the rest of this contract, and this repository's own authority
+boundary places OIDC/session infrastructure outside its ownership entirely
+(there is no "same-origin BFF package" here to publish a real contract
+for). The unified SDK no longer exposes it. Same sunset treatment as
+`/v1/crm/leads*` above -- deprecated in the contract, not yet removable.
 
 These compatibility routes are absent from Middleware SHA `9cd3fd3e…`; they
 must not be used as evidence for staging or production certification and need

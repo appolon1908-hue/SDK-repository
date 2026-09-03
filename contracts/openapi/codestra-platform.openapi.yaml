@@ -8,9 +8,9 @@ info:
     (packages/codestra_sdk). These operations were implemented in the SDK
     facade before any canonical contract existed for them; this document is
     that contract, grounded in the request/response shapes the facade and
-    its generated clients already send and expect. The CRM lead operations
-    are `deprecated: true`: codestra_sdk no longer exposes this direct CRM
-    read edge (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md), and they are
+    its generated clients already send and expect. The auth session and CRM
+    lead operations are `deprecated: true`: codestra_sdk no longer exposes
+    either (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md), and they are
     kept here only for the published sunset window
     (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before final removal.
     Lead submission goes through packages/intake-bff to POST
@@ -24,7 +24,19 @@ paths:
   /v1/auth/session:
     get:
       operationId: getAuthSession
+      deprecated: true
       summary: Read the caller's current authenticated session
+      description: >
+        Deprecated compatibility route. docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md
+        found no real backend behind this operation anywhere: it was invented
+        alongside the rest of this contract, and this repository's own
+        authority boundary (see the root README's "Authority boundary"
+        section) places OIDC/session infrastructure outside this repo's
+        ownership entirely -- there is no "same-origin BFF package" here to
+        publish a real contract for. codestra_sdk no longer exposes this
+        operation. Kept here, deprecated, only for the published sunset
+        window (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before
+        final removal.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
