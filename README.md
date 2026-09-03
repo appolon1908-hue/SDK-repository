@@ -56,7 +56,7 @@ codestra_sdk
   ai
   communication
   social
-  workflow
+  automation
   events
   common
 ```
@@ -69,6 +69,8 @@ codestra.social.posts.schedule(post, { idempotencyKey });
 ```
 
 CRM has no direct read/write edge on this facade. Lead submission goes through [packages/intake-bff](packages/intake-bff) to `POST /v1/intake/leads`; CRM record mutation goes through the canonical Middleware command plane (`codestra.control.crm`).
+
+Workflow triggering has no dedicated route either: `codestra.automation.commands.trigger({ workflowKey, payload }, { idempotencyKey })` submits through the same canonical command plane (`POST /v1/commands`), read back with `codestra.operations.get(commandId)`.
 
 The facade is the programming contract product developers see. Backend implementations can move between Middleware, product services, or provider adapters without forcing product teams to hand-roll HTTP calls or chase service topology changes.
 

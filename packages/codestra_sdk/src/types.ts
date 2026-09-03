@@ -61,7 +61,10 @@ export interface GenerateAiInput {
   retain_output?: boolean;
 }
 
-export interface TriggerWorkflowInput {
-  workflow: string;
+export interface TriggerAutomationCommandInput {
+  workflowKey: string;
+  workflowFamily?: string;
+  workflowVersion?: string;
   payload?: JsonObject;
+  commandId?: string;
 }

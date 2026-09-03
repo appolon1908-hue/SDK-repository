@@ -86,6 +86,32 @@ This branch replaces manifest/string-based SDK readiness with exact accepted Ope
 /v1/workflow/runs
   Superseded orchestration vocabulary.
   Action: remove and use POST /v2/automation/commands plus command/job status APIs.
+  Status: DONE, but not as originally worded. Investigated the real Middleware
+  v2 automation contract (appolon1908-hue/Middleware-@9152a04e:
+  docs/decisions/ADR-0001-AUTOMATION-CONTRACT-V2.md,
+  contracts/automation/{n8n-control-plane,operation-policy}.v2.json) before
+  building against it: it is real and ADR-accepted, but status: SOURCE_ONLY /
+  implementation_status: NOT_IMPLEMENTED, and every client in its operation
+  policy is an n8n-branded machine client (n8n-crm-automation,
+  n8n-identity-automation, ...) with tenant/actor context explicitly derived
+  server-side, never from a caller. That is the n8n-orchestrator's internal
+  claim/lease protocol with Middleware, not a product-facing route -- building
+  a product SDK contract against POST /v2/automation/commands as literally
+  written here would have repeated the exact mistake this file's own
+  marketing/ai corrections above just fixed: inventing a contract for the
+  wrong integration point.
+  Routed through the real, already-implemented canonical command plane
+  instead: codestra.automation.commands.trigger() submits POST /v1/commands
+  (command_type "automation.workflow.trigger", target "n8n", capability
+  "AUTOMATION_TRIGGER" -- a proposed convention, not a verified-real
+  command_type, since no such workflow-trigger command_type exists in the
+  real command-envelope.v1.schema.json's validated branches yet), read back
+  via the existing GET /v1/operations/{command_id}. No new OpenAPI paths
+  needed: /v1/commands and /v1/operations/{id} both already exist in the
+  vendored Middleware contract and are already exercised by
+  scripts/check-middleware-runtime-alignment.mjs. /v1/workflow/runs* is
+  deprecated: true in codestra-platform.openapi.yaml, same sunset treatment
+  as the routes above; codestra_sdk no longer exposes workflow.runs.*.
 ```
 
 ## Required packages
