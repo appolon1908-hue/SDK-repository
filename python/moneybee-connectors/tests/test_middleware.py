@@ -23,7 +23,7 @@ def operation() -> dict[str, object]:
         "command_type": "crm.project", "command_version": "1.0", "target": "odoo",
         "requested_by": ctx.principal, "correlation_id": ctx.correlation_id,
         "idempotency_key": ctx.idempotency_key, "capability": "ODOO_WRITE",
-        "state": "accepted", "provider_operation_id": None, "last_error": None,
+        "state": "ACCEPTED", "provider_operation_id": None, "last_error": None,
         "created_at": "2026-09-02T00:00:00Z", "updated_at": "2026-09-02T00:00:00Z",
         "duplicate": False,
     }
@@ -62,7 +62,7 @@ async def test_command_sends_authority_context_once() -> None:
         context(), command_type="crm.project", target="odoo",
         capability="ODOO_WRITE", payload={"id": "1"},
     )
-    assert result.state == "accepted"
+    assert result.state == "ACCEPTED"
     assert len(requests) == 1
     assert requests[0].headers["Idempotency-Key"] == "idem-0001"
     assert requests[0].headers["X-Tenant-ID"] == "tenant-1"
@@ -136,6 +136,6 @@ async def test_reads_retry_and_preserve_tenant() -> None:
         MiddlewareClientConfig(base_url="https://middleware.example", enabled=True),
         lambda: "service-token", transport=httpx.MockTransport(handler),
     )
-    assert (await client.get_operation(context())).state == "accepted"
+    assert (await client.get_operation(context())).state == "ACCEPTED"
     assert calls == 3
     await client.aclose()
