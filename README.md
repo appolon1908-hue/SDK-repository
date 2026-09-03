@@ -52,7 +52,6 @@ Product teams should import one stable SDK facade from [packages/codestra_sdk](p
 
 ```text
 codestra_sdk
-  auth
   marketing
   ai
   communication

@@ -14,7 +14,6 @@ describe("codestra_sdk facade", () => {
   it("exposes the canonical domain module layout", () => {
     const sdk = testSdk(vi.fn<typeof fetch>());
 
-    expect(sdk).toHaveProperty("auth");
     expect(sdk).toHaveProperty("platform");
     expect(sdk).toHaveProperty("operations");
     expect(sdk).toHaveProperty("control");
