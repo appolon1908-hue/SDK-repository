@@ -21,7 +21,7 @@ describe("codestra_sdk facade", () => {
     expect(sdk).toHaveProperty("ai");
     expect(sdk).toHaveProperty("communication");
     expect(sdk).toHaveProperty("social");
-    expect(sdk).toHaveProperty("workflow");
+    expect(sdk).toHaveProperty("automation");
     expect(sdk).toHaveProperty("operationsDashboard");
     expect(sdk).toHaveProperty("events");
     expect(sdk).toHaveProperty("common");
@@ -145,12 +145,20 @@ describe("codestra_sdk facade", () => {
     expect(() => sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey: "12345678" })).toThrow(
       "idempotencyKey must contain between 16 and 128 characters.",
     );
+    expect(() => sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey: "x".repeat(129) })).toThrow(
+      "idempotencyKey must contain between 16 and 128 characters.",
+    );
+  });
+
+  it("preserves canonical idempotency-key bounds on automation commands", () => {
+    const sdk = testSdk(vi.fn<typeof fetch>());
+
+    expect(() => sdk.automation.commands.trigger({ workflowKey: "lead-intake" }, { idempotencyKey: "1234567" })).toThrow(
+      "idempotencyKey must contain between 8 and 180 characters.",
+    );
     expect(() =>
-      sdk.workflow.runs.trigger(
-        { workflowId: "workflow-1", input: {} },
-        { idempotencyKey: "x".repeat(129) },
-      ),
-    ).toThrow("idempotencyKey must contain between 16 and 128 characters.");
+      sdk.automation.commands.trigger({ workflowKey: "lead-intake" }, { idempotencyKey: "x".repeat(181) }),
+    ).toThrow("idempotencyKey must contain between 8 and 180 characters.");
   });
 
   it("preserves unknown outcomes as a typed read-back-required error", async () => {
@@ -266,8 +274,8 @@ describe("codestra_sdk facade", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { runId: "run-001" }));
     const sdk = testSdk(fetchMock);
 
-    await sdk.workflow.runs.trigger(
-      { workflow: "lead-intake", payload: { source: "sdk-test" } },
+    await sdk.automation.commands.trigger(
+      { workflowKey: "lead-intake", payload: { source: "sdk-test" } },
       { idempotencyKey, correlationId: "correlation-explicit-0001" },
     );
 

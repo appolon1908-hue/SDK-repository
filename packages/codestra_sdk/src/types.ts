@@ -53,9 +53,12 @@ export interface GenerateAiInput {
   metadata?: JsonObject;
 }
 
-export interface TriggerWorkflowInput {
-  workflow: string;
+export interface TriggerAutomationCommandInput {
+  workflowKey: string;
+  workflowFamily?: string;
+  workflowVersion?: string;
   payload?: JsonObject;
+  commandId?: string;
 }
 
 export interface MarketingCampaignListOptions {

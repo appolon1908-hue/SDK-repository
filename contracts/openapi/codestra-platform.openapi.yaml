@@ -8,14 +8,16 @@ info:
     (packages/codestra_sdk). These operations were implemented in the SDK
     facade before any canonical contract existed for them; this document is
     that contract, grounded in the request/response shapes the facade and
-    its generated clients already send and expect. The auth session and CRM
-    lead operations are `deprecated: true`: codestra_sdk no longer exposes
-    either (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md), and they are
-    kept here only for the published sunset window
+    its generated clients already send and expect. The auth session, CRM
+    lead, and workflow run operations are `deprecated: true`: codestra_sdk
+    no longer exposes any of them (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md),
+    and they are kept here only for the published sunset window
     (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before final removal.
     Lead submission goes through packages/intake-bff to POST
     /v1/intake/leads; CRM record mutation goes through the canonical
-    Middleware command plane (codestra.control.crm).
+    Middleware command plane (codestra.control.crm). Workflow triggering
+    goes through the real POST /v1/commands (command_type
+    "automation.workflow.trigger") via codestra.automation.commands.trigger().
 servers:
   - url: https://api.codestra.co
 security:
@@ -230,7 +232,19 @@ paths:
   /v1/workflow/runs:
     post:
       operationId: triggerWorkflowRun
+      deprecated: true
       summary: Trigger a named workflow run
+      description: >
+        Deprecated compatibility route. Superseded orchestration vocabulary
+        (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md). codestra_sdk no
+        longer exposes this operation: automation.commands.trigger() submits
+        through the real, already-implemented canonical command plane
+        (POST /v1/commands, command_type "automation.workflow.trigger",
+        target "n8n") instead, read back via the existing
+        GET /v1/operations/{command_id}. Kept here, deprecated, only for the
+        published sunset window
+        (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before final
+        removal.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -255,7 +269,11 @@ paths:
   /v1/workflow/runs/{runId}:
     get:
       operationId: getWorkflowRun
+      deprecated: true
       summary: Read one workflow run
+      description: >
+        Deprecated compatibility route; see /v1/workflow/runs for the
+        removal rationale and sunset policy.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
