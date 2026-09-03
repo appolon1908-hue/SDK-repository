@@ -57,8 +57,13 @@ older wrappers remain present so this change does not silently break consumers:
 - `/v1/auth/session`
 - `/v1/marketing/campaigns*`
 - `/v1/ai/generate`
-- `/v1/crm/leads*`
 - `/v1/workflow/runs*`
+
+`/v1/crm/leads*` has been sunset: it was a direct CRM read edge that
+`docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md` flags as a prohibited
+pattern, and the unified SDK no longer exposes it. Lead submission goes
+through `packages/intake-bff` to `POST /v1/intake/leads`; CRM record
+mutation goes through `codestra.control.crm`.
 
 These compatibility routes are absent from Middleware SHA `9cd3fd3e…`; they
 must not be used as evidence for staging or production certification and need

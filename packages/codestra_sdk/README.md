@@ -22,7 +22,6 @@ await codestra.social.posts.schedule(
   { workspaceId, channels: ["linkedin"], content: { text: "Launch update" }, publishAt },
   { idempotencyKey },
 );
-await codestra.crm.leads.get(leadId);
 
 // Canonical Middleware command plane. Preserve this Idempotency-Key when
 // retrying the same logical operation.
@@ -53,7 +52,6 @@ codestra_sdk
   ai
   communication
   social
-  crm
   workflow
   events
   common

@@ -3,12 +3,15 @@ info:
   title: Codestra Platform API
   version: 0.1.0
   description: >
-    Auth session introspection, marketing, AI generation, CRM lead, and
-    workflow orchestration surfaces consumed by the unified Codestra SDK
+    Auth session introspection, marketing, AI generation, and workflow
+    orchestration surfaces consumed by the unified Codestra SDK
     (packages/codestra_sdk). These operations were implemented in the SDK
     facade before any canonical contract existed for them; this document is
     that contract, grounded in the request/response shapes the facade and
-    its generated clients already send and expect.
+    its generated clients already send and expect. CRM lead access has no
+    edge here: lead submission goes through packages/intake-bff to
+    POST /v1/intake/leads, and CRM record mutation goes through the
+    canonical Middleware command plane (codestra.control.crm).
 servers:
   - url: https://api.codestra.co
 security:
@@ -143,56 +146,6 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
-  /v1/crm/leads:
-    get:
-      operationId: listCrmLeads
-      summary: List tenant CRM leads
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - name: cursor
-          in: query
-          required: false
-          schema: { type: string, minLength: 1, maxLength: 1000 }
-        - name: limit
-          in: query
-          required: false
-          schema: { type: integer, minimum: 1, maximum: 100 }
-        - name: status
-          in: query
-          required: false
-          schema: { $ref: '#/components/schemas/CrmLeadStatus' }
-      responses:
-        '200':
-          description: Current tenant CRM leads
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CrmLeadList' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
-  /v1/crm/leads/{leadId}:
-    get:
-      operationId: getCrmLead
-      summary: Read one tenant CRM lead
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - name: leadId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        '200':
-          description: Current lead state
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CrmLead' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
         '429': { $ref: '#/components/responses/Error' }
   /v1/workflow/runs:
     post:
@@ -361,34 +314,6 @@ components:
         output: { type: string }
         model: { type: string, minLength: 1, maxLength: 200 }
         createdAt: { type: string, format: date-time }
-    CrmLeadStatus:
-      type: string
-      enum: [new, contacted, qualified, disqualified, converted]
-    CrmLead:
-      type: object
-      additionalProperties: false
-      required: [id, tenantId, status, createdAt, updatedAt]
-      properties:
-        id: { type: string, format: uuid }
-        tenantId: { type: string, format: uuid }
-        status: { $ref: '#/components/schemas/CrmLeadStatus' }
-        name: { type: string, maxLength: 200 }
-        email: { type: string, format: email, maxLength: 254 }
-        phone: { type: string, maxLength: 40 }
-        source: { type: string, maxLength: 120 }
-        message: { type: string, maxLength: 4000 }
-        attributes: { type: object }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-    CrmLeadList:
-      type: object
-      additionalProperties: false
-      required: [items]
-      properties:
-        items:
-          type: array
-          items: { $ref: '#/components/schemas/CrmLead' }
-        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
     TriggerWorkflowRunRequest:
       type: object
       additionalProperties: false

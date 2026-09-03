@@ -18,7 +18,6 @@
     "ai",
     "communication",
     "social",
-    "crm",
     "workflow",
     "events",
     "common"
@@ -45,7 +44,6 @@
     "/v1/auth/session",
     "/v1/marketing/campaigns",
     "/v1/ai/generate",
-    "/v1/crm/leads",
     "/v1/workflow/runs",
     "/v1/communications/templates",
     "/v1/communications/sender-identities",

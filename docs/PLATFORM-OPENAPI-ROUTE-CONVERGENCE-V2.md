@@ -20,6 +20,9 @@ This branch replaces manifest/string-based SDK readiness with exact accepted Ope
 /v1/crm/leads
   Prohibited direct CRM edge.
   Action: remove and use POST /v1/intake/leads.
+  Status: DONE. Removed from the unified SDK facade, codestra-platform.openapi.yaml,
+  and the readiness manifest. Lead submission goes through packages/intake-bff to
+  POST /v1/intake/leads; CRM record mutation goes through codestra.control.crm.
 
 /v1/workflow/runs
   Superseded orchestration vocabulary.

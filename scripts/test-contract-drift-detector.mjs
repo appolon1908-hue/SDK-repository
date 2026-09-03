@@ -157,13 +157,17 @@ const cases = [
     expectedSubstring: "removed previously satisfiable security alternative",
   },
   {
-    // Proves codestra-platform.openapi.yaml (the auth/marketing/ai/crm/
+    // Proves codestra-platform.openapi.yaml (the auth/marketing/ai/
     // workflow contract added to close the previously-uncontracted routes
     // gap) is itself covered by this gate, the same way the communications
     // fixture above proves that file is covered.
     name: "a new required property on the platform contract",
     file: "contracts/openapi/codestra-platform.openapi.yaml",
-    corrupt: (text) => text.replace("required: [id, tenantId, status, createdAt, updatedAt]", "required: [id, tenantId, status, createdAt, updatedAt, newlyRequiredField]"),
+    corrupt: (text) =>
+      text.replace(
+        "required: [id, tenantId, workflow, status, createdAt, updatedAt]",
+        "required: [id, tenantId, workflow, status, createdAt, updatedAt, newlyRequiredField]",
+      ),
     expectedSubstring: "new required property",
   },
   {

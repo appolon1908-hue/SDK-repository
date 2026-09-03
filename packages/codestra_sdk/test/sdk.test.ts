@@ -22,7 +22,6 @@ describe("codestra_sdk facade", () => {
     expect(sdk).toHaveProperty("ai");
     expect(sdk).toHaveProperty("communication");
     expect(sdk).toHaveProperty("social");
-    expect(sdk).toHaveProperty("crm");
     expect(sdk).toHaveProperty("workflow");
     expect(sdk).toHaveProperty("operationsDashboard");
     expect(sdk).toHaveProperty("events");
@@ -201,8 +200,7 @@ describe("codestra_sdk facade", () => {
       .mockResolvedValueOnce(jsonResponse(200, { items: [] }))
       .mockResolvedValueOnce(jsonResponse(200, { output: "done" }))
       .mockResolvedValueOnce(jsonResponse(202, { messageId: "message-001" }))
-      .mockResolvedValueOnce(jsonResponse(202, socialPost()))
-      .mockResolvedValueOnce(jsonResponse(200, { leadId: "lead-001" }));
+      .mockResolvedValueOnce(jsonResponse(202, socialPost()));
     const sdk = testSdk(fetchMock);
 
     await sdk.marketing.campaigns.list();
@@ -220,13 +218,11 @@ describe("codestra_sdk facade", () => {
       },
       { idempotencyKey },
     );
-    await sdk.crm.leads.get("lead-001");
 
     expect(pathname(fetchMock, 0)).toBe("/v1/marketing/campaigns");
     expect(pathname(fetchMock, 1)).toBe("/v1/ai/generate");
     expect(pathname(fetchMock, 2)).toBe("/v1/communications/messages");
     expect(pathname(fetchMock, 3)).toBe("/v1/social/posts");
-    expect(pathname(fetchMock, 4)).toBe("/v1/crm/leads/lead-001");
     expect(headersFor(fetchMock, 1).get("x-codestra-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 1).get("x-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 2).get("x-tenant-id")).toBe(tenantId);
