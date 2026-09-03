@@ -14,7 +14,6 @@ describe("codestra_sdk facade", () => {
   it("exposes the canonical domain module layout", () => {
     const sdk = testSdk(vi.fn<typeof fetch>());
 
-    expect(sdk).toHaveProperty("auth");
     expect(sdk).toHaveProperty("platform");
     expect(sdk).toHaveProperty("operations");
     expect(sdk).toHaveProperty("control");
@@ -22,8 +21,7 @@ describe("codestra_sdk facade", () => {
     expect(sdk).toHaveProperty("ai");
     expect(sdk).toHaveProperty("communication");
     expect(sdk).toHaveProperty("social");
-    expect(sdk).toHaveProperty("crm");
-    expect(sdk).toHaveProperty("workflow");
+    expect(sdk).toHaveProperty("automation");
     expect(sdk).toHaveProperty("operationsDashboard");
     expect(sdk).toHaveProperty("events");
     expect(sdk).toHaveProperty("common");
@@ -144,15 +142,23 @@ describe("codestra_sdk facade", () => {
   it("preserves legacy idempotency-key bounds on legacy calls", () => {
     const sdk = testSdk(vi.fn<typeof fetch>());
 
-    expect(() => sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey: "12345678" })).toThrow(
+    expect(() => sdk.ai.generate({ task: "summarize", input: "Summarize this lead." }, { idempotencyKey: "12345678" })).toThrow(
       "idempotencyKey must contain between 16 and 128 characters.",
     );
+    expect(() => sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey: "x".repeat(129) })).toThrow(
+      "idempotencyKey must contain between 16 and 128 characters.",
+    );
+  });
+
+  it("preserves canonical idempotency-key bounds on automation commands", () => {
+    const sdk = testSdk(vi.fn<typeof fetch>());
+
+    expect(() => sdk.automation.commands.trigger({ workflowKey: "lead-intake" }, { idempotencyKey: "1234567" })).toThrow(
+      "idempotencyKey must contain between 8 and 180 characters.",
+    );
     expect(() =>
-      sdk.workflow.runs.trigger(
-        { workflowId: "workflow-1", input: {} },
-        { idempotencyKey: "x".repeat(129) },
-      ),
-    ).toThrow("idempotencyKey must contain between 16 and 128 characters.");
+      sdk.automation.commands.trigger({ workflowKey: "lead-intake" }, { idempotencyKey: "x".repeat(181) }),
+    ).toThrow("idempotencyKey must contain between 8 and 180 characters.");
   });
 
   it("preserves unknown outcomes as a typed read-back-required error", async () => {
@@ -201,12 +207,11 @@ describe("codestra_sdk facade", () => {
       .mockResolvedValueOnce(jsonResponse(200, { items: [] }))
       .mockResolvedValueOnce(jsonResponse(200, { output: "done" }))
       .mockResolvedValueOnce(jsonResponse(202, { messageId: "message-001" }))
-      .mockResolvedValueOnce(jsonResponse(202, socialPost()))
-      .mockResolvedValueOnce(jsonResponse(200, { leadId: "lead-001" }));
+      .mockResolvedValueOnce(jsonResponse(202, socialPost()));
     const sdk = testSdk(fetchMock);
 
     await sdk.marketing.campaigns.list();
-    await sdk.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey });
+    await sdk.ai.generate({ task: "summarize", input: "Summarize this lead." }, { idempotencyKey });
     await sdk.communication.messages.send(
       { channel: "email", to: ["customer@example.com"], content: { subject: "Hi", text: "Hello" } },
       { idempotencyKey },
@@ -220,13 +225,11 @@ describe("codestra_sdk facade", () => {
       },
       { idempotencyKey },
     );
-    await sdk.crm.leads.get("lead-001");
 
     expect(pathname(fetchMock, 0)).toBe("/v1/marketing/campaigns");
     expect(pathname(fetchMock, 1)).toBe("/v1/ai/generate");
     expect(pathname(fetchMock, 2)).toBe("/v1/communications/messages");
     expect(pathname(fetchMock, 3)).toBe("/v1/social/posts");
-    expect(pathname(fetchMock, 4)).toBe("/v1/crm/leads/lead-001");
     expect(headersFor(fetchMock, 1).get("x-codestra-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 1).get("x-tenant-id")).toBe(tenantId);
     expect(headersFor(fetchMock, 2).get("x-tenant-id")).toBe(tenantId);
@@ -271,8 +274,8 @@ describe("codestra_sdk facade", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { runId: "run-001" }));
     const sdk = testSdk(fetchMock);
 
-    await sdk.workflow.runs.trigger(
-      { workflow: "lead-intake", payload: { source: "sdk-test" } },
+    await sdk.automation.commands.trigger(
+      { workflowKey: "lead-intake", payload: { source: "sdk-test" } },
       { idempotencyKey, correlationId: "correlation-explicit-0001" },
     );
 

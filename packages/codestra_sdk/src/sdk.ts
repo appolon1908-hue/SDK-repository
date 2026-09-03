@@ -26,12 +26,10 @@ import type {
 import type {
   CanonicalCommandEnvelope,
   CanonicalCommandInput,
-  CrmLeadListOptions,
   GenerateAiInput,
-  MarketingCampaignListOptions,
   OperationListOptions,
   OperationMutationInput,
-  TriggerWorkflowInput,
+  TriggerAutomationCommandInput,
 } from "./types.js";
 
 const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
@@ -145,15 +143,9 @@ export class CodestraSdk {
     social: CanonicalDomainClient;
     telephony: CanonicalDomainClient;
   };
-  readonly auth: {
-    session: {
-      get: (options?: CodestraRequestOptions) => Promise<JsonObject>;
-    };
-  };
-
   readonly marketing: {
     campaigns: {
-      list: (options?: MarketingCampaignListOptions) => Promise<JsonObject>;
+      list: (options?: CodestraRequestOptions) => Promise<JsonObject>;
       get: (campaignId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
     };
   };
@@ -178,17 +170,9 @@ export class CodestraSdk {
     };
   };
 
-  readonly crm: {
-    leads: {
-      list: (options?: CrmLeadListOptions) => Promise<JsonObject>;
-      get: (leadId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
-    };
-  };
-
-  readonly workflow: {
-    runs: {
-      trigger: (input: TriggerWorkflowInput, options: CodestraMutationOptions) => Promise<JsonObject>;
-      get: (runId: UUID, options?: CodestraRequestOptions) => Promise<JsonObject>;
+  readonly automation: {
+    commands: {
+      trigger: (input: TriggerAutomationCommandInput, options: CodestraMutationOptions) => Promise<JsonObject>;
     };
   };
 
@@ -304,15 +288,9 @@ export class CodestraSdk {
       telephony: this.domainClient("telephony"),
     };
 
-    this.auth = {
-      session: {
-        get: (requestOptions) => this.request({ method: "GET", path: "/v1/auth/session", ...copyRequestOptions(requestOptions) }),
-      },
-    };
-
     this.marketing = {
       campaigns: {
-        list: (requestOptions) => this.request({ method: "GET", path: withQuery("/v1/marketing/campaigns", requestOptions), ...copyRequestOptions(requestOptions) }),
+        list: (requestOptions) => this.request({ method: "GET", path: "/v1/marketing/campaigns", ...copyRequestOptions(requestOptions) }),
         get: (campaignId, requestOptions) =>
           this.request({ method: "GET", path: `/v1/marketing/campaigns/${encodeURIComponent(requirePathSegment(campaignId, "campaignId"))}`, ...copyRequestOptions(requestOptions) }),
       },
@@ -349,26 +327,32 @@ export class CodestraSdk {
       },
     };
 
-    this.crm = {
-      leads: {
-        list: (requestOptions) => this.request({ method: "GET", path: withQuery("/v1/crm/leads", requestOptions), ...copyRequestOptions(requestOptions) }),
-        get: (leadId, requestOptions) =>
-          this.request({ method: "GET", path: `/v1/crm/leads/${encodeURIComponent(requirePathSegment(leadId, "leadId"))}`, ...copyRequestOptions(requestOptions) }),
-      },
-    };
-
-    this.workflow = {
-      runs: {
+    this.automation = {
+      commands: {
+        // Submits through the real, already-implemented canonical command
+        // plane (POST /v1/commands) rather than a dedicated workflow route --
+        // there isn't one. Read the result back with sdk.operations.get(),
+        // the same generic operation collection every canonical command
+        // uses. See the AUTOMATION_TRIGGER capability doc comment above
+        // submitCanonicalCommand's call site for the command_type/target
+        // convention this uses.
         trigger: (input, requestOptions) =>
-          this.request({
-            method: "POST",
-            path: "/v1/workflow/runs",
-            body: stripUndefined(input),
-            idempotencyKey: requireIdempotencyKey(requestOptions.idempotencyKey),
-            ...copyRequestOptions(requestOptions),
-          }),
-        get: (runId, requestOptions) =>
-          this.request({ method: "GET", path: `/v1/workflow/runs/${encodeURIComponent(requirePathSegment(runId, "runId"))}`, ...copyRequestOptions(requestOptions) }),
+          this.submitCanonicalCommand(
+            "/v1/commands",
+            {
+              ...(input.commandId !== undefined ? { commandId: input.commandId } : {}),
+              commandType: "automation.workflow.trigger",
+              target: "n8n",
+              capability: "AUTOMATION_TRIGGER",
+              payload: stripUndefined({
+                workflow_key: input.workflowKey,
+                workflow_family: input.workflowFamily,
+                workflow_version: input.workflowVersion,
+                payload: input.payload,
+              }) as JsonObject,
+            },
+            requestOptions,
+          ),
       },
     };
 
