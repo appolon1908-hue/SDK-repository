@@ -195,7 +195,11 @@ const cases = [
     corrupt: (text) =>
       text.replace(
         "authority: ai\n        sourceSha: 7d31ef8de1c15bcc71b61de50917c81e3bcf557d",
-        "authority: ai\n        sourceSha: 1111111111111111111111111111111111111111",
+        // A run of hex digits is deliberate: an all-numeric 40-char value
+        // would parse as a YAML number, not a string, and fail this
+        // fixture's own /^[0-9a-f]{40}$/ format check before ever reaching
+        // the "is pinned to" comparison this fixture means to exercise.
+        "authority: ai\n        sourceSha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       ),
     expectedSubstring: "is pinned to",
   },
