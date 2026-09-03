@@ -85,7 +85,9 @@ class WebhookVerifier:
         current = int(time.time()) if now is None else now
         if abs(current - parsed_timestamp) > self._tolerance_seconds:
             raise AuthenticationError("Webhook timestamp is outside the replay window")
-        signed = timestamp.encode() + b"." + raw_body
+        signed = b".".join(
+            (timestamp.encode(), tenant_id.encode(), provider.encode(), event_id.encode(), raw_body)
+        )
         expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
         supplied = signature.removeprefix("sha256=")
         if not hmac.compare_digest(expected, supplied):

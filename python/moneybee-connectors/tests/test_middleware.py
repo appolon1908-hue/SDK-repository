@@ -29,6 +29,12 @@ def operation() -> dict[str, object]:
     }
 
 
+def test_rejects_plaintext_remote_middleware() -> None:
+    with pytest.raises(ValueError, match="base_url must use HTTPS"):
+        MiddlewareClientConfig(base_url="http://middleware.example", enabled=True)
+    assert MiddlewareClientConfig(base_url="http://127.0.0.1:8080", enabled=True).base_url.host == "127.0.0.1"
+
+
 @pytest.mark.asyncio
 async def test_disabled_by_default() -> None:
     client = CodestraMiddlewareClient(
@@ -83,6 +89,32 @@ async def test_mutation_timeout_is_unknown_and_not_retried() -> None:
             context(), command_type="crm.project", target="odoo",
             capability="ODOO_WRITE", payload={},
         )
+    assert calls == 1
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [502, 503, 504])
+async def test_ambiguous_gateway_response_requires_readback(status: int) -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(status, json={"error": {}})
+
+    client = CodestraMiddlewareClient(
+        MiddlewareClientConfig(base_url="https://middleware.example", enabled=True,
+                               allowed_capabilities=frozenset({"ODOO_WRITE"})),
+        lambda: "service-token", transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(UnknownOutcomeError) as caught:
+        await client.submit_command(
+            context(), command_type="crm.project", target="odoo",
+            capability="ODOO_WRITE", payload={},
+        )
+    assert caught.value.retryable is False
+    assert caught.value.details == {"operation_id": context().operation_id}
     assert calls == 1
     await client.aclose()
 

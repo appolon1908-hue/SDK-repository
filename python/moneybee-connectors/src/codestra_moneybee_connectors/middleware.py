@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from .context import AdapterRequestContext
 from .errors import (
@@ -35,6 +35,14 @@ class MiddlewareClientConfig(BaseModel):
     timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     read_attempts: int = Field(default=3, ge=1, le=5)
     allowed_capabilities: frozenset[str] = frozenset()
+
+    @model_validator(mode="after")
+    def require_secure_remote_transport(self) -> MiddlewareClientConfig:
+        host = (self.base_url.host or "").lower()
+        loopback = host in {"localhost", "127.0.0.1", "::1"}
+        if self.base_url.scheme != "https" and not (loopback and self.base_url.scheme == "http"):
+            raise ValueError("base_url must use HTTPS except for explicit loopback development")
+        return self
 
 
 class Operation(BaseModel):
@@ -122,6 +130,12 @@ class CodestraMiddlewareClient:
                 retryable=False,
                 details={"operation_id": context.operation_id},
             ) from exc
+        if response.status_code in {502, 503, 504}:
+            raise UnknownOutcomeError(
+                "Middleware command outcome is unknown; read back by operation ID before retrying",
+                retryable=False,
+                details={"operation_id": context.operation_id},
+            )
         return self._parse_response(response)
 
     async def get_operation(self, context: AdapterRequestContext) -> Operation:
