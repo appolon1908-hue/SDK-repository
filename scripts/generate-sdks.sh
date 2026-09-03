@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GENERATOR_VERSION="${OPENAPI_GENERATOR_VERSION:-7.15.0}"
 GENERATOR_IMAGE="${OPENAPI_GENERATOR_IMAGE:-openapitools/openapi-generator-cli:v${GENERATOR_VERSION}}"
 PUBLIC_SPEC="/local/contracts/openapi/codestra-public.openapi.yaml"
-CONTROL_PLANE_SPEC="/local/contracts/openapi/codestra-control-plane.openapi.yaml"
+MIDDLEWARE_SPEC="/local/generated/middleware-generator.openapi.json"
 
 command -v docker >/dev/null 2>&1 || {
   echo "Docker is required to run the pinned OpenAPI generator." >&2
@@ -20,6 +20,13 @@ mkdir -p \
   "$ROOT/generated/python" \
   "$ROOT/generated/php" \
   "$ROOT/generated/middleware-python"
+
+# OpenAPI Generator 7.15 cannot consume JSON Schema's explicit `null` branches.
+# Produce a generation-only OpenAPI 3.0 projection with equivalent nullable
+# semantics; the checked-in 3.1 contract remains the parity authority.
+node "$ROOT/scripts/prepare-middleware-generator-contract.mjs" \
+  "$ROOT/contracts/openapi/codestra-middleware-client.openapi.json" \
+  "$ROOT/generated/middleware-generator.openapi.json"
 
 run_generator() {
   local generator="$1"
@@ -46,7 +53,7 @@ run_generator php "$PUBLIC_SPEC" codegen/php.yaml generated/php
 # cannot accidentally gain command-plane methods by upgrading the public SDK.
 run_generator \
   python \
-  "$CONTROL_PLANE_SPEC" \
+  "$MIDDLEWARE_SPEC" \
   codegen/python-control-plane.yaml \
   generated/middleware-python
 

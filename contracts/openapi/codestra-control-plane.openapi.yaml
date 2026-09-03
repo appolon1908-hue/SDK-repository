@@ -205,6 +205,16 @@ components:
             - failed
             - reconciliation_required
             - dead_lettered
+            - RECEIVED
+            - QUEUED
+            - SUBMITTED
+            - ACCEPTED
+            - UNKNOWN
+            - COMPLETED
+            - FAILED
+            - RECONCILIATION_REQUIRED
+            - DEAD_LETTERED
+            - CANCELLED
         provider_operation_id:
           type: [string, 'null']
         last_error:

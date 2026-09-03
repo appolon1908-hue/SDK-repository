@@ -6,10 +6,11 @@ import httpx
 class MarketingClient:
     base_url: str
     token: str
+    tenant_id: str
     timeout_seconds: float = 15.0
 
     def _headers(self, *, correlation_id: str | None = None, idempotency_key: str | None = None) -> dict[str, str]:
-        headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/json"}
+        headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/json", "X-Codestra-Tenant-Id": self.tenant_id}
         if correlation_id:
             headers["X-Correlation-ID"] = correlation_id
         if idempotency_key:

@@ -3,8 +3,9 @@ import { buildIdentityProviderConfigFixture, buildSmtpConfigFixture } from "@cod
 import { DataTable, ExternalConfigPanel, StatusPill } from "@codestra/apps-shared/ui";
 import { getTenant, listTenantUsers } from "../../../../lib/tenant-store";
 
-export default function TenantDetailPage({ params }: { params: { tenantId: string } }): JSX.Element {
-  const tenant = getTenant(params.tenantId);
+export default async function TenantDetailPage({ params }: { params: Promise<{ tenantId: string }> }): Promise<JSX.Element> {
+  const { tenantId } = await params;
+  const tenant = getTenant(tenantId);
   if (!tenant) notFound();
 
   const users = listTenantUsers(tenant.id);

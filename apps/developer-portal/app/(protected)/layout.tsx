@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { requireStubSession } from "@codestra/apps-shared/auth";
 
-export default function ProtectedLayout({ children }: { children: ReactNode }): JSX.Element {
-  requireStubSession();
+export default async function ProtectedLayout({ children }: { children: ReactNode }): Promise<JSX.Element> {
+  await requireStubSession();
   return <>{children}</>;
 }

@@ -26,15 +26,20 @@ if (!baseSha) {
 }
 
 const OPENAPI_FILES = [
+  "contracts/openapi/codestra-middleware-client.openapi.json",
   "contracts/openapi/codestra-public.openapi.yaml",
   "contracts/openapi/codestra-enterprise.openapi.yaml",
   "contracts/openapi/codestra-restricted-gateway.openapi.yaml",
   "contracts/openapi/codestra-communications.openapi.yaml",
   "contracts/openapi/codestra-operations-dashboard.openapi.yaml",
   "contracts/openapi/codestra-control-plane.openapi.yaml",
+  "contracts/openapi/codestra-platform.openapi.yaml",
 ];
 const ASYNCAPI_FILE = "contracts/asyncapi/codestra-events.asyncapi.yaml";
 const METHODS = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
+const TRANSPORT_INJECTED_HEADERS = new Map([
+  ["X-Tenant-ID", '"x-tenant-id": this.tenantId'],
+]);
 
 const workDir = await mkdtemp(join(tmpdir(), "codestra-contract-drift-"));
 const failures = [];
@@ -93,7 +98,8 @@ function bundle(sourcePath, outputPath) {
     env: { ...process.env, REDOCLY_TELEMETRY: "off", REDOCLY_SUPPRESS_UPDATE_NOTICE: "true" },
   });
   if (result.status !== 0) {
-    if (/does not exist/i.test(result.stdout ?? "") || /ENOENT/.test(result.stderr ?? "")) return undefined;
+    const diagnostic = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (/does not exist|ENOENT/iu.test(diagnostic)) return undefined;
     throw new Error(`redocly bundle failed for ${sourcePath}:\n${[result.stdout, result.stderr].filter(Boolean).join("\n")}`);
   }
   return JSON.parse(readFileSyncOrThrow(outputPath));
@@ -189,7 +195,7 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
     if (baseParam.schema && currentParam.schema) compareSchema(`${label} parameters.${key}`, baseParam.schema, currentParam.schema, output, file);
   }
   for (const [key, currentParam] of currentParams) {
-    if (!baseParams.has(key) && currentParam.required) {
+    if (!baseParams.has(key) && currentParam.required && !isProvenTransportInjectedHeader(currentParam)) {
       output.push(`[${file}] new required parameter ${key} on ${label}`);
     }
   }
@@ -228,18 +234,66 @@ function diffOperation(file, label, base, current, baseParameters, currentParame
   // fired against a real document.
   const baseSecurity = base.security ?? documentBaseSecurity ?? [];
   const currentSecurity = current.security ?? documentCurrentSecurity ?? [];
-  const baseSchemes = new Set(baseSecurity.flatMap((requirement) => Object.keys(requirement)));
-  const currentSchemes = new Set(currentSecurity.flatMap((requirement) => Object.keys(requirement)));
-  for (const scheme of currentSchemes) {
-    if (!baseSchemes.has(scheme)) output.push(`[${file}] ${label} now requires security scheme not previously required: ${scheme}`);
+  compareSecurityAlternatives(file, label, baseSecurity, currentSecurity, output);
+}
+
+/**
+ * Codex review finding on #68: within one Security Requirement Object the
+ * keys are conjunctive (all required together), but across the top-level
+ * array, requirement objects are alternatives (any one satisfies the
+ * operation) -- flattening every requirement object into one Set of scheme
+ * names, as an earlier version of this check did, loses that structure:
+ * relaxing `[{oidc: [], apiKey: []}]` to `[{oidc: []}]` (dropping a
+ * conjunctive co-requirement, which only makes auth *easier*) got reported
+ * identically to actually removing an alternative.
+ *
+ * The correct test: a base alternative is still satisfiable after the
+ * change if some current alternative needs no more than what that base
+ * alternative already required -- a caller holding every credential the
+ * base alternative demanded can trivially satisfy a current alternative
+ * that is a subset (or exact match) of it. An empty requirement array
+ * means "no security requirement" (open access), modeled here as a single
+ * alternative with an empty scheme set so that both directions -- open
+ * access becoming gated, and a base alternative losing every satisfying
+ * current alternative -- go through the same check.
+ */
+function compareSecurityAlternatives(file, label, baseSecurity, currentSecurity, output) {
+  const baseAlternatives = baseSecurity.length > 0 ? baseSecurity.map((requirement) => new Set(Object.keys(requirement))) : [new Set()];
+  const currentAlternatives = currentSecurity.length > 0 ? currentSecurity.map((requirement) => new Set(Object.keys(requirement))) : [new Set()];
+
+  for (const baseAlternative of baseAlternatives) {
+    const stillSatisfiable = currentAlternatives.some((currentAlternative) => isSubset(currentAlternative, baseAlternative));
+    if (!stillSatisfiable) {
+      const description = baseAlternative.size > 0 ? [...baseAlternative].sort().join(" + ") : "(no authentication required)";
+      output.push(`[${file}] ${label} removed previously satisfiable security alternative: ${description}`);
+    }
   }
-  // The top-level security array lists alternatives (any one satisfies the
-  // requirement), so a scheme disappearing from every alternative locks out
-  // any caller who was authenticating with it, even though the array is
-  // merely a subset of what it used to be.
-  for (const scheme of baseSchemes) {
-    if (!currentSchemes.has(scheme)) output.push(`[${file}] ${label} removed previously allowed security scheme alternative: ${scheme}`);
+}
+
+function isSubset(subset, superset) {
+  for (const value of subset) {
+    if (!superset.has(value)) return false;
   }
+  return true;
+}
+
+/**
+ * A required header that the public transport has always supplied is not a
+ * new caller obligation. Keep this exception deliberately narrow: the
+ * contract must opt in, the header must be on the reviewed allowlist, and
+ * the checked source must still contain the corresponding injection. This
+ * prevents an annotation alone from concealing an arbitrary breaking API
+ * change.
+ */
+function isProvenTransportInjectedHeader(parameter) {
+  if (parameter.in !== "header" || parameter["x-codestra-sdk-transport-injected"] !== true) return false;
+  const sourceInvariant = TRANSPORT_INJECTED_HEADERS.get(parameter.name);
+  if (!sourceInvariant) return false;
+  const sdkSource = readFileSyncOrThrow("packages/codestra_sdk/src/sdk.ts");
+  if (!sdkSource.includes(sourceInvariant)) {
+    throw new Error(`Contract marks ${parameter.name} as transport-injected, but the SDK transport invariant is absent`);
+  }
+  return true;
 }
 
 function diffAsyncApi(file, base, current, output) {
@@ -318,7 +372,9 @@ function compareSchema(path, before, after, output, file) {
   if (!before || !after || typeof before !== "object" || typeof after !== "object") return;
 
   if (before.type !== undefined && after.type !== undefined && !typesEquivalent(before.type, after.type)) {
-    output.push(`[${file}] type changed at ${path}: ${JSON.stringify(before.type)} -> ${JSON.stringify(after.type)}`);
+    if (!isPinnedRuntimeNullabilityCorrection(before, after)) {
+      output.push(`[${file}] type changed at ${path}: ${JSON.stringify(before.type)} -> ${JSON.stringify(after.type)}`);
+    }
   }
   if (before.format !== undefined && after.format !== undefined && before.format !== after.format) {
     output.push(`[${file}] format changed at ${path}: ${before.format} -> ${after.format}`);
@@ -357,6 +413,21 @@ function compareSchema(path, before, after, output, file) {
   compareAlternatives(path, "anyOf", before.anyOf, after.anyOf, output, file);
 
   if (before.items && after.items) compareSchema(`${path}[]`, before.items, after.items, output, file);
+}
+
+function isPinnedRuntimeNullabilityCorrection(before, after) {
+  const authoritySha = after["x-codestra-corrects-runtime-nullability"];
+  if (!/^[0-9a-f]{40}$/u.test(authoritySha ?? "")) return false;
+  const authority = JSON.parse(readFileSyncOrThrow("contracts/middleware-runtime-current.source.json"));
+  if (authority.source_sha !== authoritySha) return false;
+  const beforeTypes = Array.isArray(before.type) ? before.type : [before.type];
+  const afterTypes = Array.isArray(after.type) ? after.type : [after.type];
+  return (
+    !beforeTypes.includes("null") &&
+    afterTypes.includes("null") &&
+    beforeTypes.every((type) => afterTypes.includes(type)) &&
+    afterTypes.every((type) => type === "null" || beforeTypes.includes(type))
+  );
 }
 
 /**
