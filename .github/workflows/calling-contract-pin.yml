@@ -1,21 +1,62 @@
 name: calling-contract-pin
+
 on:
   pull_request:
-    paths: [".codestra/calling-contract.lock.json"]
+    paths:
+      - ".codestra/calling-contract.lock.json"
+      - ".github/workflows/calling-contract-pin.yml"
+      - ".github/workflows/compatibility.yml"
+      - "scripts/validate_calling_contract_pin.py"
   push:
     branches: ["main"]
-    paths: [".codestra/calling-contract.lock.json"]
+    paths:
+      - ".codestra/calling-contract.lock.json"
+      - ".github/workflows/calling-contract-pin.yml"
+      - ".github/workflows/compatibility.yml"
+      - "scripts/validate_calling_contract_pin.py"
+
 permissions:
   contents: read
+
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    name: verify-head
+    runs-on: ubuntu-24.04
+    env:
+      EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out exact reviewed head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ env.EXPECTED_SHA }}
+          fetch-depth: 1
           persist-credentials: false
-      - name: Enforce issue 257 contract and fail-closed default
+      - name: Prove exact source and validate lock
         run: |
-          test "$(jq -r .version .codestra/calling-contract.lock.json)" = "1.0.0"
-          test "$(jq -r .sha256 .codestra/calling-contract.lock.json)" = "b39cdffe56a8185c91174228f0423df68b1137f34875f6ee52f9914f904bf724"
-          test "$(jq -r .external_effects_enabled .codestra/calling-contract.lock.json)" = "false"
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          test -z "$(git status --porcelain)"
+          python3 scripts/validate_calling_contract_pin.py
+          python3 scripts/validate_calling_contract_pin.py --self-test
+          git diff --check
+
+  verify-merge-result:
+    name: verify-merge-result
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    env:
+      EXPECTED_SHA: ${{ github.sha }}
+    steps:
+      - name: Check out synthetic merge result
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Prove merge-result source and validate lock
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          test -z "$(git status --porcelain)"
+          python3 scripts/validate_calling_contract_pin.py
+          git diff --check
