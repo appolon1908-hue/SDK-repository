@@ -95,10 +95,11 @@ describe("CodestraCommunicationsClient", () => {
   });
 
   it("reads command operation state with tenant and bearer headers", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, operation));
+    const canonicalOperation = { ...operation, state: "COMPLETED" };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, canonicalOperation));
     const client = testClient(fetchMock);
 
-    await expect(client.operations.get(commandId)).resolves.toMatchObject(operation);
+    await expect(client.operations.get(commandId)).resolves.toMatchObject(canonicalOperation);
 
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     const headers = new Headers(init?.headers);
@@ -109,10 +110,17 @@ describe("CodestraCommunicationsClient", () => {
     expect(headers.get("idempotency-key")).toBeNull();
   });
 
+  it("rejects the undocumented lowercase cancellation state", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { ...operation, state: "cancelled" }));
+    const client = testClient(fetchMock);
+
+    await expect(client.operations.get(commandId)).rejects.toThrow("response.state is not a supported value.");
+  });
+
   it("exposes the canonical public Communications API resource surface", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(jsonResponse(200, { items: [] }))
+      .mockResolvedValueOnce(jsonResponse(200, { items: [], nextCursor: null }))
       .mockResolvedValueOnce(jsonResponse(202, { messageId: commandId }))
       .mockResolvedValueOnce(jsonResponse(200, { templateId: commandId }))
       .mockResolvedValueOnce(jsonResponse(201, { domainId: commandId }))
@@ -123,7 +131,9 @@ describe("CodestraCommunicationsClient", () => {
       .mockResolvedValueOnce(jsonResponse(200, { status: "good", domains: [], providers: [] }));
     const client = testClient(fetchMock);
 
-    await client.messages.list({ channel: "email", status: "queued", limit: 25 });
+    await expect(
+      client.messages.list({ channel: "email", status: "queued", limit: 25 }),
+    ).resolves.toMatchObject({ items: [], nextCursor: null });
     await client.messages.create(
       { channel: "email", to: ["customer@example.com"], content: { subject: "Hi", text: "Hello" } },
       { idempotencyKey: "message-create-0001" },

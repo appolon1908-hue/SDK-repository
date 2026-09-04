@@ -127,6 +127,11 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateMessageRequest' }
       responses:
+        '200':
+          description: Message accepted by the canonical Middleware runtime
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
         '202':
           description: Message accepted for governed asynchronous processing
           content:
@@ -167,6 +172,11 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/MessageId'
       responses:
+        '200':
+          description: Cancellation accepted by the canonical Middleware runtime
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationMessage' }
         '202':
           description: Cancellation accepted
           content:
@@ -835,7 +845,7 @@ components:
         - updatedAt
       properties:
         messageId: { type: string, format: uuid }
-        tenantId: { type: string, minLength: 1, maxLength: 128 }
+        tenantId: { type: string }
         channel: { $ref: '#/components/schemas/CommunicationChannel' }
         direction: { $ref: '#/components/schemas/MessageDirection' }
         status: { $ref: '#/components/schemas/MessageStatus' }
@@ -862,7 +872,9 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/CommunicationMessage' }
-        nextCursor: { type: string }
+        nextCursor:
+          type: [string, 'null']
+          x-codestra-corrects-runtime-nullability: 9cd3fd3e46fb0366fbff69aeef251a1b85beff1d
     MessageEvent:
       type: object
       additionalProperties: false
@@ -886,7 +898,9 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/MessageEvent' }
-        nextCursor: { type: string }
+        nextCursor:
+          type: [string, 'null']
+          x-codestra-corrects-runtime-nullability: 9cd3fd3e46fb0366fbff69aeef251a1b85beff1d
     TemplateWrite:
       type: object
       additionalProperties: false
@@ -1094,7 +1108,6 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [provider, channel, status]
             properties:
               provider: { type: string }
               channel: { $ref: '#/components/schemas/CommunicationChannel' }
@@ -1112,7 +1125,6 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [channel, accepted, delivered, failed, suppressed]
             properties:
               channel: { $ref: '#/components/schemas/CommunicationChannel' }
               accepted: { type: integer, minimum: 0 }
@@ -1133,7 +1145,6 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [domain, status]
             properties:
               domain: { type: string }
               status: { type: string, enum: [good, watch, limited, suspended] }
@@ -1145,7 +1156,6 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [provider, channel, status]
             properties:
               provider: { type: string }
               channel: { $ref: '#/components/schemas/CommunicationChannel' }

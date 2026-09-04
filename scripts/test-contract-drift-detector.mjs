@@ -48,7 +48,7 @@ const cases = [
     name: "the document root's inherited security requirement swapped for an incompatible one",
     file: "contracts/openapi/codestra-public.openapi.yaml",
     corrupt: (text) => text.replace("security:\n  - oidc: []", "security:\n  - serviceBearer: []"),
-    expectedSubstring: "now requires security scheme not previously required",
+    expectedSubstring: "removed previously satisfiable security alternative",
   },
   {
     // Codex review finding on PR #47: the parameter-diff loop only ever
@@ -61,6 +61,16 @@ const cases = [
       text.replace(
         "        - $ref: '#/components/parameters/CorrelationId'\n        - name: cursor",
         "        - $ref: '#/components/parameters/CorrelationId'\n        - name: newRequiredThing\n          in: query\n          required: true\n          schema: { type: string }\n        - name: cursor",
+      ),
+    expectedSubstring: "new required parameter",
+  },
+  {
+    name: "an arbitrary required header cannot evade drift detection with a transport marker",
+    file: "contracts/openapi/codestra-public.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: cursor",
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: X-Unreviewed-Required\n          in: header\n          required: true\n          x-codestra-sdk-transport-injected: true\n          schema: { type: string }\n        - name: cursor",
       ),
     expectedSubstring: "new required parameter",
   },
@@ -126,18 +136,72 @@ const cases = [
     // Codex review finding on #54: the top-level `security` array lists
     // alternatives (any one satisfies the requirement), but diffOperation
     // only ever reported schemes newly present on the current side. An
-    // operation-level `security: []` override removes the only alternative
-    // (oidc, inherited from the document root) without adding any new one,
-    // so the previous one-directional check saw nothing to report even
-    // though every caller authenticating via oidc is now locked out.
-    name: "an operation-level security override that drops the only previously-allowed scheme",
+    // operation-level override that replaces the only inherited alternative
+    // (oidc, from the document root) with an incompatible one locks out
+    // every caller authenticating via oidc, but the previous
+    // one-directional check saw nothing to report.
+    //
+    // (An earlier version of this fixture instead overrode with `security:
+    // []` -- weakening to no auth at all. Codex review on #68 correctly
+    // flagged that a *conjunctive* removal like that is not what "removed
+    // alternative" should mean, and pointed out that dropping to no auth
+    // doesn't lock out any caller who already held the old credential, so
+    // it isn't actually breaking. Replaced with a real incompatible swap.)
+    name: "an operation-level security override that replaces the only inherited alternative with an incompatible one",
     file: "contracts/openapi/codestra-public.openapi.yaml",
     corrupt: (text) =>
       text.replace(
         "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      parameters:",
-        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      security: []\n      parameters:",
+        "      operationId: getSocialPost\n      summary: Read one tenant-owned social post\n      security:\n        - serviceBearer: []\n      parameters:",
       ),
-    expectedSubstring: "removed previously allowed security scheme alternative",
+    expectedSubstring: "removed previously satisfiable security alternative",
+  },
+  {
+    // Proves codestra-platform.openapi.yaml (the auth/marketing/ai/crm/
+    // workflow contract added to close the previously-uncontracted routes
+    // gap) is itself covered by this gate, the same way the communications
+    // fixture above proves that file is covered.
+    name: "a new required property on the platform contract",
+    file: "contracts/openapi/codestra-platform.openapi.yaml",
+    corrupt: (text) => text.replace("required: [id, tenantId, status, createdAt, updatedAt]", "required: [id, tenantId, status, createdAt, updatedAt, newlyRequiredField]"),
+    expectedSubstring: "new required property",
+  },
+  {
+    name: "a runtime-nullability correction cannot cite an unpinned authority",
+    file: "contracts/openapi/codestra-communications.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "        messageId: { type: string, format: uuid }\n        tenantId: { type: string }",
+        "        messageId: { type: string, format: uuid }\n        tenantId:\n          type: [string, 'null']\n          x-codestra-corrects-runtime-nullability: 0000000000000000000000000000000000000000",
+      ),
+    expectedSubstring: "type changed",
+  },
+  {
+    // Proves the vendored-runtime-authority correction escape hatch (added
+    // to fix /v1/ai/generate and /v1/marketing/campaigns, which were
+    // invented before the real Codestra-AI/Codestra-Marketing- contracts
+    // were available and didn't match them) actually cross-checks the
+    // claim instead of trusting the annotation. A citation whose shape
+    // doesn't match the pinned authority must still be rejected as
+    // breaking drift, not silently waved through.
+    name: "a runtime-authority correction that doesn't actually match its cited authority",
+    file: "contracts/openapi/codestra-platform.openapi.yaml",
+    corrupt: (text) => text.replace("required: [task, input]", "required: [task]"),
+    expectedSubstring: "does not actually match it",
+  },
+  {
+    name: "a runtime-authority correction citing a sourceSha other than the one actually vendored",
+    file: "contracts/openapi/codestra-platform.openapi.yaml",
+    corrupt: (text) =>
+      text.replace(
+        "authority: ai\n        sourceSha: 7d31ef8de1c15bcc71b61de50917c81e3bcf557d",
+        // A run of hex digits is deliberate: an all-numeric 40-char value
+        // would parse as a YAML number, not a string, and fail this
+        // fixture's own /^[0-9a-f]{40}$/ format check before ever reaching
+        // the "is pinned to" comparison this fixture means to exercise.
+        "authority: ai\n        sourceSha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      ),
+    expectedSubstring: "is pinned to",
   },
 ];
 

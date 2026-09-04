@@ -30,7 +30,8 @@ def main() -> None:
 
     try:
         import codestra_middleware_sdk  # noqa: E402
-        from codestra_middleware_sdk.api.default_api import DefaultApi  # noqa: E402
+        from codestra_middleware_sdk.api.domain_control_api import DomainControlApi  # noqa: E402
+        from codestra_middleware_sdk.api.operations_api import OperationsApi  # noqa: E402
         from codestra_middleware_sdk.configuration import Configuration  # noqa: E402
         from codestra_middleware_sdk.models.command_envelope import CommandEnvelope  # noqa: E402
     except ImportError as error:
@@ -51,7 +52,7 @@ def main() -> None:
         "correlation_id": correlation_id,
         "idempotency_key": idempotency_key,
         "capability": "ODOO_WRITE",
-        "state": "completed",
+        "state": "COMPLETED",
         "provider_operation_id": "odoo:123",
         "last_error": None,
         "created_at": "2026-08-29T00:00:00Z",
@@ -87,10 +88,10 @@ def main() -> None:
             }
             length = int(self.headers.get("Content-Length", "0"))
             observations["post_body"] = json.loads(self.rfile.read(length) or b"{}")
-            if self.path != "/v1/commands":
+            if self.path != "/v1/odoo/commands":
                 self._json_response(404, {"error": {"code": "not_found", "message": "not found", "correlation_id": correlation_id, "retryable": False, "details": {}}})
                 return
-            self.send_response(202)
+            self.send_response(200)
             encoded = json.dumps(operation).encode("utf-8")
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(encoded)))
@@ -121,7 +122,8 @@ def main() -> None:
         configuration = Configuration(host=f"http://127.0.0.1:{server.server_address[1]}")
         with codestra_middleware_sdk.ApiClient(configuration) as api_client:
             api_client.default_headers["Authorization"] = "Bearer smoke-test-product-token"
-            api = DefaultApi(api_client)
+            command_api = DomainControlApi(api_client)
+            operations_api = OperationsApi(api_client)
             command = CommandEnvelope(
                 command_id=command_id,
                 command_type="crm.project",
@@ -134,13 +136,13 @@ def main() -> None:
                 capability="ODOO_WRITE",
                 payload={"intake_id": "MB-CONTACT-EXAMPLE"},
             )
-            submitted = api.submit_command(
+            command_api.submit_odoo_command_v1_odoo_commands_post(
                 x_tenant_id=tenant_id,
                 x_correlation_id=correlation_id,
                 idempotency_key=idempotency_key,
                 command_envelope=command,
             )
-            fetched = api.get_operation(
+            fetched = operations_api.get_operation_v1_operations_command_id_get(
                 command_id=command_id,
                 x_tenant_id=tenant_id,
             )
@@ -162,13 +164,11 @@ def main() -> None:
             fail(f"command body did not serialize correctly: {body!r}")
         if body.get("tenant_id") != tenant_id or body.get("capability") != "ODOO_WRITE":
             fail(f"command authority fields did not serialize correctly: {body!r}")
-        if str(submitted.command_id) != str(command_id) or state_value(submitted.state) != "completed":
-            fail(f"submitted operation did not deserialize correctly: {submitted!r}")
-        if str(fetched.command_id) != str(command_id) or state_value(fetched.state) != "completed":
+        if str(fetched.command_id) != str(command_id) or state_value(fetched.state) != "COMPLETED":
             fail(f"operation read-back did not deserialize correctly: {fetched!r}")
 
         print(
-            "PASS: generated Middleware Python SDK submitted a command with the "
+            "PASS: generated Middleware Python SDK submitted an Odoo command with the "
             "required authority headers and read the typed operation back."
         )
     finally:

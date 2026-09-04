@@ -1,0 +1,525 @@
+openapi: 3.1.0
+info:
+  title: Codestra Platform API
+  version: 0.1.0
+  description: >
+    Auth session introspection, marketing, AI generation, CRM lead, and
+    workflow orchestration surfaces consumed by the unified Codestra SDK
+    (packages/codestra_sdk). These operations were implemented in the SDK
+    facade before any canonical contract existed for them; this document is
+    that contract, grounded in the request/response shapes the facade and
+    its generated clients already send and expect. The auth session, CRM
+    lead, and workflow run operations are `deprecated: true`: codestra_sdk
+    no longer exposes any of them (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md),
+    and they are kept here only for the published sunset window
+    (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before final removal.
+    Lead submission goes through packages/intake-bff to POST
+    /v1/intake/leads; CRM record mutation goes through the canonical
+    Middleware command plane (codestra.control.crm). Workflow triggering
+    goes through the real POST /v1/commands (command_type
+    "automation.workflow.trigger") via codestra.automation.commands.trigger().
+servers:
+  - url: https://api.codestra.co
+security:
+  - oidc: []
+paths:
+  /v1/auth/session:
+    get:
+      operationId: getAuthSession
+      deprecated: true
+      summary: Read the caller's current authenticated session
+      description: >
+        Deprecated compatibility route. docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md
+        found no real backend behind this operation anywhere: it was invented
+        alongside the rest of this contract, and this repository's own
+        authority boundary (see the root README's "Authority boundary"
+        section) places OIDC/session infrastructure outside this repo's
+        ownership entirely -- there is no "same-origin BFF package" here to
+        publish a real contract for. codestra_sdk no longer exposes this
+        operation. Kept here, deprecated, only for the published sunset
+        window (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before
+        final removal.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Current session for the authenticated caller
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/marketing/campaigns:
+    get:
+      operationId: listMarketingCampaigns
+      summary: List tenant marketing campaigns
+      description: >
+        Corrected against the real Codestra-Marketing- contract
+        (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md): the real endpoint
+        takes no cursor/limit/status query parameters and returns a bare
+        array, not a paginated envelope.
+      x-codestra-corrects-invented-contract:
+        authority: marketing
+        sourceSha: fe784f1e91bb0f0fd49f2b2f741a4020a337c149
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 64 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '200':
+          description: Current tenant marketing campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MarketingCampaign' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createMarketingCampaign
+      summary: Create a marketing campaign
+      description: >
+        Corrected against the real Codestra-Marketing- contract; see the
+        GET operation on this path for the correction rationale.
+      x-codestra-corrects-invented-contract:
+        authority: marketing
+        sourceSha: fe784f1e91bb0f0fd49f2b2f741a4020a337c149
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 64 }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingCampaignRequest' }
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCampaign' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/marketing/campaigns/{campaignId}:
+    get:
+      operationId: getMarketingCampaign
+      summary: Read one tenant marketing campaign
+      description: >
+        Corrected against the real Codestra-Marketing- contract; see
+        /v1/marketing/campaigns for the correction rationale.
+      x-codestra-corrects-invented-contract:
+        authority: marketing
+        sourceSha: fe784f1e91bb0f0fd49f2b2f741a4020a337c149
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 64 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '200':
+          description: Current campaign state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCampaign' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/marketing/capabilities:
+    get:
+      operationId: getMarketingCapabilities
+      summary: Read marketing capabilities enabled for the calling tenant
+      description: >
+        Corrected against the real Codestra-Marketing- contract: the real
+        endpoint returns an open-ended object with no fixed channel/limit
+        schema, and does not require X-Tenant-ID.
+      x-codestra-corrects-invented-contract:
+        authority: marketing
+        sourceSha: fe784f1e91bb0f0fd49f2b2f741a4020a337c149
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: false
+          schema: { type: [string, 'null'] }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '200':
+          description: Enabled marketing capabilities for the tenant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingCapabilities' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/ai/generate:
+    post:
+      operationId: generateAiContent
+      summary: Submit a governed AI generation request
+      description: >
+        Corrected against the real Codestra-AI Gateway contract
+        (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md): this operation was
+        originally invented as a synchronous `{prompt} -> 200 {output}` call,
+        which the real backend rejects outright (`additionalProperties:
+        false`, `task`+`input` required). It is actually an async durable
+        request: `202` returns a `request_id` to read back via
+        `GET /v1/ai/requests/{request_id}` on the real service.
+      x-codestra-corrects-invented-contract:
+        authority: ai
+        sourceSha: 7d31ef8de1c15bcc71b61de50917c81e3bcf557d
+      security:
+        - oidc: []
+        - serviceBearer: [ai.request]
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 180 }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GenerateAiRequest' }
+      responses:
+        '202':
+          description: Durable AI generation request accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiGenerationResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/crm/leads:
+    get:
+      operationId: listCrmLeads
+      deprecated: true
+      summary: List tenant CRM leads
+      description: >
+        Deprecated compatibility route. This is a prohibited direct CRM read
+        edge on the unified Codestra SDK; codestra_sdk no longer exposes it
+        (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md). Lead submission
+        goes through packages/intake-bff to POST /v1/intake/leads; CRM
+        record mutation goes through the canonical Middleware command plane
+        (codestra.control.crm). Kept here, deprecated, only for the
+        published sunset window (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md)
+        before final removal from this contract.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 1000 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/CrmLeadStatus' }
+      responses:
+        '200':
+          description: Current tenant CRM leads
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrmLeadList' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/crm/leads/{leadId}:
+    get:
+      operationId: getCrmLead
+      deprecated: true
+      summary: Read one tenant CRM lead
+      description: >
+        Deprecated compatibility route; see /v1/crm/leads for the removal
+        rationale and sunset policy.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: leadId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current lead state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrmLead' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/workflow/runs:
+    post:
+      operationId: triggerWorkflowRun
+      deprecated: true
+      summary: Trigger a named workflow run
+      description: >
+        Deprecated compatibility route. Superseded orchestration vocabulary
+        (docs/PLATFORM-OPENAPI-ROUTE-CONVERGENCE-V2.md). codestra_sdk no
+        longer exposes this operation: automation.commands.trigger() submits
+        through the real, already-implemented canonical command plane
+        (POST /v1/commands, command_type "automation.workflow.trigger",
+        target "n8n") instead, read back via the existing
+        GET /v1/operations/{command_id}. Kept here, deprecated, only for the
+        published sunset window
+        (docs/production/MIDDLEWARE-SDK-CONTRACT-DRIFT.md) before final
+        removal.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TriggerWorkflowRunRequest' }
+      responses:
+        '202':
+          description: Workflow run accepted for asynchronous execution
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowRun' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /v1/workflow/runs/{runId}:
+    get:
+      operationId: getWorkflowRun
+      deprecated: true
+      summary: Read one workflow run
+      description: >
+        Deprecated compatibility route; see /v1/workflow/runs for the
+        removal rationale and sunset policy.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: runId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current workflow run state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowRun' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.codestra.co/realms/codestra/.well-known/openid-configuration
+    serviceBearer:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.codestra.co/realms/codestra/protocol/openid-connect/token
+          scopes:
+            ai.read: Read AI requests and policy
+            ai.request: Submit governed AI requests
+            ai.cancel: Cancel a governed AI request
+  parameters:
+    TenantId:
+      name: X-Codestra-Tenant-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema: { type: string, minLength: 8, maxLength: 128 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+  responses:
+    Error:
+      description: Structured Codestra error
+      content:
+        application/json:
+          schema: { $ref: './codestra-public.openapi.yaml#/components/schemas/ErrorResponse' }
+  schemas:
+    Session:
+      type: object
+      additionalProperties: false
+      required: [subject, tenantId, issuedAt, expiresAt]
+      properties:
+        subject:
+          type: object
+          additionalProperties: false
+          required: [type, id]
+          properties:
+            type: { type: string, enum: [user, service] }
+            id: { type: string, minLength: 1, maxLength: 200 }
+        tenantId: { type: string, format: uuid }
+        scopes:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 200 }
+        issuedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    CreateMarketingCampaignRequest:
+      type: object
+      additionalProperties: false
+      required: [name, objective, daily_budget_minor]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        objective: { type: string, minLength: 1, maxLength: 80 }
+        daily_budget_minor: { type: integer, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3, default: USD }
+        tenant_id: { type: [string, 'null'], minLength: 1, maxLength: 64 }
+    MarketingCampaign:
+      type: object
+      required: [id, tenant_id, name, objective, daily_budget_minor, currency, state, resource_version]
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string }
+        name: { type: string }
+        objective: { type: string }
+        daily_budget_minor: { type: integer }
+        currency: { type: string }
+        state: { type: string }
+        resource_version: { type: integer }
+    MarketingCapabilities:
+      type: object
+      additionalProperties: true
+    GenerateAiRequest:
+      type: object
+      additionalProperties: false
+      required: [task, input]
+      properties:
+        task: { type: string, enum: [copy, classify, summarize, score, creative_brief] }
+        input: { type: string, minLength: 1, maxLength: 20000 }
+        tenant_id: { type: [string, 'null'], maxLength: 128 }
+        campaign_id: { type: [string, 'null'], maxLength: 128 }
+        data_class: { type: string, enum: [public, internal, confidential] }
+        region: { type: string, minLength: 2, maxLength: 32 }
+        maximum_cost_micros: { type: integer, minimum: 0, maximum: 10000000 }
+        retain_output: { type: boolean }
+    AiGenerationResult:
+      type: object
+      required: [request_id, status, input_tokens, output_tokens, cost_micros, resource_version]
+      properties:
+        request_id: { type: string, format: uuid }
+        status: { type: string }
+        output: { type: [string, 'null'] }
+        provider: { type: [string, 'null'] }
+        model: { type: [string, 'null'] }
+        input_tokens: { type: integer, minimum: 0 }
+        output_tokens: { type: integer, minimum: 0 }
+        cost_micros: { type: integer, minimum: 0 }
+        middleware_operation_id: { type: [string, 'null'], maxLength: 128 }
+        resource_version: { type: integer, minimum: 1 }
+        created_at: { type: [string, 'null'], format: date-time }
+        updated_at: { type: [string, 'null'], format: date-time }
+    CrmLeadStatus:
+      type: string
+      enum: [new, contacted, qualified, disqualified, converted]
+    CrmLead:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/CrmLeadStatus' }
+        name: { type: string, maxLength: 200 }
+        email: { type: string, format: email, maxLength: 254 }
+        phone: { type: string, maxLength: 40 }
+        source: { type: string, maxLength: 120 }
+        message: { type: string, maxLength: 4000 }
+        attributes: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CrmLeadList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CrmLead' }
+        nextCursor: { type: string, minLength: 1, maxLength: 1000 }
+    TriggerWorkflowRunRequest:
+      type: object
+      additionalProperties: false
+      required: [workflow]
+      properties:
+        workflow: { type: string, minLength: 1, maxLength: 200 }
+        payload: { type: object }
+    WorkflowRunStatus:
+      type: string
+      enum: [queued, running, succeeded, failed, cancelled]
+    WorkflowRun:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workflow, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        workflow: { type: string, minLength: 1, maxLength: 200 }
+        status: { $ref: '#/components/schemas/WorkflowRunStatus' }
+        payload: { type: object }
+        result: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }

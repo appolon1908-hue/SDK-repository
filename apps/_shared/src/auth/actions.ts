@@ -19,7 +19,7 @@ export async function createStubSession(formData: FormData): Promise<void> {
     typeof tenantIdRaw === "string" && tenantIdRaw.trim() ? tenantIdRaw.trim() : defaultStubTenantId();
 
   const session: StubSession = { subject, tenantId };
-  cookies().set(STUB_SESSION_COOKIE, JSON.stringify(session), {
+  (await cookies()).set(STUB_SESSION_COOKIE, JSON.stringify(session), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -30,6 +30,6 @@ export async function createStubSession(formData: FormData): Promise<void> {
 }
 
 export async function clearStubSession(): Promise<void> {
-  cookies().delete(STUB_SESSION_COOKIE);
+  (await cookies()).delete(STUB_SESSION_COOKIE);
   redirect("/login");
 }

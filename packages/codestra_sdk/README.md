@@ -13,7 +13,7 @@ const codestra = createCodestraSdk({
 });
 
 await codestra.marketing.campaigns.list();
-await codestra.ai.generate({ prompt: "Summarize this lead." }, { idempotencyKey });
+await codestra.ai.generate({ task: "summarize", input: "Summarize this lead." }, { idempotencyKey });
 await codestra.communication.messages.send(
   { channel: "email", to: ["customer@example.com"], content: { subject: "Hi", text: "Hello" } },
   { idempotencyKey },
@@ -22,20 +22,45 @@ await codestra.social.posts.schedule(
   { workspaceId, channels: ["linkedin"], content: { text: "Launch update" }, publishAt },
   { idempotencyKey },
 );
-await codestra.crm.leads.get(leadId);
+
+// Canonical Middleware command plane. Preserve this Idempotency-Key when
+// retrying the same logical operation.
+const operation = await codestra.control.odoo.submit(
+  {
+    commandType: "crm.lead.upsert",
+    target: "odoo-19",
+    capability: "ODOO_WRITE",
+    payload: { external_id: "lead-123", name: "Example lead" },
+  },
+  { idempotencyKey: "lead-123-upsert-20260902" },
+);
+
+// UNKNOWN and RECONCILIATION_REQUIRED remain visible. They are never
+// converted into an automatic resubmission.
+await codestra.control.odoo.get(operation.operation_id);
+
+// Workflow triggering has no dedicated route -- it submits through the
+// same canonical command plane, read back with the generic operations
+// collection every canonical command uses.
+const command = await codestra.automation.commands.trigger(
+  { workflowKey: "lead-intake", payload: { source: "sdk-example" } },
+  { idempotencyKey: "lead-intake-20260902-0001" },
+);
+await codestra.operations.get(command.command_id);
 ```
 
 ## Module Map
 
 ```text
 codestra_sdk
-  auth
+  platform
+  operations
+  control
   marketing
   ai
   communication
   social
-  crm
-  workflow
+  automation
   events
   common
 ```

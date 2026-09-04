@@ -15,12 +15,64 @@ env:
   REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact revision with history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan repository and history for secrets
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  moneybee-python-connectors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: python/moneybee-connectors/requirements.lock
+      - name: Install connector and audit tooling
+        run: |
+          python -m pip install --require-hashes -r python/moneybee-connectors/requirements.lock
+          python -m pip install --no-deps -e python/moneybee-connectors
+          python -m pip check
+      - name: Test and build connector
+        run: |
+          python -m pytest -q python/moneybee-connectors/tests
+          python -m compileall -q python/moneybee-connectors/src python/moneybee-connectors/tests
+          python -m pip wheel --no-deps --wheel-dir dist python/moneybee-connectors
+      - name: Audit connector dependencies
+        run: python -m pip_audit
+      - name: Generate connector SBOM
+        run: cyclonedx-py environment --output-format JSON --output-file dist/codestra-moneybee-connectors.sbom.cdx.json
+      - name: Upload immutable connector evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: moneybee-python-connectors-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout exact revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
@@ -29,13 +81,15 @@ jobs:
         with:
           version: 10.15.0
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - name: Install exact dependencies
         run: pnpm install --frozen-lockfile
+      - name: Reject production dependency vulnerabilities rated High or Critical
+        run: pnpm security:audit
       - name: Validate canonical contracts semantically
         run: pnpm contracts:validate
       - name: Prove invalid contracts fail closed

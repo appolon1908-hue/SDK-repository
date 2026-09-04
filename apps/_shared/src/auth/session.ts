@@ -39,8 +39,8 @@ export function defaultStubTenantId(): string {
   return SYNTHETIC_TENANT_ID;
 }
 
-export function getStubSession(): StubSession | null {
-  const store = cookies();
+export async function getStubSession(): Promise<StubSession | null> {
+  const store = await cookies();
   const raw = store.get(STUB_SESSION_COOKIE)?.value;
   if (!raw) return null;
   try {
@@ -64,8 +64,8 @@ export function getStubSession(): StubSession | null {
  * the stub session and redirects to `/login` when it is missing. Swap for a
  * real OIDC session check per the note above the `StubSession` type.
  */
-export function requireStubSession(): StubSession {
-  const session = getStubSession();
+export async function requireStubSession(): Promise<StubSession> {
+  const session = await getStubSession();
   if (!session) redirect("/login");
   return session;
 }
